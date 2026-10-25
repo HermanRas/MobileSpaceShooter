@@ -624,9 +624,11 @@ rejects fractional costs at any size, unknown materials, zero mass, and anything
 exactly one `unique` tile (the core).
 
 #### 1.3 Blueprint format
-- [ ] `model/blueprint.gd`: load/save the §5.4 JSON, a `format` version, and a migration hook
-- [ ] Round-trip test: load → save → load gives identical data
-- **Done when:** the round-trip test passes and a malformed file gives a readable error, not a crash.
+✅ 2026-10-25. `src/model/blueprint.gd`, tested in `tests/model/test_blueprint.gd`. The
+check here is structural only; whether a design is buildable is 1.4. `migrate()` refuses a
+newer `format` with "update the game". ⚠️ **JSON turns every number into a float**, so the
+round-trip test goes through text. Mounts stay untyped until 3.2/4.3, and until then
+whole-number floats in them are turned back into ints, or they'd drift on every save.
 
 #### 1.4 Placement rules
 - [ ] `model/placement.gd`: `candidate_snaps(blueprint, tile_def, shape, size)` → valid (pos, rot) options at free ports
