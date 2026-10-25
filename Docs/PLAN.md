@@ -1173,8 +1173,10 @@ must ignore touches, or once it grew wider it swallowed pans that started under 
 #### 15.3 Store and distribution `[D14]`
 - [x] Icon and splash (owner's art, 2026-10-25): `tools/make_branding.py` builds
   `game/assets/branding/` from `art_src/`. The adaptive icon is shrunk to survive a round mask;
-  the splash is cropped to 2.17:1 above its baked-in loading bar. ⚠️ Two fighters in the splash
-  look like X-wings: review before a public release.
+  the splash is cropped to 2.17:1 above its baked-in loading bar. Both are Gemini art.
+- [ ] **Regenerate the splash with in-game ships** (owner, 2026-10-25). The current one has two
+  fighters that look like X-wings, and the game stays clear of copyrighted designs. Do it once
+  enough real tile-built ships exist to pose (after M2), feeding Gemini screenshots of them.
 - [ ] Final title, screenshots, trailer GIF; itch.io, GitHub; optionally F-Droid and Play
 - **Done when:** v1.0 is published.
 
