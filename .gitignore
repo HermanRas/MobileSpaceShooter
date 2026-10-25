@@ -1,0 +1,24 @@
+# Godot
+.godot/
+/game/android/
+*.import.tmp
+
+# Build output and signing material (never commit keystores)
+/build/
+*.apk
+*.aab
+/.android/
+*.keystore
+*.jks
+
+# Derived art (masters in art_src/ ARE committed; sliced output is regenerated)
+/art_src/**/sliced/
+/dev_preview_out/
+/game/dev_preview/out/
+
+# Tooling
+/tools/.venv/
+__pycache__/
+
+# Reference images: some are third-party screenshots, so they stay out of the public repo
+/insperationPictures/
