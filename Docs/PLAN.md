@@ -641,9 +641,10 @@ Measured on the desktop, a 150-tile ship validates in ~11 ms, and a snap search 
 finger takes ~4 ms. ⚠️ A phone may be 5–10× slower, so 2.5 may need incremental validation.
 
 #### 1.5 Stats
-- [ ] `model/ship_stats.gd`: HP, armor, shield capacity and regen, mass, centre of mass, moment of inertia, cost breakdown
-- [ ] Costs as multi-material totals (§4.2: Hull plus Alloy, Crystal or Tech)
-- **Done when:** stats for 3 hand-made blueprints match hand-calculated values in the tests.
+✅ 2026-10-25. `src/model/ship_stats.gd`, checked in `tests/model/test_ship_stats.gd` against
+three ships worked out by hand. Each tile's mass is spread over its real polygon, so the centre of
+mass and the inertia (about that centre) are exact for every shape. Armor is reported HP-weighted
+(`armor_avg`). Units are U; Phase 3.1 converts to pixels.
 
 #### 1.6 Debug view and sample ships
 - [ ] `scenes/debug/blueprint_view.tscn`: draws a blueprint with flat colours, port dots and an invalid-tile overlay
