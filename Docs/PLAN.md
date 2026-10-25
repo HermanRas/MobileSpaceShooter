@@ -588,12 +588,16 @@ the host uid. `tools/licence_audit.py` checks for missing and stale rows (exit 1
 ported against MSP's first real Gemini sheet rather than a made-up one.
 
 #### 0.9 Android pipeline in Docker `[D15]`
-- [ ] `tools/docker/android.Dockerfile`: JDK 17, Android SDK + build-tools, Godot 4.7.1 export templates
-- [ ] Debug keystore generated in the container and stored in `.android/` (gitignored)
-- [ ] `export_presets.cfg` (tracked, no secrets): arm64-v8a, landscape, package id per D14
-- [ ] `tools/android.sh export|install|run|logcat`: adb in the container with `--device /dev/bus/usb`
-- [ ] `Docs/MOBILE_DEPLOY.md` with the exact commands (pattern from AOD's)
-- [ ] Run an empty scene on the reference phone (§5.5) and record its fps there
+🟡 2026-10-25, built but **not yet run on the phone** (none was connected).
+`tools/android.sh export|devices|install|run|deploy|logcat` uses the `msp-android:1` image
+(JDK 17, SDK platform 35 + build-tools 35.0.1, Android export templates only; 1.8 GB). Building
+the image accepts the Android SDK licence. `tools/android.sh export` produces a signed
+28 MB `build/msp-debug.apk` containing `data/*.json` and no tests. adb runs in the container
+as root to reach USB, then hands its key files back to the host user. Commands and gotchas
+are in [MOBILE_DEPLOY.md](MOBILE_DEPLOY.md). ⚠️ Android export needs
+`import_etc2_astc=true`, and JSON only ships because the preset's include filter names it.
+- [ ] Owner: plug in the phone and run `tools/android.sh deploy`
+- [ ] Record the empty-scene fps on the reference phone in §5.5
 - **Done when:** the placeholder menu runs on the owner's phone from one command.
 
 #### 0.10 Workflow docs
