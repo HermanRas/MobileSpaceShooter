@@ -25,6 +25,7 @@ func _ready() -> void:
 	await _step_tap_select_delete_undo()
 	await _step_move_selected()
 	await _step_paint()
+	await _step_thrusters()
 	await _step_stats_match_and_refresh_fast()
 	await _step_library()
 	await _step_pinch_zooms()
@@ -105,6 +106,57 @@ func _step_paint() -> void:
 	var image := get_viewport().get_texture().get_image()
 	image.save_png(ProjectSettings.globalize_path("res://dev_preview/out/drive_hangar_paint.png"))
 	paint.visible = false
+
+
+func _step_thrusters() -> void:
+	var errors: PackedStringArray = []
+	_hangar.load_blueprint(Blueprint.from_dict(Data.json_dir("blueprints")["starter"], errors))
+	await _frames(2)
+	var mounts: Array[Dictionary] = _hangar.editor.blueprint.mounts
+	_check(mounts.size() == 3, "the starter carries 3 thrusters")
+	# The front pulse thruster's nozzle sits just in front of the front hardpoint (1, 0).
+	await _tap(0, _screen_of_u(Vector2(1.7, 0)))
+	_check(_hangar._selected_mount == 2, "a tap on a thruster selects it (got %d)" % _hangar._selected_mount)
+	_hangar._delete_selected()
+	await _frames(2)
+	_check(_hangar.editor.blueprint.mounts.size() == 2, "delete removes it")
+	_check(_warnings_shown().has("can't brake"), "the panel warns it can't brake (%s)" % ", ".join(_warnings_shown()))
+
+	var tab := _palette_tab("Thrusters")
+	tab.button_pressed = true
+	await _frames(2)
+	var jet := _swatch("jet")
+	_check(jet != null, "the Thrusters tab shows a Jet")
+	var start := jet.get_global_rect().get_center()
+	await _drag(0, start, _screen_of_u(Vector2(1.7, 0)) + Vector2(0, _hangar.GHOST_LIFT_PX))
+	var after: Array[Dictionary] = _hangar.editor.blueprint.mounts
+	_check(after.size() == 3 and after[2]["part"] == "thruster.jet" and int(after[2]["tile"]) == 6,
+			"dragging a Jet onto the front edge mounts it there")
+	_check(not _warnings_shown().has("can't brake"), "and the warning clears")
+	await _frames(2)
+	_save_shot("drive_hangar_thrusters.png")
+	_palette_tab("Hull").button_pressed = true
+	await _frames(1)
+
+
+func _warnings_shown() -> PackedStringArray:
+	var out: PackedStringArray = []
+	for label in _hangar._stats._problems.get_children():
+		if not label.is_queued_for_deletion():
+			out.append((label as Label).text.trim_prefix("• "))
+	return out
+
+
+func _palette_tab(text: String) -> Button:
+	for button in _hangar._palette.find_children("*", "Button", true, false):
+		if (button as Button).text == text:
+			return button
+	return null
+
+
+func _save_shot(file_name: String) -> void:
+	get_viewport().get_texture().get_image().save_png(
+			ProjectSettings.globalize_path("res://dev_preview/out/" + file_name))
 
 
 func _step_stats_match_and_refresh_fast() -> void:

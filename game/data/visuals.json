@@ -4,8 +4,9 @@
 	"visuals": {
 		"vis.tiles.material_atlas": {
 			"placeholder": "res://assets/placeholders/tile_atlas.png",
-			"cells": ["core", "hull", "armor", "shield", "hardpoint"],
-			"_doc": "One seamless cell per tile type. R = detail, G = untinted trim (PLAN.md 6.2). Real art: A.1."
+			"cells": ["core", "hull", "armor", "shield", "hardpoint", "thruster"],
+			"thruster_tints": {"pulse": "#d9822b", "jet": "#c0392b", "ion": "#3a7bd5"},
+			"_doc": "One seamless cell per tile type, plus thruster nozzles tinted by type. R = detail, G = untinted trim (PLAN.md 6.2). Real art: A.1."
 		}
 	}
 }

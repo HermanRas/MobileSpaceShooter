@@ -1,13 +1,15 @@
 class_name StatsPanel
 extends PanelContainer
 ## The hangar's live stats (Phase 2.5): totals from ShipStats, what the carried tile would add,
-## and the blueprint's problems.
+## the blueprint's problems (red, they stop it flying) and the flight warnings (amber, they
+## never do; PLAN.md 4.10).
 ##
 ## The "+50 HP" preview comes from the tile definition alone, not a full recompute, so it's
 ## cheap enough to refresh while a tile is being dragged.
 
 const GOOD := Color(0.45, 1.0, 0.55)
 const BAD := Color(1.0, 0.45, 0.45)
+const WARN := Color(1.0, 0.75, 0.3)
 const DIM := Color(1, 1, 1, 0.55)
 const MAX_PROBLEMS := 3
 
@@ -16,9 +18,13 @@ var _problems := VBoxContainer.new()
 
 
 func _ready() -> void:
+	# Display only: touches go through to the ship underneath, so it can be panned there.
+	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var column := VBoxContainer.new()
+	column.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(column)
 	var grid := GridContainer.new()
+	grid.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	grid.columns = 3
 	column.add_child(grid)
 	for entry: Array in [["tiles", "Tiles"], ["hp", "HP"], ["armor", "Armor"], ["shield", "Shield"],
@@ -30,17 +36,22 @@ func _ready() -> void:
 		grid.add_child(value)
 		grid.add_child(delta)
 		_rows[entry[0]] = [value, delta]
+	_problems.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	column.add_child(_problems)
 
 
-func show_stats(stats: ShipStats, problems: Array[Placement.Problem], max_tiles: int) -> void:
+func show_stats(stats: ShipStats, problems: Array[Placement.Problem], max_tiles: int,
+		envelope: ThrustEnvelope = null) -> void:
 	_set_row(&"tiles", "%d / %d" % [stats.tile_count, max_tiles])
 	_set_row(&"hp", "%d" % stats.hp)
 	_set_row(&"armor", "%.1f" % stats.armor_avg)
 	_set_row(&"shield", "%d  +%.1f/s" % [stats.shield_cap, stats.shield_regen] if stats.shield_cap > 0.0 else "none")
 	_set_row(&"mass", "%.2f" % stats.mass)
-	# Thrusters arrive in Phase 3.2; until then there's nothing to accelerate with.
-	_set_row(&"accel", "no thrusters")
+	if envelope == null or envelope.thrusters.is_empty():
+		_set_row(&"accel", "no thrusters")
+	else:
+		_set_row(&"accel", "%.1f U/s² forward, %.1f back" % [envelope.accel(ThrustEnvelope.FORWARD),
+				envelope.accel(ThrustEnvelope.BACK)])
 	_set_row(&"cost", format_cost(stats.cost))
 	for child in _problems.get_children():
 		child.queue_free()
@@ -48,6 +59,9 @@ func show_stats(stats: ShipStats, problems: Array[Placement.Problem], max_tiles:
 		_problems.add_child(_label(problems[i].message, BAD))
 	if problems.size() > MAX_PROBLEMS:
 		_problems.add_child(_label("…and %d more" % (problems.size() - MAX_PROBLEMS), BAD))
+	if envelope != null:
+		for warning in envelope.warnings:
+			_problems.add_child(_label("• " + str(warning["text"]), WARN))
 
 
 ## Shows what one tile of `def` at `size` would add, or clears the preview when `def` is null.

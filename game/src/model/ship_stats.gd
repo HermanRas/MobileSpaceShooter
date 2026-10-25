@@ -17,6 +17,8 @@ var center_of_mass: Vector2 = Vector2.ZERO
 var inertia: float = 0.0
 ## Material -> total, for every tile.
 var cost: Dictionary = {}
+## Thrusters that resolved (known part, size, level, and a place on the ship).
+var thruster_count: int = 0
 
 
 ## Tiles with unknown types or shapes are skipped; run `Placement.validate()` first.
@@ -45,6 +47,20 @@ static func compute(bp: Blueprint, placement: Placement) -> ShipStats:
 		var own_inertia := tile_mass * polygon_polar_moment(polygon, centroid) / area if area > 0.0 else 0.0
 		parts.append([tile_mass, centroid, own_inertia])
 		stats.center_of_mass += centroid * tile_mass
+
+	# Thrusters weigh something too, as a point mass where they're mounted (3.2).
+	if placement.thrusters != null:
+		for mount in bp.mounts:
+			var spec := placement.thrusters.spec(ThrusterLib.type_of_part(str(mount.get("part", ""))),
+					StringName(mount.get("size", "")), int(mount.get("level", 0)))
+			var mount_frame := Mounting.frame(placement, bp, mount)
+			if spec.is_empty() or mount_frame.is_empty():
+				continue
+			var thruster_mass: float = spec["mass"]
+			stats.thruster_count += 1
+			stats.mass += thruster_mass
+			parts.append([thruster_mass, mount_frame["center"], 0.0])
+			stats.center_of_mass += mount_frame["center"] * thruster_mass
 
 	if stats.mass > 0.0:
 		stats.center_of_mass /= stats.mass

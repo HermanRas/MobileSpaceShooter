@@ -60,7 +60,7 @@ func build(bp: Blueprint, placement_rules: Placement) -> void:
 		shape_owner_add_shape(owner_id, shape)
 		_owner_tiles[owner_id] = tile.id
 		built.append(tile)
-	_mesh.mesh = ShipMesh.build(built, placement)
+	_mesh.mesh = ShipMesh.build(built, placement, bp)
 
 	stats = ShipStats.compute(bp, placement)
 	mass = maxf(stats.mass, 0.001)

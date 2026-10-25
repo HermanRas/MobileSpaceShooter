@@ -93,10 +93,92 @@ func remove(tile_id: int) -> bool:
 	_checkpoint()
 	var twin_id := _existing_twin_id(tile)
 	blueprint.tiles.erase(tile)
+	_drop_mounts_of(tile_id)
 	if twin_id >= 0:
 		blueprint.tiles.erase(blueprint.tile_by_id(twin_id))
+		_drop_mounts_of(twin_id)
 	changed.emit()
 	return true
+
+
+## Mounts a thruster in a slot from `Mounting.thruster_slots()` (and its mirror image when
+## mirror mode is on and the image's slot is free). Returns the new mount indices, or an empty
+## array if the slot isn't free.
+func add_thruster(type_id: StringName, size: StringName, level: int, slot: Dictionary) -> PackedInt32Array:
+	var mount := {"tile": int(slot["tile"]), "edge": int(slot["edge"]), "port": int(slot["port"]),
+			"part": ThrusterLib.part_id(type_id), "size": String(size), "level": level}
+	if not _slot_free(mount):
+		return PackedInt32Array()
+	_checkpoint()
+	blueprint.mounts.append(mount)
+	var added := PackedInt32Array([blueprint.mounts.size() - 1])
+	var host := blueprint.tile_by_id(mount["tile"])
+	var twin_id := _existing_twin_id(host)
+	if twin_id >= 0:
+		var image := Mounting.mirrored(placement, blueprint, mount, twin_id, axis_y())
+		if not image.is_empty() and _slot_free(image):
+			blueprint.mounts.append(image)
+			added.append(blueprint.mounts.size() - 1)
+	changed.emit()
+	return added
+
+
+## Removes a mount (and its mirror image).
+func remove_mount(index: int) -> bool:
+	if index < 0 or index >= blueprint.mounts.size():
+		return false
+	_checkpoint()
+	var mount := blueprint.mounts[index]
+	var doomed: Array[Dictionary] = [mount]
+	var host := blueprint.tile_by_id(int(mount["tile"]))
+	var twin_id := _existing_twin_id(host) if host != null else -1
+	if twin_id >= 0:
+		var image := Mounting.mirrored(placement, blueprint, mount, twin_id, axis_y())
+		var at := mount_index(image)
+		if at >= 0:
+			doomed.append(blueprint.mounts[at])
+	for gone in doomed:
+		blueprint.mounts.erase(gone)
+	changed.emit()
+	return true
+
+
+## Moves a mount (and its mirror image) to another slot, as one undo step.
+func move_mount(index: int, slot: Dictionary) -> bool:
+	if index < 0 or index >= blueprint.mounts.size():
+		return false
+	var mount := blueprint.mounts[index]
+	var before := blueprint.to_dict()
+	remove_mount(index)
+	var added := add_thruster(ThrusterLib.type_of_part(str(mount["part"])), StringName(mount["size"]),
+			int(mount["level"]), slot)
+	if added.is_empty():
+		_undo.pop_back()
+		_restore(before)
+		return false
+	_undo.pop_back()  # the in-between state; one undo goes back to before the move
+	return true
+
+
+## Index of the mount on that tile, edge and port, or -1.
+func mount_index(where: Dictionary) -> int:
+	if where.is_empty():
+		return -1
+	for i in blueprint.mounts.size():
+		var m := blueprint.mounts[i]
+		if int(m["tile"]) == int(where["tile"]) and int(m["edge"]) == int(where["edge"]) and int(m["port"]) == int(where["port"]):
+			return i
+	return -1
+
+
+func _slot_free(mount: Dictionary) -> bool:
+	return Mounting.thruster_slots(placement, blueprint, StringName(mount["size"])).any(
+			func(s: Dictionary) -> bool:
+				return s["tile"] == mount["tile"] and s["edge"] == mount["edge"] and s["port"] == mount["port"])
+
+
+func _drop_mounts_of(tile_id: int) -> void:
+	blueprint.mounts.assign(blueprint.mounts.filter(func(m: Dictionary) -> bool: return int(m.get("tile", -1)) != tile_id))
 
 
 ## Moves a tile to a new snapped spot in one undo step. Its mirror image is moved with it.
@@ -121,6 +203,7 @@ func move(tile_id: int, pos: Vector2, rot: int) -> bool:
 			twin.rot = image["rot"]
 		else:
 			blueprint.tiles.erase(twin)
+			_drop_mounts_of(twin_id)
 	changed.emit()
 	return true
 
@@ -151,11 +234,13 @@ func twin_of(tile_id: int) -> int:
 	return _existing_twin_id(tile) if tile != null else -1
 
 
-## A copy of the blueprint without the given tiles, for computing where they could go instead.
+## A copy of the blueprint without the given tiles (and their mounts), for computing where
+## they could go instead.
 func blueprint_without(tile_ids: PackedInt32Array) -> Blueprint:
 	var errors: PackedStringArray = []
 	var copy := Blueprint.from_dict(blueprint.to_dict(), errors)
 	copy.tiles = copy.tiles.filter(func(t: Blueprint.Tile) -> bool: return not tile_ids.has(t.id))
+	copy.mounts.assign(copy.mounts.filter(func(m: Dictionary) -> bool: return not tile_ids.has(int(m.get("tile", -1)))))
 	return copy
 
 

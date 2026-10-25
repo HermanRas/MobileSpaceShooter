@@ -1,7 +1,8 @@
 class_name ShipView
 extends Node2D
-## Draws the hangar: the grid and build area, the ship mesh, the ghost tile, and overlays
-## (selection, tiles with problems, free ports while carrying).
+## Draws the hangar: the grid and build area, the ship mesh, the ghost tile or thruster, and
+## overlays (selection, tiles with problems, free ports or thruster slots while carrying, and
+## the thrust rose at the centre of mass).
 ##
 ## Everything is in world pixels (ShipMesh.PX_PER_U per U). Overlay line widths are divided by
 ## the camera zoom so they stay the same thickness on screen at any zoom.
@@ -15,6 +16,10 @@ const PROBLEM := Color(1.0, 0.2, 0.2)
 const FREE_PORT := Color(1, 1, 1, 0.7)
 const GHOST_OK := Color(0.3, 1.0, 0.45)
 const GHOST_BAD := Color(1.0, 0.3, 0.3)
+const ROSE := Color(1.0, 0.75, 0.3, 0.75)
+const TURN := Color(0.6, 0.85, 1.0, 0.75)
+## The rose's longest spoke, in U.
+const ROSE_REACH_U := 1.6
 
 var placement: Placement
 var area_u: float = 16.0
@@ -32,6 +37,10 @@ var _ghost_ok := false
 var _show_ports := false
 var _free_ports := PackedVector2Array()
 var _pulse := 0.0
+var _selected_mount := -1
+var _slot_marks := PackedVector2Array()
+var _envelope: ThrustEnvelope
+var _center_of_mass := Vector2.ZERO
 
 
 func _ready() -> void:
@@ -47,7 +56,7 @@ func _ready() -> void:
 
 func show_blueprint(bp: Blueprint, analysis: Placement.Analysis) -> void:
 	_blueprint = bp
-	_ship.mesh = ShipMesh.build(bp.tiles, placement)
+	_ship.mesh = ShipMesh.build(bp.tiles, placement, bp)
 	_free_ports = analysis.free_ports
 	_problem_ids.clear()
 	for problem in analysis.problems:
@@ -61,9 +70,33 @@ func set_selected(tile_ids: PackedInt32Array) -> void:
 	_overlay.queue_redraw()
 
 
+func set_selected_mount(index: int) -> void:
+	_selected_mount = index
+	_overlay.queue_redraw()
+
+
+## The thrust rose and turn arcs, drawn at the centre of mass. Null hides them.
+func set_envelope(envelope: ThrustEnvelope, center_of_mass: Vector2) -> void:
+	_envelope = envelope
+	_center_of_mass = center_of_mass
+	_overlay.queue_redraw()
+
+
+## A carried thruster: its nozzle outline (in U; empty hides it), whether it has a slot, and
+## the centres of every free slot to show while carrying.
+func set_thruster_ghost(nozzle: PackedVector2Array, ok: bool, slot_centers: PackedVector2Array) -> void:
+	_ghost.mesh = null
+	_ghost_polygon = nozzle
+	_ghost_ok = ok
+	_slot_marks = slot_centers
+	_show_ports = false
+	_overlay.queue_redraw()
+
+
 ## Shows a ghost tile, green when it has a valid snap, red when it doesn't. Pass null to hide.
 func set_ghost(tile: Blueprint.Tile, ok: bool) -> void:
 	_show_ports = tile != null
+	_slot_marks = PackedVector2Array()
 	if tile == null:
 		_ghost.mesh = null
 		_ghost_polygon = PackedVector2Array()
@@ -107,8 +140,17 @@ func _draw_overlay() -> void:
 		var radius := _px(3.0)
 		for port in _free_ports:
 			_overlay.draw_circle(port * PX, radius, FREE_PORT)
+	for mark in _slot_marks:
+		_overlay.draw_circle(mark * PX, _px(5.0), Color(GHOST_OK, 0.6))
 	if not _ghost_polygon.is_empty():
+		if _ghost.mesh == null:
+			_overlay.draw_colored_polygon(_to_px(_ghost_polygon), Color(GHOST_OK if _ghost_ok else GHOST_BAD, 0.45))
 		_overlay.draw_polyline(_closed(_to_px(_ghost_polygon)), GHOST_OK if _ghost_ok else GHOST_BAD, _px(2.0), true)
+	if _selected_mount >= 0 and _selected_mount < _blueprint.mounts.size():
+		var mount_frame := Mounting.frame(placement, _blueprint, _blueprint.mounts[_selected_mount])
+		if not mount_frame.is_empty():
+			_overlay.draw_polyline(_closed(_to_px(Mounting.nozzle(placement, mount_frame))), SELECTED, _px(3.0), true)
+	_draw_envelope()
 	# The forward arrow, from the core.
 	for tile in _blueprint.tiles:
 		if tile.type == placement.tiles.core_id():
@@ -117,6 +159,31 @@ func _draw_overlay() -> void:
 			_overlay.draw_line(from, tip, Color(0.3, 0.9, 0.4, 0.8), _px(3.0), true)
 			var s := _px(9.0)
 			_overlay.draw_colored_polygon(PackedVector2Array([tip + Vector2(s, 0), tip + Vector2(-s * 0.6, -s * 0.8), tip + Vector2(-s * 0.6, s * 0.8)]), Color(0.3, 0.9, 0.4, 0.8))
+
+
+## Spokes for the rose (scaled to its strongest direction) and an arc each way for turning,
+## thicker for the stronger turn.
+func _draw_envelope() -> void:
+	if _envelope == null or _envelope.thrusters.is_empty():
+		return
+	var center := _center_of_mass * PX
+	var strongest := 0.0
+	for force in _envelope.rose:
+		strongest = maxf(strongest, force)
+	if strongest > 0.0:
+		for i in ThrustEnvelope.DIRECTIONS.size():
+			var reach := _envelope.rose[i] / strongest * ROSE_REACH_U * PX
+			if reach > 0.5:
+				_overlay.draw_line(center, center + ThrustEnvelope.direction(i) * reach, ROSE, _px(4.0), true)
+	var radius := ROSE_REACH_U * 0.55 * PX
+	var turn_max := maxf(_envelope.turn_left, _envelope.turn_right)
+	for side: Array in [[_envelope.turn_right, 1.0], [_envelope.turn_left, -1.0]]:
+		if side[0] <= ThrustEnvelope.NONE:
+			continue
+		# Both arcs start just off the nose: the right turn sweeps down (+y), the left up.
+		var width := _px(2.0 + 4.0 * side[0] / turn_max)
+		_overlay.draw_arc(center, radius, side[1] * 0.12, side[1] * 1.3, 20, TURN, width, true)
+	_overlay.draw_circle(center, _px(5.0), ROSE)
 
 
 ## A width of `screen_px` on screen, at the current zoom.

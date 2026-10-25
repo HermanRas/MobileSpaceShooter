@@ -771,10 +771,21 @@ ships collide, back keeps the hangar). ⚠️ A GDScript lambda captures a local
 an array for a flag set from a signal.
 
 #### 3.2 Thruster mounting `[D13]`
-- [ ] `data/thrusters.json` (§4.3: 3 types × Small/Medium/Large × L1–3)
-- [ ] Hangar: a part drawer with mounts on hardpoint edges, footprint checks, exhaust direction shown
-- [ ] Thrust rose and turn-strength overlay, the ship's forward arrow, and the §4.10 flight warnings (they never block saving)
-- **Done when:** mounting thrusters changes the rose correctly in the tests and on screen.
+✅ 2026-10-25. `data/thrusters.json` → `ThrusterLib` (type × S/M/L × L1–3; thrust, mass and
+GC price scale with size). `Mounting` (`src/model/mounting.gd`): a thruster covers 1/2/4 ports
+of a hardpoint edge and sticks out half its length. Its footprint is an **obstacle in
+`Placement`**, so tiles can't snap onto it, and a thruster blocked by a later edit becomes a
+red `mount` problem. Thrusters add point mass at their mounts in `ShipStats`. `ThrustEnvelope`
+computes the 8-way rose, turn strength each way (**+y is the ship's right; positive torque
+turns right**) and the §4.10 warnings (no forward thrust, can't brake, can't turn left/right,
+pulls to one side), shown in amber and never blocking. Hangar: a **Thrusters** palette tab
+(Pulse/Jet/Ion, L1–3, S/M/L), drag onto green slot markers, tap to select, drag to move (one
+undo step), Delete, mirror mode. The rose and turn arcs are drawn at the centre of mass.
+Nozzles are drawn in the ship mesh (a `thruster` atlas cell tinted per type from
+`visuals.json`), so the ship is still one draw call. The starter now carries its 3 Large pulse
+thrusters. Tested in `tests/model/test_thrusters.gd` (21 tests, including the §4.3
+invariants), and `drive_hangar` places and deletes thrusters by touch. ⚠️ The stats panel
+must ignore touches, or once it grew wider it swallowed pans that started under it.
 
 #### 3.3 Flight controller
 - [ ] `ship/flight_controller.gd`: stick → a throttle per thruster (§4.3), forces applied at the mount points, very low damping

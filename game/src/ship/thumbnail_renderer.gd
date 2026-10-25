@@ -30,7 +30,7 @@ func render(bp: Blueprint, placement: Placement, path: String) -> Error:
 			bounds = bounds.expand(p)
 	var span := maxf(bounds.size.x, bounds.size.y) * ShipMesh.PX_PER_U
 	var fit := SIZE * MARGIN / maxf(span, 1.0)
-	_mesh.mesh = ShipMesh.build(bp.tiles, placement)
+	_mesh.mesh = ShipMesh.build(bp.tiles, placement, bp)
 	_mesh.scale = Vector2(fit, fit)
 	_mesh.position = Vector2(SIZE, SIZE) * 0.5 - bounds.get_center() * ShipMesh.PX_PER_U * fit
 	_viewport.render_target_update_mode = SubViewport.UPDATE_ONCE

@@ -1,0 +1,39 @@
+{
+	"format": 1,
+	"_doc": "PLAN.md 4.3. Values are for a Large thruster; Small and Medium multiply thrust, mass and price by size_factor. Thrust is in force units (mass units x U/s^2); the body converts to pixels. A thruster covers size_u / port_pitch ports of one hardpoint edge (S 1, M 2, L 4) and sticks out depth_factor x its length.",
+	"size_factor": {"S": 0.25, "M": 0.5, "L": 1.0},
+	"depth_factor": 0.5,
+	"types": {
+		"pulse": {
+			"name": "Pulse",
+			"behaviour": "pulse",
+			"interval_s": 0.5,
+			"mass": 0.4,
+			"levels": [
+				{"thrust": 40, "price_gc": 60},
+				{"thrust": 45, "price_gc": 150},
+				{"thrust": 50, "price_gc": 360}
+			]
+		},
+		"jet": {
+			"name": "Jet",
+			"behaviour": "steady",
+			"mass": 0.6,
+			"levels": [
+				{"thrust": 70, "price_gc": 120},
+				{"thrust": 80, "price_gc": 300},
+				{"thrust": 90, "price_gc": 720}
+			]
+		},
+		"ion": {
+			"name": "Ion",
+			"behaviour": "ramp",
+			"mass": 0.8,
+			"levels": [
+				{"thrust": 120, "start": 30, "ramp_s": 3.0, "price_gc": 240},
+				{"thrust": 140, "start": 30, "ramp_s": 2.5, "price_gc": 600},
+				{"thrust": 160, "start": 30, "ramp_s": 2.0, "price_gc": 1440}
+			]
+		}
+	}
+}

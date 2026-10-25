@@ -41,6 +41,8 @@ class Analysis:
 
 var shapes: ShapeLib
 var tiles: TileLib
+## Optional: with it, mounted thrusters are checked against their data and add mass (3.2).
+var thrusters: ThrusterLib
 var max_tiles: int
 var area_u: float
 
@@ -128,7 +130,7 @@ func candidate_snaps(bp: Blueprint, type: StringName, shape_id: StringName, size
 	var steps := shapes.rotation_steps()
 	var pitch := shapes.port_pitch
 	var new_edges_at_zero := shapes.edges(shape_id, size, 0)
-	var placed := _placed_polygons(bp)
+	var placed := _obstacles(bp)
 	var seen := {}
 
 	for target in bp.tiles:
@@ -168,8 +170,9 @@ func candidate_snaps(bp: Blueprint, type: StringName, shape_id: StringName, size
 
 
 ## True when `polygon` overlaps no tile of `bp` (ignoring the ids in `ignore`).
+## Mounted parts count as obstacles; a tile's own parts are ignored along with it.
 func footprint_free(bp: Blueprint, polygon: PackedVector2Array, ignore: PackedInt32Array = []) -> bool:
-	var placed := _placed_polygons(bp).filter(func(p: _Placed) -> bool: return not ignore.has(p.id))
+	var placed := _obstacles(bp).filter(func(p: _Placed) -> bool: return not ignore.has(p.id))
 	var typed: Array[_Placed] = []
 	typed.assign(placed)
 	return not _overlaps_any(polygon, typed)
@@ -306,6 +309,7 @@ func analyze(bp: Blueprint) -> Analysis:
 		if not loose.is_empty():
 			problems.append(Problem.new(&"disconnected", loose,
 					"%d tile(s) aren't connected to the core" % loose.size()))
+	problems.append_array(Mounting.problems(self, bp, analysis.free_ports))
 	return analysis
 
 
@@ -371,6 +375,18 @@ func _placed_polygons(bp: Blueprint) -> Array[_Placed]:
 		placed.id = tile.id
 		placed.polygon = geometry[0]
 		placed.bounds = geometry[5]
+		out.append(placed)
+	return out
+
+
+## Tiles plus mounted parts' footprints (each tagged with its host tile's id).
+func _obstacles(bp: Blueprint) -> Array[_Placed]:
+	var out := _placed_polygons(bp)
+	for part in Mounting.footprints(self, bp):
+		var placed := _Placed.new()
+		placed.id = part["tile"]
+		placed.polygon = part["polygon"]
+		placed.bounds = _bounds(placed.polygon)
 		out.append(placed)
 	return out
 

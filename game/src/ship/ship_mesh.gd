@@ -23,25 +23,26 @@ static func make_material() -> ShaderMaterial:
 
 
 ## The mesh for `tiles` (all of a blueprint's, or one ghost tile). Positions are in pixels,
-## relative to the ship origin.
-static func build(tiles: Array, placement: Placement) -> ArrayMesh:
+## relative to the ship origin. With `bp`, the thrusters mounted on those tiles are drawn too,
+## in the same mesh, so the whole ship stays one draw call.
+static func build(tiles: Array, placement: Placement, bp: Blueprint = null) -> ArrayMesh:
 	var cells := _cell_names()
 	var vertices := PackedVector2Array()
 	var colors := PackedColorArray()
 	var uvs := PackedVector2Array()
+	var on_ship := {}
 	for tile: Blueprint.Tile in tiles:
-		var polygon := placement.tile_polygon(tile)
-		var center := ShipStats.polygon_centroid(polygon)
-		var cell := maxi(cells.find(String(tile.type)), 0)
-		for i in polygon.size():
-			var a := polygon[i]
-			var b := polygon[(i + 1) % polygon.size()]
-			var to_edge := _distance_to_line(center, a, b)
-			for corner: Array in [[center, to_edge], [a, 0.0], [b, 0.0]]:
-				var p: Vector2 = corner[0]
-				vertices.append(p * PX_PER_U)
-				colors.append(Color(tile.paint.r, tile.paint.g, tile.paint.b, corner[1]))
-				uvs.append(Vector2(cell * 1000.0 + LOCAL_OFFSET + p.x, LOCAL_OFFSET + p.y))
+		on_ship[tile.id] = true
+		_add_fan(vertices, colors, uvs, placement.tile_polygon(tile), maxi(cells.find(String(tile.type)), 0), tile.paint)
+	if bp != null and not bp.mounts.is_empty():
+		var thruster_cell := maxi(cells.find("thruster"), 0)
+		var tints: Dictionary = Assets.meta(ATLAS_ID).get("thruster_tints", {})
+		for mount in bp.mounts:
+			var type_id := ThrusterLib.type_of_part(str(mount.get("part", "")))
+			var mount_frame := Mounting.frame(placement, bp, mount) if on_ship.has(int(mount.get("tile", -1))) else {}
+			if type_id != &"" and not mount_frame.is_empty():
+				_add_fan(vertices, colors, uvs, Mounting.nozzle(placement, mount_frame), thruster_cell,
+						Color.from_string(str(tints.get(String(type_id), "#888888")), Color.GRAY))
 	var mesh := ArrayMesh.new()
 	if vertices.is_empty():
 		return mesh
@@ -54,10 +55,26 @@ static func build(tiles: Array, placement: Placement) -> ArrayMesh:
 	return mesh
 
 
+## One convex polygon as a triangle fan from its centroid; vertex alpha carries the distance
+## to the nearest edge for the shader's bevel and outline.
+static func _add_fan(vertices: PackedVector2Array, colors: PackedColorArray, uvs: PackedVector2Array,
+		polygon: PackedVector2Array, cell: int, paint: Color) -> void:
+	var center := ShipStats.polygon_centroid(polygon)
+	for i in polygon.size():
+		var a := polygon[i]
+		var b := polygon[(i + 1) % polygon.size()]
+		var to_edge := _distance_to_line(center, a, b)
+		for corner: Array in [[center, to_edge], [a, 0.0], [b, 0.0]]:
+			var p: Vector2 = corner[0]
+			vertices.append(p * PX_PER_U)
+			colors.append(Color(paint.r, paint.g, paint.b, corner[1]))
+			uvs.append(Vector2(cell * 1000.0 + LOCAL_OFFSET + p.x, LOCAL_OFFSET + p.y))
+
+
 static func _distance_to_line(p: Vector2, a: Vector2, b: Vector2) -> float:
 	var along := (b - a).normalized()
 	return absf((p - a).cross(along))
 
 
 static func _cell_names() -> Array:
-	return Assets.meta(ATLAS_ID).get("cells", ["core", "hull", "armor", "shield", "hardpoint"])
+	return Assets.meta(ATLAS_ID).get("cells", ["core", "hull", "armor", "shield", "hardpoint", "thruster"])

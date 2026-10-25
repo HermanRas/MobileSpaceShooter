@@ -37,6 +37,7 @@ var _fly_button: Button
 var _sandbox: FlightSandbox
 
 var _selected: int = -1
+var _selected_mount: int = -1
 ## Active carry: {"type", "shape", "size", "paint", "moving": tile id or -1, "finger": index}
 var _carry: Dictionary = {}
 var _carry_screen := Vector2.ZERO
@@ -48,12 +49,16 @@ var _touches: Dictionary = {}  # finger index -> screen position
 var _gesture: StringName = &""  # &"tap", &"pan", &"pinch"
 var _press_screen := Vector2.ZERO
 var _press_tile: int = -1
+var _press_mount: int = -1
+## While carrying a thruster: the slot it would go in ({} for none).
+var _thruster_slot: Dictionary = {}
 
 
 func _ready() -> void:
 	var tiles_table := Data.table(&"tiles")
 	placement = Placement.create(ShapeLib.from_table(Data.table(&"shapes")),
 			TileLib.from_table(tiles_table), tiles_table)
+	placement.thrusters = ThrusterLib.from_table(Data.table(&"thrusters"))
 	editor = HangarEditor.create(placement)
 	editor.changed.connect(_on_changed)
 
@@ -194,7 +199,8 @@ func _unhandled_input(event: InputEvent) -> void:
 			if _touches.size() == 1:
 				_gesture = &"tap"
 				_press_screen = touch.position
-				_press_tile = _tile_at(touch.position)
+				_press_mount = _mount_at(touch.position)
+				_press_tile = _tile_at(touch.position) if _press_mount < 0 else -1
 			else:
 				_gesture = &"pinch"
 		else:
@@ -212,7 +218,11 @@ func _unhandled_input(event: InputEvent) -> void:
 		if _gesture == &"pinch" and _touches.size() >= 2:
 			_pinch(drag.index, previous, drag.position)
 		elif _gesture == &"tap" and drag.position.distance_to(_press_screen) > TAP_SLOP_PX:
-			if _press_tile >= 0 and _press_tile == _selected and _press_tile != editor.core_tile().id:
+			if _press_mount >= 0 and _press_mount == _selected_mount:
+				_start_move_mount(_press_mount, drag.index, drag.position)
+				_touches.erase(drag.index)
+				_gesture = &""
+			elif _press_tile >= 0 and _press_tile == _selected and _press_tile != editor.core_tile().id:
 				_start_move(_press_tile, drag.index, drag.position)
 				_touches.erase(drag.index)
 				_gesture = &""
@@ -257,6 +267,33 @@ func _start_carry_new(type: StringName, shape: StringName, size: StringName) -> 
 	_carry_dirty = true
 
 
+func _start_carry_thruster(type_id: StringName, size: StringName, level: int) -> void:
+	_select(-1)
+	_carry = {"thruster": type_id, "size": size, "level": level, "moving_mount": -1, "finger": 0,
+			"slots": Mounting.thruster_slots(placement, editor.blueprint, size), "target": editor.blueprint}
+	_carry_screen = _touch_position_or_mouse(0)
+	_carry_dirty = true
+
+
+func _start_move_mount(index: int, finger: int, screen: Vector2) -> void:
+	var mount := editor.blueprint.mounts[index]
+	# Slots as if this thruster (and its mirror twin) weren't there.
+	var errors: PackedStringArray = []
+	var without := Blueprint.from_dict(editor.blueprint.to_dict(), errors)
+	without.mounts.remove_at(index)
+	var twin_id := editor.twin_of(int(mount["tile"]))
+	if twin_id >= 0:
+		var image := Mounting.mirrored(placement, editor.blueprint, mount, twin_id, editor.axis_y())
+		without.mounts.assign(without.mounts.filter(func(m: Dictionary) -> bool:
+			return image.is_empty() or not (int(m["tile"]) == int(image["tile"])
+					and int(m["edge"]) == int(image["edge"]) and int(m["port"]) == int(image["port"]))))
+	_carry = {"thruster": ThrusterLib.type_of_part(str(mount["part"])), "size": StringName(mount["size"]),
+			"level": int(mount["level"]), "moving_mount": index, "finger": finger,
+			"slots": Mounting.thruster_slots(placement, without, StringName(mount["size"])), "target": without}
+	_carry_screen = screen
+	_carry_dirty = true
+
+
 func _start_move(tile_id: int, finger: int, screen: Vector2) -> void:
 	var tile := editor.blueprint.tile_by_id(tile_id)
 	_carry = {"type": tile.type, "shape": tile.shape, "size": tile.size,
@@ -274,6 +311,9 @@ func _process(_delta: float) -> void:
 
 func _update_ghost() -> void:
 	if _carry.is_empty():
+		return
+	if _carry.has("thruster"):
+		_update_thruster_ghost()
 		return
 	var point_u := _camera.screen_to_world(_carry_screen + Vector2(0, -GHOST_LIFT_PX)) / PX
 	var target := editor.blueprint
@@ -295,6 +335,34 @@ func _update_ghost() -> void:
 		ghost.pos = point_u - ShipStats.polygon_centroid(placement.shapes.polygon(ghost.shape, ghost.size, ghost.rot))
 	_view.set_ghost(ghost, _snap != null)
 	_stats.show_delta(placement.tiles.tile(ghost.type) if _snap != null and _carry["moving"] < 0 else null, ghost.size)
+
+
+## A carried thruster snaps to the free slot whose centre is nearest the (lifted) finger.
+func _update_thruster_ghost() -> void:
+	var point_u := _camera.screen_to_world(_carry_screen + Vector2(0, -GHOST_LIFT_PX)) / PX
+	var target: Blueprint = _carry["target"]
+	var centers := PackedVector2Array()
+	var best_d := INF
+	var best_frame := {}
+	_thruster_slot = {}
+	for slot: Dictionary in _carry["slots"]:
+		var mount := slot.duplicate()
+		mount["size"] = String(_carry["size"])
+		var mount_frame := Mounting.frame(placement, target, mount)
+		centers.append(mount_frame["center"])
+		var d := (mount_frame["center"] as Vector2).distance_to(point_u)
+		if d < best_d and d <= SNAP_REACH_U:
+			best_d = d
+			_thruster_slot = slot
+			best_frame = mount_frame
+	var nozzle: PackedVector2Array
+	if not best_frame.is_empty():
+		nozzle = Mounting.nozzle(placement, best_frame)
+	else:
+		var half := placement.shapes.edge_u(_carry["size"]) * 0.5
+		nozzle = Mounting.nozzle(placement, {"a": point_u + Vector2(-half, 0), "b": point_u + Vector2(half, 0),
+				"normal": Vector2.DOWN, "length": half * 2.0})
+	_view.set_thruster_ghost(nozzle, not _thruster_slot.is_empty(), centers)
 
 
 ## The snap whose tile centre is nearest the finger, preferring the player's chosen rotation
@@ -345,6 +413,14 @@ func _cycle_carry_rotation() -> void:
 
 
 func _commit_carry() -> void:
+	if _carry.has("thruster"):
+		if not _thruster_slot.is_empty():
+			var done := editor.move_mount(_carry["moving_mount"], _thruster_slot) if _carry["moving_mount"] >= 0 \
+					else not editor.add_thruster(_carry["thruster"], _carry["size"], _carry["level"], _thruster_slot).is_empty()
+			if done:
+				_select_mount(editor.mount_index(_thruster_slot))
+		_end_carry()
+		return
 	if _snap != null:
 		_rot_pref = _snap.rot
 		if _carry["moving"] >= 0:
@@ -360,17 +436,23 @@ func _commit_carry() -> void:
 func _end_carry() -> void:
 	_carry = {}
 	_snap = null
+	_thruster_slot = {}
 	_view.set_ghost(null, false)
 	_stats.show_delta(null, &"")
 
 
 # ── toolbar actions ───────────────────────────────────────────────────────────
 
-## A tap selects the tile under the finger, or paints it while the paint panel is open.
+## A tap selects the thruster or tile under the finger, or paints the tile while the paint
+## panel is open.
 func _on_tap(screen: Vector2) -> void:
 	var tile_id := _tile_at(screen)
 	if not _paint.visible:
-		_select(tile_id)
+		var mount := _mount_at(screen)
+		if mount >= 0:
+			_select_mount(mount)
+		else:
+			_select(tile_id)
 		return
 	var tile := editor.blueprint.tile_by_id(tile_id)
 	if tile == null:
@@ -382,7 +464,16 @@ func _on_tap(screen: Vector2) -> void:
 	_paint.remember(_paint.color)
 
 
+func _select_mount(index: int) -> void:
+	_select(-1)
+	_selected_mount = index
+	_view.set_selected_mount(index)
+
+
 func _select(tile_id: int) -> void:
+	if _selected_mount >= 0:
+		_selected_mount = -1
+		_view.set_selected_mount(-1)
 	_selected = tile_id
 	var ids := PackedInt32Array()
 	if tile_id >= 0:
@@ -395,7 +486,10 @@ func _select(tile_id: int) -> void:
 
 
 func _delete_selected() -> void:
-	if _selected >= 0 and editor.remove(_selected):
+	if _selected_mount >= 0:
+		editor.remove_mount(_selected_mount)
+		_select(-1)
+	elif _selected >= 0 and editor.remove(_selected):
 		_select(-1)
 
 
@@ -458,14 +552,21 @@ func _on_changed() -> void:
 	var analyzed := Time.get_ticks_usec()
 	_view.show_blueprint(editor.blueprint, analysis)
 	var drawn := Time.get_ticks_usec()
-	if _selected >= 0 and editor.blueprint.tile_by_id(_selected) == null:
+	if _selected_mount >= editor.blueprint.mounts.size():
+		_select(-1)
+	elif _selected_mount >= 0:
+		_view.set_selected_mount(_selected_mount)
+	elif _selected >= 0 and editor.blueprint.tile_by_id(_selected) == null:
 		_select(-1)
 	else:
 		_select(_selected)
 	if _status != null:
 		_status.text = "%s  ·  %s" % [editor.blueprint.name, "ready to fly" if problems.is_empty() else "can't fly yet"]
 		_fly_button.disabled = not problems.is_empty()
-		_stats.show_stats(ShipStats.compute(editor.blueprint, placement), problems, placement.max_tiles)
+		var stats := ShipStats.compute(editor.blueprint, placement)
+		var envelope := ThrustEnvelope.compute(editor.blueprint, placement, stats)
+		_view.set_envelope(envelope, stats.center_of_mass)
+		_stats.show_stats(stats, problems, placement.max_tiles, envelope)
 	last_refresh_usec = Time.get_ticks_usec() - started
 	last_refresh_parts = {"analyze": analyzed - started, "view": drawn - analyzed,
 			"stats": started + last_refresh_usec - drawn}
@@ -476,6 +577,21 @@ func _refresh_buttons() -> void:
 		return
 	_undo_button.disabled = not editor.can_undo()
 	_redo_button.disabled = not editor.can_redo()
+
+
+## The mount whose nozzle is under the finger (with some slack, as a Small one is tiny), or -1.
+func _mount_at(screen: Vector2) -> int:
+	var point_u := _camera.screen_to_world(screen) / PX
+	var slack_u := TAP_SLOP_PX / PX / _camera.zoom.x
+	for i in range(editor.blueprint.mounts.size() - 1, -1, -1):
+		var mount_frame := Mounting.frame(placement, editor.blueprint, editor.blueprint.mounts[i])
+		if mount_frame.is_empty():
+			continue
+		var nozzle := Mounting.nozzle(placement, mount_frame)
+		if Geometry2D.is_point_in_polygon(point_u, nozzle) \
+				or ShipStats.polygon_centroid(nozzle).distance_to(point_u) <= slack_u:
+			return i
+	return -1
 
 
 func _tile_at(screen: Vector2) -> int:
@@ -506,6 +622,8 @@ func _build_ui() -> void:
 	_palette.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
 	_palette.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	_palette.drag_started.connect(_start_carry_new)
+	_palette.thrusters = placement.thrusters
+	_palette.thruster_drag_started.connect(_start_carry_thruster)
 	root.add_child(_palette)
 
 	var tools := VBoxContainer.new()

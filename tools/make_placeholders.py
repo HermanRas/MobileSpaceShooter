@@ -16,7 +16,8 @@ import numpy as np
 from PIL import Image
 
 CELL = 128
-CELLS = ["core", "hull", "armor", "shield", "hardpoint"]
+# Append new cells at the end: the noise generator is seeded, so earlier cells stay identical.
+CELLS = ["core", "hull", "armor", "shield", "hardpoint", "thruster"]
 OUT = Path(__file__).resolve().parent.parent / "game" / "assets" / "placeholders" / "tile_atlas.png"
 
 yy, xx = np.mgrid[0:CELL, 0:CELL].astype(np.float32)
@@ -89,8 +90,17 @@ def core() -> tuple[np.ndarray, np.ndarray]:
     return detail, np.clip(canopy * 1.4, 0, 1)
 
 
+def thruster() -> tuple[np.ndarray, np.ndarray]:
+    # Machined nozzle metal: cooling ribs across, a bright lip as trim.
+    ribs = line_mask(xx, 16, 2.0)
+    detail = 0.6 + periodic_noise(8, 0.08) - ribs * 0.3
+    lip = line_mask(xx, 128, 5.0)
+    return detail, np.clip(lip, 0, 1) * 0.7
+
+
 def main() -> None:
-    makers = {"core": core, "hull": hull, "armor": armor, "shield": shield, "hardpoint": hardpoint}
+    makers = {"core": core, "hull": hull, "armor": armor, "shield": shield, "hardpoint": hardpoint,
+              "thruster": thruster}
     atlas = np.zeros((CELL, CELL * len(CELLS), 4), dtype=np.uint8)
     for i, name in enumerate(CELLS):
         detail, trim = makers[name]()
