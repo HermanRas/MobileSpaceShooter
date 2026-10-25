@@ -16,8 +16,10 @@
 			"ion": ["#ffffff", "#9fe8ff", "#3a8bff", "#1030c0"]
 		},
 		"vis.fx.explosion": {
-			"_doc": "A ship's death (PLAN.md 4.2), drawn in code; no files. A white flash, an expanding ring and a burst of sparks, sized by the ship. Colours run hot -> cooling.",
+			"_doc": "A ship's death (PLAN.md 4.2), drawn in code; no files. A white flash, an expanding ring and a burst of sparks (fireballs), sized by the ship: spark_size is [min, max] as a share of the ship's length. Colours run hot -> cooling.",
 			"duration_s": 0.9,
+			"sparks": 96,
+			"spark_size": [0.09, 0.24],
 			"colors": ["#ffffff", "#ffd27a", "#ff7a1a", "#802000"]
 		}
 	}

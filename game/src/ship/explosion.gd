@@ -28,7 +28,7 @@ func _ready() -> void:
 	material = ThrusterFx._additive()
 	z_index = 1
 	var sparks := CPUParticles2D.new()
-	sparks.amount = 48
+	sparks.amount = int(meta.get("sparks", 96))
 	sparks.lifetime = _duration
 	sparks.one_shot = true
 	sparks.explosiveness = 1.0
@@ -39,8 +39,9 @@ func _ready() -> void:
 	sparks.damping_min = size_px * 0.5
 	sparks.damping_max = size_px * 1.2
 	sparks.texture = ThrusterFx._dot()
-	sparks.scale_amount_min = size_px * 0.06 / 32.0
-	sparks.scale_amount_max = size_px * 0.16 / 32.0
+	var spark_size: Array = meta.get("spark_size", [0.09, 0.24])
+	sparks.scale_amount_min = size_px * float(spark_size[0]) / 32.0
+	sparks.scale_amount_max = size_px * float(spark_size[1]) / 32.0
 	var ramp := Gradient.new()
 	ramp.offsets = PackedFloat32Array([0.0, 0.2, 0.6, 1.0])
 	ramp.colors = PackedColorArray([_colors[0], _colors[1], _colors[2], Color(_colors[3], 0.0)])
