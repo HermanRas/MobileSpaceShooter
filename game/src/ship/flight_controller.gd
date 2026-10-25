@@ -7,6 +7,9 @@ extends Node
 ## The stick is world-space, length ≤ 1, set by whoever is flying: the touch stick (3.4), the
 ## keyboard, or later an AI pilot.
 
+## A pulse thruster kicked this tick (for its puff, 3.6). `index` is in envelope order.
+signal kicked(index: int, throttle: float)
+
 const PX := ShipMesh.PX_PER_U
 
 var stick := Vector2.ZERO
@@ -41,6 +44,7 @@ func _physics_process(delta: float) -> void:
 		_ship.apply_force(turn * ((f["force"] as Vector2) * PX), turn * _offset(f["pos"]))
 	for j: Dictionary in out["impulses"]:
 		_ship.apply_impulse(turn * ((j["impulse"] as Vector2) * PX), turn * _offset(j["pos"]))
+		kicked.emit(j["index"], throttles[j["index"]])
 
 
 ## A thruster's position (U from the centre of mass, ship-local) as Godot wants it for

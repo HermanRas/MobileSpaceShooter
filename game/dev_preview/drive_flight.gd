@@ -177,6 +177,12 @@ func _step_fly_the_starter_with_the_stick() -> void:
 	await _physics_frames(240)
 	_check(absf(wrapf(ship.rotation + PI * 0.5, -PI, PI)) < 0.2,
 			"stick up: it turns left to face up (heading %.2f)" % ship.rotation)
+	# Three frames after a pulse kick, so the shot shows the exhaust.
+	var kicked := [false]
+	sandbox.pilot.kicked.connect(func(_i: int, _t: float) -> void: kicked[0] = true)
+	while not kicked[0]:
+		await _frames(1)
+	await _frames(6)
 	_save_shot("drive_flight_flying.png")
 
 	_touch_at(1, base + Vector2(0, -110), false)

@@ -840,9 +840,20 @@ setting `global_position` on an awake body is overwritten by the next physics st
 - [ ] Owner, on the phone: flying fast feels fast, and the edge is clearly signalled
 
 #### 3.6 Thruster VFX
-- [ ] Pulse: an orange puff burst per pulse. Jet: a red fire trail scaled by throttle. Ion: a short blue circular torch that brightens with the ramp.
-- [ ] L2 and L3 look visibly bigger. Use `CPUParticles2D` first, then measure `GPUParticles2D` on Compatibility.
-- **Done when:** the sandbox scene shows all 3 types × 3 sizes at L1 and L3, side by side (a dev_preview shot).
+✅ 2026-10-25. `ThrusterFx` (`src/ship/thruster_fx.gd`), one per thruster, fed by
+`ThrusterFxSet` from the FlightController:
+- **Pulse:** an orange puff on each kick (the controller's `kicked` signal).
+- **Jet:** a fire trail whose length follows the throttle.
+- **Ion:** a short round blue torch that brightens with its ramp.
+
+Size follows the thruster's width, and L2/L3 are ×1.3/×1.6 (`vis.fx.thrusters` in
+`visuals.json`, with the colours). It uses CPUParticles2D with a soft dot generated in code (no
+asset files), additive, drawn **under** the hull. `scenes/debug/thruster_fx_showcase.tscn`
+shows 3 types × 3 sizes at L1 and L3 (`tools/preview.sh … 1560x720 --frames=45`). ⚠️ **Pulse
+puffs use local coordinates.** In world space they were left behind and slid off-screen within
+a fraction of a second at cruise, because the camera leads the ship. Jet trails stay in world
+space so they bend on a turn. GPUParticles2D hasn't been measured yet; revisit if particles
+cost too much with 40 ships (15.1).
 
 **M1 — fly a ship you built.** Demo on the phone: build in the hangar → Test → fly → back.
 

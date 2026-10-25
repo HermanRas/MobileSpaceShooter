@@ -145,7 +145,7 @@ func throttles(cmd: Dictionary) -> PackedFloat32Array:
 
 
 ## Advances each thruster by `delta` at these throttles and returns what they do this step:
-##   {"forces": [{"pos", "force"}], "impulses": [{"pos", "impulse"}]}
+##   {"forces": [{"pos", "force"}], "impulses": [{"index", "pos", "impulse"}]}
 ## ship-local, positions relative to the centre of mass. Forces are held for the step;
 ## impulses (pulse kicks) are applied once.
 func step(throttle: PackedFloat32Array, delta: float) -> Dictionary:
@@ -177,7 +177,7 @@ func step(throttle: PackedFloat32Array, delta: float) -> Dictionary:
 				var interval: float = t["interval_s"]
 				if on and beat.get(interval, false):
 					# A pulse's rated thrust is its average: each kick carries one interval's worth.
-					impulses.append({"pos": t["pos"], "impulse": push * float(t["force"]) * interval * throttle[i]})
+					impulses.append({"index": i, "pos": t["pos"], "impulse": push * float(t["force"]) * interval * throttle[i]})
 			&"ramp":
 				var ramp_s: float = t["ramp_s"]
 				if on:

@@ -52,6 +52,10 @@ func open(bp: Blueprint, placement: Placement) -> void:
 	pilot.name = "Pilot"
 	ship.add_child(pilot)
 	pilot.attach(ship, flight)
+	var exhaust := ThrusterFxSet.new()
+	exhaust.name = "Exhaust"
+	ship.add_child(exhaust)
+	exhaust.attach(ship, pilot)
 	_overlay.draw.connect(_draw_pick)
 	ship.add_child(_overlay)
 
