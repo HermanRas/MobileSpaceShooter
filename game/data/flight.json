@@ -1,0 +1,15 @@
+{
+	"format": 1,
+	"_doc": "PLAN.md 4.3, Phase 3.3. How the flight controller turns a stick into thruster throttles. Units: U, seconds, radians. Top speed in a direction is push / (mass x linear_damp).",
+	"linear_damp": 0.5,
+	"angular_damp": 0.5,
+	"dead_zone": 0.15,
+	"turn_response": 6.0,
+	"turn_brake_margin": 0.7,
+	"max_spin": 4.0,
+	"brake_response": 1.0,
+	"stop_speed_u": 0.05,
+	"stop_spin": 0.05,
+	"min_throttle": 0.05,
+	"ion_cooldown_rate": 2.0
+}

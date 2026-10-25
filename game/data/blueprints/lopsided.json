@@ -1,0 +1,23 @@
+{
+	"format": 1,
+	"id": "lopsided",
+	"name": "Lopsided",
+	"author": "mss",
+	"tags": ["sample"],
+	"_doc": "PLAN.md 3.3, 4.10: deliberately bad. The starter missing its right rear thruster, so pushing forward also turns it right.",
+	"tiles": [
+		{"id": 0, "type": "core", "shape": "square", "size": "L", "pos": [0, 0], "rot": 0, "paint": "#d8d8d8"},
+		{"id": 1, "type": "hull", "shape": "square", "size": "L", "pos": [-1, 0], "rot": 0, "paint": "#8c96a0"},
+		{"id": 2, "type": "hull", "shape": "square", "size": "L", "pos": [0, -1], "rot": 0, "paint": "#8c96a0"},
+		{"id": 3, "type": "hull", "shape": "square", "size": "L", "pos": [0, 1], "rot": 0, "paint": "#8c96a0"},
+		{"id": 4, "type": "hardpoint", "shape": "square", "size": "L", "pos": [-1, -1], "rot": 0, "paint": "#3a3f45"},
+		{"id": 5, "type": "hardpoint", "shape": "square", "size": "L", "pos": [-1, 1], "rot": 0, "paint": "#3a3f45"},
+		{"id": 6, "type": "hardpoint", "shape": "square", "size": "L", "pos": [1, 0], "rot": 0, "paint": "#3a3f45"},
+		{"id": 7, "type": "hull", "shape": "wedge", "size": "L", "pos": [1, -1], "rot": 18, "paint": "#8c96a0"},
+		{"id": 8, "type": "hull", "shape": "wedge", "size": "L", "pos": [1, 1], "rot": 0, "paint": "#8c96a0"}
+	],
+	"mounts": [
+		{"tile": 4, "edge": 3, "port": 0, "part": "thruster.pulse", "size": "L", "level": 1},
+		{"tile": 6, "edge": 1, "port": 0, "part": "thruster.pulse", "size": "L", "level": 1}
+	]
+}

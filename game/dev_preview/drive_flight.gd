@@ -47,7 +47,58 @@ func _ready() -> void:
 	_check(JSON.stringify(_hangar.editor.blueprint.to_dict()) == before, "the hangar's ship is untouched")
 	_check(_hangar.editor.can_undo(), "the undo history survived the flight")
 	_check(_hangar._world.visible and _hangar._ui.visible, "the hangar is visible again")
+
+	await _step_fly_the_starter_with_the_stick()
 	_finish()
+
+
+## Phase 3.3/3.4: real touches on the stick fly the starter, through the real physics.
+func _step_fly_the_starter_with_the_stick() -> void:
+	var errors: PackedStringArray = []
+	_hangar.load_blueprint(Blueprint.from_dict(Data.json_dir("blueprints")["starter"], errors))
+	await _frames(2)
+	var sandbox: FlightSandbox = _hangar.fly()
+	await _physics_frames(2)
+	var ship := sandbox.ship
+	var base := Vector2(300, 400)
+
+	_touch_at(1, base, true)
+	await _frames(1)
+	_drag_to(1, base + Vector2(110, 0))  # full right: forward
+	await _physics_frames(90)
+	var speed := ship.linear_velocity.length() / PX
+	_check(ship.linear_velocity.x > 0.0 and speed > 2.0, "stick forward: it accelerates (%.2f U/s)" % speed)
+	_check(absf(ship.rotation) < 0.1, "and flies straight (heading %.3f)" % ship.rotation)
+
+	_drag_to(1, base + Vector2(0, -110))  # full up: a quarter turn left
+	await _physics_frames(240)
+	_check(absf(wrapf(ship.rotation + PI * 0.5, -PI, PI)) < 0.2,
+			"stick up: it turns left to face up (heading %.2f)" % ship.rotation)
+	_save_shot("drive_flight_flying.png")
+
+	_touch_at(1, base + Vector2(0, -110), false)
+	var peak := ship.linear_velocity.length()
+	await _physics_frames(60 * 8)
+	_check(ship.linear_velocity.length() < peak * 0.1,
+			"let go: it brakes (%.2f -> %.2f U/s)" % [peak / PX, ship.linear_velocity.length() / PX])
+	_check(absf(ship.angular_velocity) < 0.1, "and stops turning (%.3f rad/s)" % ship.angular_velocity)
+	_hangar.land()
+	await _frames(2)
+
+
+func _touch_at(finger: int, at: Vector2, pressed: bool) -> void:
+	var event := InputEventScreenTouch.new()
+	event.index = finger
+	event.position = at
+	event.pressed = pressed
+	Input.parse_input_event(event)
+
+
+func _drag_to(finger: int, at: Vector2) -> void:
+	var event := InputEventScreenDrag.new()
+	event.index = finger
+	event.position = at
+	Input.parse_input_event(event)
 
 
 func _step_taps_pick_the_right_tile(sandbox: FlightSandbox) -> void:

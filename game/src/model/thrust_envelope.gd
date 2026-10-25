@@ -25,7 +25,7 @@ const PULL_BALANCE := 0.5
 const PULL_MIN_LEVER_U := 0.05
 
 ## [{"mount": index, "type", "behaviour", "pos": U from the centre of mass, "push": unit
-## vector, "force"}]
+## vector, "force", "start", "ramp_s", "interval_s"}] (the last three from ThrusterLib.spec)
 var thrusters: Array[Dictionary] = []
 ## Total force available in each of DIRECTIONS (a thruster counts by the cosine of its angle).
 var rose := PackedFloat32Array([0, 0, 0, 0, 0, 0, 0, 0])
@@ -60,6 +60,7 @@ static func compute(bp: Blueprint, placement: Placement, stats: ShipStats = null
 				"mount": i, "type": type_id, "behaviour": spec["behaviour"],
 				"pos": (mount_frame["center"] as Vector2) - stats.center_of_mass,
 				"push": -(mount_frame["normal"] as Vector2), "force": spec["thrust"],
+				"start": spec["start"], "ramp_s": spec["ramp_s"], "interval_s": spec["interval_s"],
 			})
 	envelope._sum()
 	envelope._warn()
@@ -78,6 +79,14 @@ func turn_accel_right() -> float:
 
 func turn_accel_left() -> float:
 	return turn_left / inertia if inertia > 0.0 else 0.0
+
+
+## Total force available along a ship-local unit direction (each thruster by its cosine).
+func push_toward(direction_local: Vector2) -> float:
+	var total := 0.0
+	for t in thrusters:
+		total += maxf(0.0, (t["push"] as Vector2).dot(direction_local)) * float(t["force"])
+	return total
 
 
 func has_warning(code: StringName) -> bool:

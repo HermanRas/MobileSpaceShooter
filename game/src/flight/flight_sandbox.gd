@@ -3,15 +3,20 @@ extends Node
 ## Test-flying the ship being built (Phase 3; M1 is "build → Fly → back").
 ##
 ## Opened by the hangar on top of itself rather than as a scene change, so the hangar keeps
-## its undo history and unsaved edits. Phase 3.1: the ship spawns as a physics body, and
-## tapping it highlights the tile the physics query hit (the hit → tile table, checkable on
-## the phone). Controls arrive in 3.3–3.4, the starfield and follow camera in 3.5.
+## its undo history and unsaved edits. The ship spawns as a physics body flown by a
+## FlightController (3.3): a floating touch stick on the left of the screen, or WASD/arrows/a
+## gamepad. Tapping the ship elsewhere highlights the tile a physics query hit (the 3.1 check).
+## The starfield and follow camera come in 3.5.
 
 signal closed
 
 const PX := ShipMesh.PX_PER_U
 
+## The share of the screen's width, from the left, where a touch starts the stick.
+const STICK_ZONE := 0.4
+
 var ship: ShipBody
+var pilot: FlightController
 ## How long building the ship body took, for the debug Perf log.
 var last_spawn_usec: int = 0
 
@@ -19,6 +24,8 @@ var _camera := Camera2D.new()
 var _status := Label.new()
 var _picked := -1
 var _overlay := Node2D.new()
+var _stick := TouchStick.new()
+var _hud := Label.new()
 
 
 ## Spawns `bp` (already validated) at the origin.
@@ -33,6 +40,10 @@ func open(bp: Blueprint, placement: Placement) -> void:
 	ship = ShipBody.create(bp, placement)
 	last_spawn_usec = Time.get_ticks_usec() - started
 	world.add_child(ship)
+	pilot = FlightController.new()
+	pilot.name = "Pilot"
+	ship.add_child(pilot)
+	pilot.attach(ship, Data.table(&"flight"))
 	_overlay.draw.connect(_draw_pick)
 	ship.add_child(_overlay)
 
@@ -52,8 +63,12 @@ func close() -> void:
 
 
 func _process(_delta: float) -> void:
-	if ship:
-		_camera.position = ship.global_position
+	if ship == null:
+		return
+	pilot.stick = _stick.value if _stick.is_active() \
+			else Input.get_vector(&"move_left", &"move_right", &"move_up", &"move_down")
+	_camera.position = ship.global_position
+	_hud.text = "%.1f U/s%s" % [ship.linear_velocity.length() / PX, "  ·  braking" if pilot.braking and ship.linear_velocity.length() > 1.0 else ""]
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -105,9 +120,18 @@ func _show_status() -> void:
 func _build_ui() -> void:
 	var ui := CanvasLayer.new()
 	add_child(ui)
+	_stick.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_stick.anchor_right = STICK_ZONE
+	_stick.offset_right = 0.0
+	ui.add_child(_stick)
 	_status.position = Vector2(16, 12)
 	_status.add_theme_font_size_override(&"font_size", 20)
+	_status.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	ui.add_child(_status)
+	_hud.position = Vector2(16, 44)
+	_hud.add_theme_font_size_override(&"font_size", 20)
+	_hud.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ui.add_child(_hud)
 	var back := Button.new()
 	back.text = "Hangar"
 	back.size = Vector2(132, 56)

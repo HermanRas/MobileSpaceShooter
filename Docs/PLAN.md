@@ -206,7 +206,8 @@ How the flight controller uses whatever thrusters a ship has:
   motion and spin, and brings the ship to a stop if its thrusters can. A ship with nothing
   pointing the right way can't brake, and keeps drifting (§4.10).
 - An ion thruster keeps its ramp for as long as it stays on.
-- Damping is very low, so momentum carries. Top speed in a direction is the push that way ÷ mass.
+- Damping is low, so momentum carries. Top speed in a direction is the push that way ÷ (mass ×
+  `linear_damp`), with `linear_damp` 0.5 in `data/flight.json`. The starter tops out around 12 U/s.
 - The hangar shows a **thrust rose** (the maximum push in 8 local directions), the **turn
   strength** each way, and the acceleration, so problems show up before flying.
 
@@ -788,15 +789,27 @@ invariants), and `drive_hangar` places and deletes thrusters by touch. ⚠️ Th
 must ignore touches, or once it grew wider it swallowed pans that started under it.
 
 #### 3.3 Flight controller
-- [ ] `ship/flight_controller.gd`: stick → a throttle per thruster (§4.3), forces applied at the mount points, very low damping
-- [ ] Auto-brake when the stick is released: fire whatever opposes the motion and spin, down to 0
-- [ ] Pulse impulses, steady jet force, ion ramp while it stays on
-- [ ] Sample ships in `data/blueprints/`: `starter` (2 rear + 1 front), `strafer` (thrusters facing 4 ways), and the deliberately bad `no_forward` and `lopsided`
-- [ ] Tests: the §4.3 invariants for every size; top speed = push ÷ mass within tolerance; `starter` turns left when the right rear thruster fires and brakes with its front one; `strafer` moves sideways; a released stick brings a ship to 0 when it can; one centred rear thruster can't turn; `no_forward` drifts
-- **Done when:** the invariant tests pass, the three thruster types feel distinct in the sandbox, and the bad ships fly exactly as badly as they should.
+✅ 2026-10-25, except the owner's feel check below. `FlightModel` (`src/model/flight_model.gd`):
+the stick is **world-space and says where to go**. The ship turns toward it (planning its spin
+so it can stop in time) and pushes that way. Throttle per thruster = how much its push helps
+the move + how much its torque helps the turn, clamped 0..1, so stick up-left on an up-facing
+starter fires the right rear thruster. Released, it auto-brakes, asking for a deceleration
+proportional to speed. Pulse kicks, steady jets and ion ramps (cooling twice as fast as they
+build) are all handled. `FlightController` (`src/ship/`) applies it to `ShipBody` each physics
+tick, and tuning is in `data/flight.json`. Samples: `strafer`, `no_forward` and `lopsided` in
+`data/blueprints/`. `FlightSim` integrates like Godot for headless tests
+(`tests/model/test_flight.gd`, 11 tests, covering every §4.3 behaviour listed in the old
+checklist), and `drive_flight` flies the starter with real touches: forward, quarter turn,
+brake to 0.01 U/s. ⚠️ **All pulse thrusters share one clock**: out of step, each kick is a
+one-sided shove and the ship yaws back and forth. A pulse's share of the *feedback* (turning,
+braking) is scaled to one interval's worth, or a kick overshoots. `dev_preview/trace_flight.tscn`
+prints a frame-by-frame trace.
+- [ ] Owner, on the phone: the three thruster types feel distinct, and the bad ships fly as badly as they should
 
 #### 3.4 Touch controls
-- [ ] A floating virtual stick (appears where the thumb lands on the left half), with a dead zone
+- [x] A floating virtual stick: `TouchStick` (`src/ui/controls/`), in the left 40% of the
+  sandbox (so taps on the ship still reach it), one finger per stick. The dead zone is in
+  `flight.json`. WASD, the arrows and a gamepad also fly.
 - [ ] The 2-stick layout (FIRE and SWITCH placeholders) and the 1-stick layout; switched in Settings
 - [ ] The handedness mirror
 - **Done when:** both schemes fly on the phone, and multi-touch (stick + fire at once) works.

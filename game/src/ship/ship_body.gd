@@ -15,6 +15,8 @@ const PX := ShipMesh.PX_PER_U
 var blueprint: Blueprint
 var placement: Placement
 var stats: ShipStats
+## What the thrusters can do (3.2); the FlightController flies with it.
+var envelope: ThrustEnvelope
 
 var _mesh := MeshInstance2D.new()
 ## Shape owner id -> tile id.
@@ -63,6 +65,7 @@ func build(bp: Blueprint, placement_rules: Placement) -> void:
 	_mesh.mesh = ShipMesh.build(built, placement, bp)
 
 	stats = ShipStats.compute(bp, placement)
+	envelope = ThrustEnvelope.compute(bp, placement, stats)
 	mass = maxf(stats.mass, 0.001)
 	center_of_mass = stats.center_of_mass * PX
 	inertia = maxf(stats.inertia * PX * PX, 0.001)

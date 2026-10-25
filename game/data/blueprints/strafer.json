@@ -1,0 +1,24 @@
+{
+	"format": 1,
+	"id": "strafer",
+	"name": "Strafer",
+	"author": "mss",
+	"tags": ["sample"],
+	"_doc": "PLAN.md 3.3: thrusters facing all 4 ways. Split rear pulses steer, a front pulse brakes, and Medium jets on the top and bottom hardpoints (above and below the core) push sideways through the centre of mass.",
+	"tiles": [
+		{"id": 0, "type": "core", "shape": "square", "size": "L", "pos": [0, 0], "rot": 0, "paint": "#d8d8d8"},
+		{"id": 1, "type": "hardpoint", "shape": "square", "size": "L", "pos": [0, -1], "rot": 0, "paint": "#2e5d8a"},
+		{"id": 2, "type": "hardpoint", "shape": "square", "size": "L", "pos": [0, 1], "rot": 0, "paint": "#2e5d8a"},
+		{"id": 3, "type": "hull", "shape": "square", "size": "L", "pos": [-1, 0], "rot": 0, "paint": "#8c96a0"},
+		{"id": 4, "type": "hardpoint", "shape": "square", "size": "L", "pos": [-1, -1], "rot": 0, "paint": "#3a3f45"},
+		{"id": 5, "type": "hardpoint", "shape": "square", "size": "L", "pos": [-1, 1], "rot": 0, "paint": "#3a3f45"},
+		{"id": 6, "type": "hardpoint", "shape": "square", "size": "L", "pos": [1, 0], "rot": 0, "paint": "#3a3f45"}
+	],
+	"mounts": [
+		{"tile": 4, "edge": 3, "port": 0, "part": "thruster.pulse", "size": "L", "level": 1},
+		{"tile": 5, "edge": 3, "port": 0, "part": "thruster.pulse", "size": "L", "level": 1},
+		{"tile": 6, "edge": 1, "port": 0, "part": "thruster.pulse", "size": "L", "level": 1},
+		{"tile": 1, "edge": 0, "port": 0, "part": "thruster.jet", "size": "M", "level": 1},
+		{"tile": 2, "edge": 2, "port": 0, "part": "thruster.jet", "size": "M", "level": 1}
+	]
+}
