@@ -1171,7 +1171,11 @@ must ignore touches, or once it grew wider it swallowed pans that started under 
 - **Done when:** a new player builds and flies with no outside help.
 
 #### 15.3 Store and distribution `[D14]`
-- [ ] Final title, icon, screenshots, trailer GIF; itch.io, GitHub; optionally F-Droid and Play
+- [x] Icon and splash (owner's art, 2026-10-25): `tools/make_branding.py` builds
+  `game/assets/branding/` from `art_src/`. The adaptive icon is shrunk to survive a round mask;
+  the splash is cropped to 2.17:1 above its baked-in loading bar. ⚠️ Two fighters in the splash
+  look like X-wings: review before a public release.
+- [ ] Final title, screenshots, trailer GIF; itch.io, GitHub; optionally F-Droid and Play
 - **Done when:** v1.0 is published.
 
 #### 15.4 Release builds

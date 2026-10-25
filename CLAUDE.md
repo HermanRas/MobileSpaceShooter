@@ -17,6 +17,7 @@ tools/preview.sh res://scenes/debug/blueprint_view.tscn   # screenshot a scene (
 tools/drive.sh res://dev_preview/drive_hangar.tscn       # play the hangar with fake touches; exit 0 = pass
 tools/drive.sh res://dev_preview/drive_flight.tscn       # hangar -> Fly -> hits, draw calls, collisions -> back
 tools/run.sh python3 -I tools/licence_audit.py            # every asset declared?
+tools/run.sh python3 -I tools/make_branding.py            # icon + splash from art_src/ -> game/assets/branding/
 tools/android.sh export|devices|deploy|logcat             # see Docs/MOBILE_DEPLOY.md
 tools/android.sh perf                                     # phone fps / frame time / refresh (debug builds)
 tools/android.sh shot NAME                                # phone screenshot -> build/phone_NAME.png
