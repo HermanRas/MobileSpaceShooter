@@ -2,7 +2,7 @@
 	"format": 1,
 	"id": "starter",
 	"name": "Starter",
-	"author": "msp",
+	"author": "mss",
 	"tags": ["starter", "pinned"],
 	"_doc": "PLAN.md 4.10. Forward is +x. Hardpoints at rear-left, rear-right and front take the 3 pulse thrusters in Phase 3.2; the front one also takes the single gatling.",
 	"tiles": [

@@ -2,7 +2,7 @@
 	"format": 1,
 	"id": "brick",
 	"name": "Brick",
-	"author": "msp",
+	"author": "mss",
 	"tags": ["sample"],
 	"_doc": "All armor, 3 x 3: the slow tank end of D10.",
 	"tiles": [

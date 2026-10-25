@@ -75,7 +75,7 @@ func _ready() -> void:
 	var started := Time.get_ticks_msec()
 	OS.add_logger(_spy)
 
-	print_rich("[b]MSP test run[/b]  Godot %s" % Engine.get_version_info().string)
+	print_rich("[b]MSS test run[/b]  Godot %s" % Engine.get_version_info().string)
 	print("")
 
 	var files := _discover(TEST_ROOT)

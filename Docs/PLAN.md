@@ -1,4 +1,4 @@
-# MSP — Mobile Space Shooter: Game & Implementation Plan
+# MSS — Mobile Space Shooter: Game & Implementation Plan
 
 Companion to [IDEA.md](IDEA.md), which describes what we're building. This document covers
 **how we build it**: the locked decisions, the numbers, the architecture, and the phase
@@ -93,7 +93,7 @@ mode and comes last.
 | **D11** | Which world-map tiles you can see | **Story tiles, plus every tile within 5 hexes of your ship** | 9.3 |
 | **D12** | When job rewards pay | **On return to a hangar.** "Save and return to hangar" pays at once, but then you have to fly all the way back out. Carrying rewards further is your own risk. | 4.9, 12.1 |
 | **D13** | Thruster sizes | **Every thruster type comes in Small, Medium and Large**, and they can be mixed on one ship | 4.3 |
-| **D14** | Title, package id, stores | Working title "MSP", package id `com.example.msp`, itch.io + GitHub Releases first | 15.3 |
+| **D14** | Title, package id, stores | Working title "MSS", package id `com.example.mss`, itch.io + GitHub Releases first | 15.3 |
 | **D15** | Reference phone | **The same phone as AOD**: HONOR LNA-NX1, Mali-G610 (§5.5). Creative gets a performance test (7.5). | 0.9, 7.5 |
 | **D16** | Status board | **None**, since this is a quick project. Status lives in this file's checkboxes. | – |
 | **D17** | Selling the starter ship's parts | Shops **warn before you sell your last thruster or your last gun**, but allow it. The starter ship has 3 thrusters and 1 gun. | 4.10, 11.4 |
@@ -365,7 +365,7 @@ left/right", "pulls to one side".
 ### 5.1 Repository layout
 
 ```
-MSP/
+MSS/
   README.md  LICENSE  CREDITS.md  GeminiCopyRight.md  CLAUDE.md
   Docs/            IDEA.md PLAN.md ART_PROMPT.md STORY.md MOBILE_DEPLOY.md
   insperationPictures/                 # reference images, never shipped
@@ -464,6 +464,18 @@ MediaTek MT6858, **Mali-G610 MC2**, OpenGL ES 3.2, arm64-v8a only, 2600 × 1200 
 | Ship rendering | **One `ArrayMesh` per ship** built from its tile polygons (one draw call), not a node per tile. Rebuilt only when a tile is destroyed. |
 | Projectiles | Pooled data plus `MultiMeshInstance2D` for drawing. Hits use `intersect_ray` per projectile per tick. **No node per bullet.** |
 | Hit → tile | Each tile is its own `CollisionPolygon2D`, and a shape-index → tile-id table resolves which tile was hit |
+| Hangar edit refresh | **≤ ~18 ms on a 150-tile ship** (one dropped frame at the cap). The owner accepted this on the phone, 2026-10-25 |
+
+**Measured on the phone (2026-10-25, debug build):** the menu and the hangar both hold a steady
+60 fps (the display can do 120 Hz; the game runs at 60). The hangar draws in 66 calls, and the
+app uses about 40 MB. A scene change costs one ~150 ms frame. A 150-tile edit refresh takes
+15–18 ms (analyze ~9, mesh ~3.5, stats ~3). The phone is **~3.5× slower than the dev PC** at
+GDScript, so a PC timing × 3.5 is a fair guess before deploying. Read these numbers with
+`tools/android.sh perf` (the debug-only `Perf` autoload).
+
+**Android's bottom gesture strip** (130 px on this phone, ~78 canvas px) sends the game home
+on any drag that starts there, even in immersive mode. Only taps belong in that strip; no drag
+may start there.
 
 ---
 
@@ -580,25 +592,23 @@ llvmpipe**, so no window opens on the desktop. ⚠️ `docker run` needs `--init
 off-centre menu.
 
 #### 0.8 Tools container
-✅ 2026-10-25. One image, `msp-tools:1` (`tools/docker/tools.Dockerfile`: Ubuntu 24.04,
+✅ 2026-10-25. One image, `mss-tools:1` (`tools/docker/tools.Dockerfile`: Ubuntu 24.04,
 Pillow, numpy, Xvfb, Mesa), serves both the art pipeline and the screenshots. `tools/run.sh`
 builds it on first use, mounts the repo at `/work` and Godot at `/opt/godot/godot`, and runs as
 the host uid. `tools/licence_audit.py` checks for missing and stale rows (exit 1 on either).
 **The slicer port moved to A.1:** AOD's ~800-line slicer is tuned sheet by sheet, so it gets
-ported against MSP's first real Gemini sheet rather than a made-up one.
+ported against MSS's first real Gemini sheet rather than a made-up one.
 
 #### 0.9 Android pipeline in Docker `[D15]`
-🟡 2026-10-25, built but **not yet run on the phone** (none was connected).
-`tools/android.sh export|devices|install|run|deploy|logcat` uses the `msp-android:1` image
+✅ 2026-10-25. Runs on the reference phone from one `tools/android.sh deploy`; fps is in §5.5.
+`tools/android.sh export|devices|install|run|deploy|logcat|log|perf|shot|adb` uses the `mss-android:1` image
 (JDK 17, SDK platform 35 + build-tools 35.0.1, Android export templates only; 1.8 GB). Building
 the image accepts the Android SDK licence. `tools/android.sh export` produces a signed
-28 MB `build/msp-debug.apk` containing `data/*.json` and no tests. adb runs in the container
+28 MB `build/mss-debug.apk` containing `data/*.json` and no tests. adb runs in the container
 as root to reach USB, then hands its key files back to the host user. Commands and gotchas
 are in [MOBILE_DEPLOY.md](MOBILE_DEPLOY.md). ⚠️ Android export needs
 `import_etc2_astc=true`, and JSON only ships because the preset's include filter names it.
-- [ ] Owner: plug in the phone and run `tools/android.sh deploy`
-- [ ] Record the empty-scene fps on the reference phone in §5.5
-- **Done when:** the placeholder menu runs on the owner's phone from one command.
+⚠️ Honor drops app output from logcat, so `Perf` also writes `user://perf.log`.
 
 #### 0.10 Workflow docs
 ✅ 2026-10-25. `README.md`, plus the project `CLAUDE.md` (every command: test, screenshot,
@@ -685,7 +695,9 @@ ports show while carrying. **Rotate works on the selected tile** (a second finge
 button mid-drag on Android), cycling its valid orientations in place; the chosen rotation sticks
 for the next drop. `R` rotates mid-drag on desktop. ⚠️ **The carry's release must not be marked
 handled**, or the GUI keeps touch focus on the palette swatch and the next tap never reaches
-the ship.
+the ship. ⚠️ **The tabs sit below the shapes** so that no drag starts in Android's bottom gesture
+strip (§5.5); with the shapes at the bottom, the first drag on the phone sent the game home.
+A real drag from the palette onto the core works on the phone.
 - [ ] On the phone: build a 20-tile ship without a misplacement
 
 #### 2.3 Editing
@@ -711,7 +723,7 @@ tap paints. Paint round-trips with the blueprint (1.3), and `drive_hangar` check
 painting.
 
 #### 2.5 Stats panel
-🟡 2026-10-25, built; **the phone timing check is still open**. `StatsPanel` shows tiles, HP,
+✅ 2026-10-25. `StatsPanel` shows tiles, HP,
 armor, shield, mass and cost, and while a tile is carried it shows what that tile adds ("+100
 HP"), read from the tile definition so it's cheap during a drag. Acceleration reads "no
 thrusters" until 3.2. Problems are listed (the first 3), and their tiles pulse red. **Speed:** a
@@ -720,11 +732,14 @@ thrusters" until 3.2. Problems are listed (the first 3), and their tiles pulse r
 and an allocation-free port search with the grid offset so regular ports never sit on a cell
 boundary. `drive_hangar` checks the panel matches `ShipStats` and the refresh time. ⚠️
 `drive_hangar` also has a script-error watcher: before it, a step that crashed half-way still
-reported PASS.
-- [ ] On the phone: a 150-tile edit refresh in under 1 frame (or make it incremental)
+reported PASS. **On the phone** it was 29 ms (analyze alone 21) and is now 15–18 ms,
+which the owner accepted as the budget (§5.5). That came from matching each port once into
+linked-list buckets, union-find for connectivity, per-tile cached ports and cell keys,
+memoized `TileDef.stats/cost`, and a stamp on each tile so a cache hit skips the string key.
+The desktop median is 5 ms. `dev_preview/bench_analyze.tscn` times each part.
 
 #### 2.6 Blueprint library UI
-🟡 2026-10-25, built; **the phone check is still open**. `BlueprintLibrary`
+✅ 2026-10-25. Load, Save and thumbnails also checked on the phone. `BlueprintLibrary`
 (`src/ship/blueprint_library.gd`) keeps the **device-wide** library `[D6]` in
 `user://library/<id>.json` with a `<id>.png` thumbnail beside each, and writes through `Save`
 (atomic, with `.bak`). `ThumbnailRenderer` draws one frame of a private `SubViewport` per save.
@@ -735,7 +750,6 @@ checks each thumbnail actually contains the ship, reloads one byte-for-byte, ren
 deletes. ⚠️ `set_anchors_preset()` leaves the old offsets in place: use
 `set_anchors_and_offsets_preset()` for a full-screen panel. 7.3's "Publish" will mark a library
 ship as buyable rather than add a second store.
-- [ ] On the phone: save 10 ships, browse by thumbnail, reload one
 
 ---
 
@@ -907,7 +921,7 @@ Goal: put the ship you built into space and fly it.
 - **Done when:** a ship published by profile A appears in profile B's shop.
 
 #### 7.4 Save ships to files and share them
-- [ ] **Save ship to file**: a `.mspship` file (the blueprint JSON) to send to friends, and **Load ship from file** on their end
+- [ ] **Save ship to file**: a `.mssship` file (the blueprint JSON) to send to friends, and **Load ship from file** on their end
 - [ ] On Android, save and open through the system file picker (Godot's native file dialog; confirm it works on 4.7.1 here). If it doesn't, write to the Documents folder, where any app can send the file. The Android share sheet needs a plugin, so it isn't in v1.
 - [ ] A share code (compressed base64 text) as a fallback for pasting into a chat
 - [ ] Dev path: save a ship from Creative into `data/enemies/` (this is how enemies get authored)

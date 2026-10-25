@@ -4,6 +4,11 @@ extends PanelContainer
 ##
 ## Pressing a shape emits `drag_started`; from then on the hangar controller follows the finger
 ## and handles the release, so the palette doesn't need to know where the tile lands.
+##
+## The tabs sit under the shapes on purpose. Android keeps the bottom strip of the screen for
+## its home gesture even in immersive mode (130 px on the reference phone, ~78 canvas px), and a
+## drag that starts there sends the game to the background. Taps there are fine, so the
+## tap-only tabs fill that strip and every drag starts above it.
 
 signal drag_started(type: StringName, shape: StringName, size: StringName)
 
@@ -13,6 +18,8 @@ const TYPE_COLORS := {
 	&"shield": Color(0.25, 0.5, 0.78), &"hardpoint": Color(0.24, 0.26, 0.29),
 }
 const BUTTON := Vector2(76, 76)
+## At least the phone's bottom gesture strip, in canvas pixels (see the note above).
+const GESTURE_STRIP := 80.0
 
 var shapes: ShapeLib
 var type: StringName = &"hull"
@@ -24,6 +31,7 @@ var _shape_row := HBoxContainer.new()
 func _ready() -> void:
 	var column := VBoxContainer.new()
 	add_child(column)
+	column.add_child(_shape_row)
 	var tabs := HBoxContainer.new()
 	column.add_child(tabs)
 	var type_group := ButtonGroup.new()
@@ -33,7 +41,7 @@ func _ready() -> void:
 		tab.toggle_mode = true
 		tab.button_group = type_group
 		tab.button_pressed = tile_type == type
-		tab.custom_minimum_size = Vector2(120, 48)
+		tab.custom_minimum_size = Vector2(120, GESTURE_STRIP)
 		tab.toggled.connect(func(on: bool) -> void:
 			if on:
 				type = tile_type
@@ -47,13 +55,12 @@ func _ready() -> void:
 		size_button.toggle_mode = true
 		size_button.button_group = size_group
 		size_button.button_pressed = size_code == tile_size
-		size_button.custom_minimum_size = Vector2(56, 48)
+		size_button.custom_minimum_size = Vector2(72, GESTURE_STRIP)
 		size_button.toggled.connect(func(on: bool) -> void:
 			if on:
 				tile_size = size_code
 				_refresh_shapes())
 		tabs.add_child(size_button)
-	column.add_child(_shape_row)
 	_refresh_shapes()
 
 

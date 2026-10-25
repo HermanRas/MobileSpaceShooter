@@ -38,8 +38,9 @@ static func compute(bp: Blueprint, placement: Placement) -> ShipStats:
 		stats.shield_cap += tile_stats[&"shield_cap"]
 		stats.shield_regen += tile_stats[&"shield_regen"]
 		stats.mass += tile_mass
-		for material: StringName in def.cost(tile.size):
-			stats.cost[material] = stats.cost.get(material, 0) + def.cost(tile.size)[material]
+		var tile_cost := def.cost(tile.size)
+		for material: StringName in tile_cost:
+			stats.cost[material] = stats.cost.get(material, 0) + tile_cost[material]
 		var centroid := polygon_centroid(polygon)
 		var own_inertia := tile_mass * polygon_polar_moment(polygon, centroid) / area if area > 0.0 else 0.0
 		parts.append([tile_mass, centroid, own_inertia])

@@ -20,6 +20,10 @@ class Tile:
 	## Rotation in steps of `rotation_step_deg` (15°).
 	var rot: int
 	var paint: Color
+	## Placement's geometry for this tile, and the [placement, shape, size, rot, pos] it was
+	## built from. Not saved; a stale stamp just means it's rebuilt.
+	var geometry: Array = []
+	var geometry_stamp: Array = []
 
 	func to_dict() -> Dictionary:
 		return {

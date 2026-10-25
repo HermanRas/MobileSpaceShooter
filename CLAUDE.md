@@ -1,4 +1,4 @@
-# MSP: instructions for agents
+# MSS: instructions for agents
 
 Read [Docs/PLAN.md](Docs/PLAN.md) first. It's the source of truth for decisions (§2–§3),
 the design numbers (§4), the architecture (§5) and what to build next (§7). Status lives in
@@ -17,6 +17,9 @@ tools/preview.sh res://scenes/debug/blueprint_view.tscn   # screenshot a scene (
 tools/drive.sh res://dev_preview/drive_hangar.tscn       # play the hangar with fake touches; exit 0 = pass
 tools/run.sh python3 -I tools/licence_audit.py            # every asset declared?
 tools/android.sh export|devices|deploy|logcat             # see Docs/MOBILE_DEPLOY.md
+tools/android.sh perf                                     # phone fps / frame time / refresh (debug builds)
+tools/android.sh shot NAME                                # phone screenshot -> build/phone_NAME.png
+tools/android.sh adb shell input tap X Y                  # drive the phone (screen px, landscape)
 ```
 
 ## Rules

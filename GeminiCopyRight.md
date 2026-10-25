@@ -1,12 +1,12 @@
 # Google Gemini output: the terms as they stand
 
-MSP ships art the project owner generated with Google Gemini on a consumer subscription:
+MSS ships art the project owner generated with Google Gemini on a consumer subscription:
 UI chrome, icons, tile materials, part sprites, portraits and station art. Every generated
 file is declared in [`game/assets/LICENCES.md`](game/assets/LICENCES.md). This file is the
 evidence behind the claim that we may ship it.
 
 ⚠️ **These quotes were read for AOD_Mobile on 2026-09-04 and copied here on 2026-10-25.
-They haven't been re-read for MSP yet.** Re-read every linked page before MSP's first
+They haven't been re-read for MSS yet.** Re-read every linked page before MSS's first
 public release (PLAN.md 8.8), then update the dates here. Google has moved these terms
 before (§1.1).
 
@@ -16,7 +16,7 @@ before (§1.1).
 
 Which agreement applies is decided by **how** the output was generated, not by who generated it.
 
-| Tier | The operative document | Read on | Applies to MSP? |
+| Tier | The operative document | Read on | Applies to MSS? |
 |---|---|---|---|
 | **Consumer Gemini** (free, or a paid Google AI Pro / Ultra subscription) | [Google Terms of Service](https://policies.google.com/terms), *Your content* → *License* | effective **30 July 2026** | ✅ **Yes** |
 | **Gemini API / AI Studio** | [Gemini API Additional Terms of Service](https://ai.google.dev/gemini-api/terms) | effective **23 March 2026**, updated **28 April 2026** | no |
@@ -52,14 +52,14 @@ by Google" doesn't mean "exclusively ours".
 
 ### 2.2 What's prohibited
 
-- **Passing it off as human-made.** MSP complies by construction: `LICENCES.md` declares
+- **Passing it off as human-made.** MSS complies by construction: `LICENCES.md` declares
   every generated file, `CREDITS.md` says so on the Credits screen, and this file exists.
   Gemini output also carries a SynthID watermark.
 - **Training ML models on it.** This project doesn't.
 
 ### 2.3 Commercial use
 
-Permitted on every tier, with no royalty. MSP is free and open source, so this matters least.
+Permitted on every tier, with no royalty. MSS is free and open source, so this matters least.
 
 ---
 
@@ -75,7 +75,7 @@ for the law, and under US law the answer is **no**:
 - ***Thaler v. Perlmutter***: the appeals court affirmed refusal to register a purely
   machine-generated work.
 
-**In plain terms:** MSP's generated art is ours to ship and modify, and **probably not ours
+**In plain terms:** MSS's generated art is ours to ship and modify, and **probably not ours
 to restrict**. Treat it as effectively unprotectable, not as MIT-licensed code. That costs
 nothing while the game is free.
 
@@ -93,7 +93,7 @@ are). Nothing in this project claims the prompts were withheld from training.
 ## 5. Indemnification: none
 
 Google's generative-AI indemnity covers Google Cloud products (Vertex AI and others), not
-consumer subscriptions. MSP has none. Any third-party claim would be ours to carry.
+consumer subscriptions. MSS has none. Any third-party claim would be ours to carry.
 
 ---
 

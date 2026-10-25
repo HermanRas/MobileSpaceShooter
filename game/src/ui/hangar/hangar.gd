@@ -393,15 +393,19 @@ func _rotate_selected() -> void:
 	_rot_pref = next.rot
 
 
-## Microseconds the last full refresh (validate + stats + mesh) took; drive_hangar reads it.
+## Microseconds the last full refresh (validate + stats + mesh) took; drive_hangar reads it,
+## and the debug Perf log prints it with its parts.
 var last_refresh_usec: int = 0
+var last_refresh_parts := {}
 
 
 func _on_changed() -> void:
 	var started := Time.get_ticks_usec()
 	var analysis := placement.analyze(editor.blueprint)
 	var problems := analysis.problems
+	var analyzed := Time.get_ticks_usec()
 	_view.show_blueprint(editor.blueprint, analysis)
+	var drawn := Time.get_ticks_usec()
 	if _selected >= 0 and editor.blueprint.tile_by_id(_selected) == null:
 		_select(-1)
 	else:
@@ -410,6 +414,8 @@ func _on_changed() -> void:
 		_status.text = "%s  ·  %s" % [editor.blueprint.name, "ready to fly" if problems.is_empty() else "can't fly yet"]
 		_stats.show_stats(ShipStats.compute(editor.blueprint, placement), problems, placement.max_tiles)
 	last_refresh_usec = Time.get_ticks_usec() - started
+	last_refresh_parts = {"analyze": analyzed - started, "view": drawn - analyzed,
+			"stats": started + last_refresh_usec - drawn}
 
 
 func _refresh_buttons() -> void:

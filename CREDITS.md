@@ -1,6 +1,6 @@
 # Credits
 
-**MSP — Mobile Space Shooter**, by Herman Ras.
+**MSS — Mobile Space Shooter**, by Herman Ras.
 
 ## Code
 

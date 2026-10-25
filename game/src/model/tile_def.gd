@@ -16,22 +16,36 @@ var has_mounts: bool = false
 
 var _stat_factor: Dictionary
 var _cost_factor: Dictionary
+## size -> the read-only result, since stats() and cost() run for every tile on every edit.
+var _stats_by_size := {}
+var _cost_by_size := {}
 
 
+## Read-only; duplicate() it to change it.
 func stats(size_code: StringName) -> Dictionary:
+	var cached: Variant = _stats_by_size.get(size_code)
+	if cached != null:
+		return cached
 	var factor: float = _stat_factor.get(size_code, 0.0)
 	var out := {}
 	for key in STAT_KEYS:
 		out[key] = base[key] * factor if SCALED_STATS.has(key) else base[key]
+	out.make_read_only()
+	_stats_by_size[size_code] = out
 	return out
 
 
-## Material -> whole amount. The loader guarantees every size comes out whole.
+## Material -> whole amount. The loader guarantees every size comes out whole. Read-only.
 func cost(size_code: StringName) -> Dictionary:
+	var cached: Variant = _cost_by_size.get(size_code)
+	if cached != null:
+		return cached
 	var factor: float = _cost_factor.get(size_code, 0.0)
 	var out := {}
 	for material: StringName in base_cost:
 		out[material] = roundi(base_cost[material] * factor)
+	out.make_read_only()
+	_cost_by_size[size_code] = out
 	return out
 
 

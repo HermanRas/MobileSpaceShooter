@@ -2,7 +2,7 @@
 	"format": 1,
 	"id": "hexwing",
 	"name": "Hexwing",
-	"author": "msp",
+	"author": "mss",
 	"tags": ["sample"],
 	"_doc": "A hex core ringed by triangles, one on each edge (centres 2/sqrt(3) U out along each edge normal).",
 	"tiles": [

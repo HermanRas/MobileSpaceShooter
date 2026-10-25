@@ -70,6 +70,18 @@ func tile_edges(tile: Blueprint.Tile) -> Array[Shape.Edge]:
 
 
 func _cached(tile: Blueprint.Tile) -> Array:
+	# Fast path: the tile still carries the geometry from last time. Comparing the stamp is
+	# much cheaper than formatting the string key, and a refresh asks ~4 times per tile.
+	var stamp := [get_instance_id(), tile.shape, tile.size, tile.rot, tile.pos]
+	if tile.geometry_stamp == stamp:
+		return tile.geometry
+	var entry := _cached_by_key(tile)
+	tile.geometry = entry
+	tile.geometry_stamp = stamp
+	return entry
+
+
+func _cached_by_key(tile: Blueprint.Tile) -> Array:
 	var key := "%s|%s|%d|%d|%d" % [tile.shape, tile.size, tile.rot,
 			roundi(tile.pos.x * 100000.0), roundi(tile.pos.y * 100000.0)]
 	var hit: Variant = _geometry.get(key)
@@ -77,8 +89,17 @@ func _cached(tile: Blueprint.Tile) -> Array:
 		return hit
 	if _geometry.size() >= GEOMETRY_CACHE_MAX:
 		_geometry.clear()
-	var entry := [shapes.polygon(tile.shape, tile.size, tile.rot, tile.pos),
-			shapes.edges(tile.shape, tile.size, tile.rot, tile.pos)]
+	var edges := shapes.edges(tile.shape, tile.size, tile.rot, tile.pos)
+	var ports := PackedVector2Array()
+	var normals := PackedVector2Array()
+	var cells := PackedInt32Array()
+	for edge in edges:
+		for port in edge.ports:
+			ports.append(port)
+			normals.append(edge.normal)
+			cells.append(_PortIndex.cell_key(port))
+	var polygon := shapes.polygon(tile.shape, tile.size, tile.rot, tile.pos)
+	var entry := [polygon, edges, ports, normals, cells, _bounds(polygon)]
 	_geometry[key] = entry
 	return entry
 
@@ -188,9 +209,8 @@ func neighbours(bp: Blueprint) -> Dictionary:
 func _port_index(bp: Blueprint) -> _PortIndex:
 	var index := _PortIndex.new()
 	for tile in bp.tiles:
-		for edge in tile_edges(tile):
-			for port in edge.ports:
-				index.add(port, edge.normal, tile.id)
+		var geometry := _cached(tile)
+		index.add_tile(geometry[2], geometry[3], geometry[4], tile.id)
 	return index
 
 
@@ -282,15 +302,41 @@ func analyze(bp: Blueprint) -> Analysis:
 				% [bounds.size.x, bounds.size.y, area_u, area_u]))
 
 	if cores.size() == 1:
-		var reached := _reach(bp, _neighbours_from(index, bp))
-		var loose := PackedInt32Array()
-		for tile in bp.tiles:
-			if not reached.has(tile.id):
-				loose.append(tile.id)
+		var loose := _loose_tiles(bp, index, (cores[0] as Blueprint.Tile).id)
 		if not loose.is_empty():
 			problems.append(Problem.new(&"disconnected", loose,
 					"%d tile(s) aren't connected to the core" % loose.size()))
 	return analysis
+
+
+## Ids of tiles with no chain of shared ports back to the core. Union-find over the port
+## pairs: cheaper than building the neighbour lists when all that's asked is "connected?".
+func _loose_tiles(bp: Blueprint, index: _PortIndex, core_id: int) -> PackedInt32Array:
+	var slot := {}
+	for i in bp.tiles.size():
+		slot[bp.tiles[i].id] = i
+	var parent := PackedInt32Array()
+	parent.resize(bp.tiles.size())
+	for i in parent.size():
+		parent[i] = i
+	for pair in index.facing_pairs():
+		var a := _root(parent, slot[pair.x])
+		var b := _root(parent, slot[pair.y])
+		if a != b:
+			parent[a] = b
+	var core_root := _root(parent, slot[core_id])
+	var loose := PackedInt32Array()
+	for i in bp.tiles.size():
+		if _root(parent, i) != core_root:
+			loose.append(bp.tiles[i].id)
+	return loose
+
+
+static func _root(parent: PackedInt32Array, i: int) -> int:
+	while parent[i] != i:
+		parent[i] = parent[parent[i]]
+		i = parent[i]
+	return i
 
 
 func _count_type(bp: Blueprint, type: StringName) -> int:
@@ -320,10 +366,11 @@ class _Placed:
 func _placed_polygons(bp: Blueprint) -> Array[_Placed]:
 	var out: Array[_Placed] = []
 	for tile in bp.tiles:
+		var geometry := _cached(tile)
 		var placed := _Placed.new()
 		placed.id = tile.id
-		placed.polygon = tile_polygon(tile)
-		placed.bounds = _bounds(placed.polygon)
+		placed.polygon = geometry[0]
+		placed.bounds = geometry[5]
 		out.append(placed)
 	return out
 
@@ -371,71 +418,85 @@ static func _polygon_key(polygon: PackedVector2Array) -> String:
 
 ## Finds ports that sit on top of each other, facing opposite ways. A spatial hash with a
 ## neighbourhood search, so floating-point error near a cell boundary can't split a pair.
+##
+## Each port is searched once (`_match`, on first use), and every bucket is a linked list in
+## packed arrays: on the phone, a 150-tile ship's ~2400 ports cost 21 ms when every port was
+## searched twice and every bucket was a copy-on-write PackedInt32Array.
 class _PortIndex:
 	const CELL := 0.1
 	## Shifts the grid so the regular port positions (multiples of 0.125 U) never sit near a
 	## cell boundary; only odd positions (hex and triangle ports) ever need a neighbour check.
 	const SHIFT := 0.37
 	const NEAR_EDGE := POINT_EPSILON / CELL
+	## Cell (x, y) is key x * KEY_STRIDE + y; build areas are far smaller than this many cells.
+	const KEY_STRIDE := 4096
 
-	var _cells: Dictionary = {}
+	var _head: Dictionary = {}
+	var _next := PackedInt32Array()
 	var _points := PackedVector2Array()
 	var _normals := PackedVector2Array()
 	var _tiles := PackedInt32Array()
+	var _pairs: Array[Vector2i] = []
+	var _matched := PackedByteArray()
+	var _done := false
 
-	func add(point: Vector2, normal: Vector2, tile_id: int) -> void:
-		var cell := _cell_of(point)
-		if not _cells.has(cell):
-			_cells[cell] = PackedInt32Array()
-		var bucket: PackedInt32Array = _cells[cell]
-		bucket.append(_points.size())
-		_cells[cell] = bucket
-		_points.append(point)
-		_normals.append(normal)
-		_tiles.append(tile_id)
+	## One tile's ports, with their normals and `cell_key`s (cached with the tile's geometry).
+	func add_tile(points: PackedVector2Array, normals: PackedVector2Array, cells: PackedInt32Array,
+			tile_id: int) -> void:
+		var base := _points.size()
+		for k in points.size():
+			_next.append(_head.get(cells[k], -1))
+			_head[cells[k]] = base + k
+			_tiles.append(tile_id)
+		_points.append_array(points)
+		_normals.append_array(normals)
 
-	## Unordered (tile, tile) pairs that share a port.
+	static func cell_key(point: Vector2) -> int:
+		return floori(point.x / CELL + SHIFT) * KEY_STRIDE + floori(point.y / CELL + SHIFT)
+
+	## Unordered (tile, tile) pairs that share a port, one entry per shared port.
 	func facing_pairs() -> Array[Vector2i]:
-		var out: Array[Vector2i] = []
-		for i in _points.size():
-			for j in _partners(i):
-				if j > i:
-					out.append(Vector2i(_tiles[i], _tiles[j]))
-		return out
+		_match()
+		return _pairs
 
 	## Positions of ports with no partner.
 	func unmatched() -> PackedVector2Array:
+		_match()
 		var out := PackedVector2Array()
 		for i in _points.size():
-			if _partners(i).is_empty():
+			if _matched[i] == 0:
 				out.append(_points[i])
 		return out
 
-	func _cell_of(point: Vector2) -> Vector2i:
-		return Vector2i(floori(point.x / CELL + SHIFT), floori(point.y / CELL + SHIFT))
-
 	## Ports at the same spot, on another tile, facing the opposite way. Only the port's own
 	## cell is searched, plus a neighbour on any axis where the port sits within
-	## POINT_EPSILON of a cell boundary.
-	func _partners(i: int) -> PackedInt32Array:
-		var out := PackedInt32Array()
-		var point := _points[i]
-		var fx := point.x / CELL + SHIFT
-		var fy := point.y / CELL + SHIFT
-		var cx := floori(fx)
-		var cy := floori(fy)
-		var x_lo := cx - 1 if fx - cx < NEAR_EDGE else cx
-		var x_hi := cx + 1 if cx + 1 - fx < NEAR_EDGE else cx
-		var y_lo := cy - 1 if fy - cy < NEAR_EDGE else cy
-		var y_hi := cy + 1 if cy + 1 - fy < NEAR_EDGE else cy
-		for x in range(x_lo, x_hi + 1):
-			for y in range(y_lo, y_hi + 1):
-				var bucket: Variant = _cells.get(Vector2i(x, y))
-				if bucket == null:
-					continue
-				for j: int in bucket:
-					if j != i and _tiles[j] != _tiles[i] \
-							and _points[j].distance_to(point) < POINT_EPSILON \
-							and _normals[j].dot(_normals[i]) < -0.999:
-						out.append(j)
-		return out
+	## POINT_EPSILON of a cell boundary. Each pair is found from its lower index.
+	func _match() -> void:
+		if _done:
+			return
+		_done = true
+		_matched.resize(_points.size())
+		_matched.fill(0)
+		for i in _points.size():
+			var point := _points[i]
+			var normal := _normals[i]
+			var tile := _tiles[i]
+			var fx := point.x / CELL + SHIFT
+			var fy := point.y / CELL + SHIFT
+			var cx := floori(fx)
+			var cy := floori(fy)
+			var x_lo := cx - 1 if fx - cx < NEAR_EDGE else cx
+			var x_hi := cx + 1 if cx + 1 - fx < NEAR_EDGE else cx
+			var y_lo := cy - 1 if fy - cy < NEAR_EDGE else cy
+			var y_hi := cy + 1 if cy + 1 - fy < NEAR_EDGE else cy
+			for x in range(x_lo, x_hi + 1):
+				for y in range(y_lo, y_hi + 1):
+					var j: int = _head.get(x * KEY_STRIDE + y, -1)
+					while j >= 0:
+						if j > i and _tiles[j] != tile \
+								and _points[j].distance_squared_to(point) < POINT_EPSILON * POINT_EPSILON \
+								and _normals[j].dot(normal) < -0.999:
+							_pairs.append(Vector2i(tile, _tiles[j]))
+							_matched[i] = 1
+							_matched[j] = 1
+						j = _next[j]

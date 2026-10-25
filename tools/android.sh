@@ -1,12 +1,16 @@
 #!/usr/bin/env bash
 # Android build and deploy, all inside Docker (nothing installed on the host).
 #
-#   tools/android.sh export     # build/msp-debug.apk
+#   tools/android.sh export     # build/mss-debug.apk
 #   tools/android.sh devices    # is the phone connected and authorised?
 #   tools/android.sh install    # install (or reinstall) the APK on the phone
 #   tools/android.sh run        # launch it on the phone
 #   tools/android.sh deploy     # export + install + run
 #   tools/android.sh logcat     # follow the game's log (Ctrl+C to stop)
+#   tools/android.sh log        # print the game's log so far and exit
+#   tools/android.sh perf       # the debug build's fps/frame-time log (Honor drops it from logcat)
+#   tools/android.sh shot NAME  # screenshot the phone to build/phone_NAME.png
+#   tools/android.sh adb ARGS   # any adb command, e.g. adb shell input tap 500 300
 #
 # The debug keystore and adb's key live in .android/ (gitignored), so the phone only has to
 # authorise this machine once and reinstalls keep the same signature.
@@ -14,9 +18,9 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 GODOT="${GODOT:-$HOME/Downloads/Godot_v4.7.1/Godot_v4.7.1-stable_linux.x86_64}"
-IMAGE="msp-android:1"
-PACKAGE="com.example.msp"
-APK="build/msp-debug.apk"
+IMAGE="mss-android:1"
+PACKAGE="com.example.mss"
+APK="build/mss-debug.apk"
 
 image() {
   if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
@@ -67,5 +71,9 @@ case "${1:-}" in
   deploy)  do_export
            adb_cmd "adb install -r $APK && adb shell monkey -p $PACKAGE -c android.intent.category.LAUNCHER 1" ;;
   logcat)  adb_cmd "adb logcat -s godot:V" ;;
-  *) sed -n '2,12p' "$0"; exit 2 ;;
+  log)     adb_cmd "adb logcat -d -s godot:V" ;;
+  perf)    adb_cmd "adb shell run-as $PACKAGE cat files/perf.log" ;;
+  shot)    adb_cmd "adb exec-out screencap -p > build/phone_${2:-shot}.png; chown $(id -u):$(id -g) build/phone_${2:-shot}.png" && ls -l "$ROOT/build/phone_${2:-shot}.png" ;;
+  adb)     shift; adb_cmd "adb $(printf '%q ' "$@")" ;;
+  *) sed -n '2,16p' "$0"; exit 2 ;;
 esac

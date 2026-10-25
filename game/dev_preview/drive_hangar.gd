@@ -136,7 +136,7 @@ func _step_stats_match_and_refresh_fast() -> void:
 		tile.paint = Color.GRAY
 		bp.tiles.append(tile)
 	bp.tiles[0].pos = Vector2(0, 0)
-	bp.tiles[55].pos = Vector2(-5, -7)
+	bp.tiles[75].pos = Vector2(-5, -7)  # tile 75 started on the core's spot
 	_hangar.load_blueprint(bp)
 	await _frames(1)
 	# One wall-clock sample in a shared container swings 2x (8.8 vs 17.1 ms on the same code),

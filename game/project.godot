@@ -10,7 +10,7 @@ config_version=5
 
 [application]
 
-config/name="MSP"
+config/name="MSS"
 config/description="Mobile Space Shooter: build a ship from tiles, then fly it."
 config/version="0.0.1"
 run/main_scene="res://scenes/boot/boot.tscn"
@@ -27,6 +27,7 @@ Settings="*res://src/autoload/settings.gd"
 Profiles="*res://src/autoload/profiles.gd"
 Audio="*res://src/autoload/audio.gd"
 Router="*res://src/autoload/router.gd"
+Perf="*res://src/autoload/perf.gd"
 
 [display]
 

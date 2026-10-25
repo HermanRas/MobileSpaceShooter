@@ -1,6 +1,6 @@
 # Mobile deploy
 
-Everything Android runs in Docker (`msp-android:1`, built from `tools/docker/android.Dockerfile`
+Everything Android runs in Docker (`mss-android:1`, built from `tools/docker/android.Dockerfile`
 on first use). Nothing is installed on the host.
 
 ## Deploy to the phone
@@ -21,14 +21,25 @@ on first use). Nothing is installed on the host.
    tools/android.sh logcat        # follow the game's log; Ctrl+C to stop
    ```
 
-The APK lands in `build/msp-debug.apk`. To sideload it by hand instead, copy that file to the
+4. Check it from the PC, without touching the phone:
+
+   ```bash
+   tools/android.sh perf                     # fps, worst frame, draw calls, MB, hangar refresh
+   tools/android.sh shot hangar              # screenshot -> build/phone_hangar.png
+   tools/android.sh adb shell input tap 1300 702               # tap (screen px, landscape)
+   tools/android.sh adb shell input swipe 329 996 1462 750 1200   # one-finger drag over 1.2 s
+   ```
+
+   adb can't pinch; that one needs a hand on the phone.
+
+The APK lands in `build/mss-debug.apk`. To sideload it by hand instead, copy that file to the
 phone.
 
 ## What's where
 
 | Thing | Where | Notes |
 |---|---|---|
-| Package id | `com.example.msp` | Placeholder until a title is chosen (D14) |
+| Package id | `com.example.mss` | Placeholder until a title is chosen (D14) |
 | Export preset | `game/export_presets.cfg` | Tracked; it holds no secrets. arm64 only, sensor landscape, internet off, vibrate on. |
 | Debug keystore | `.android/debug.keystore` | Gitignored. Created on the first export, and kept so reinstalls keep the same signature. |
 | adb key | `.android/adb/` | Gitignored |
@@ -44,5 +55,10 @@ phone.
   not an error.
 - "cannot connect to daemon at tcp:5037" during export is the editor polling for devices.
   It's harmless.
+- **Honor phones drop app output from logcat**, so `print()` never shows in `log`/`logcat`.
+  Debug builds also write `Perf` lines to `user://perf.log`, which `tools/android.sh perf` reads.
+- **Android owns the bottom ~130 px for its home gesture**, even in immersive mode. A drag
+  starting there (including an adb swipe) sends the game to the background. It didn't crash;
+  tap the app icon to resume.
 - If `devices` shows nothing with the phone plugged in, try another cable or port, and set the
   phone's USB mode to "File transfer". Some charge-only cables carry no data.

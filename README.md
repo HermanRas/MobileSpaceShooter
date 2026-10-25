@@ -1,4 +1,4 @@
-# MSP — Mobile Space Shooter
+# MSS — Mobile Space Shooter
 
 A free, open-source 2D space shooter for Android, made with Godot 4.7.1. Build your ship from
 geometric tiles (hull, armor, shield, hardpoint), paint it, bolt on thrusters and guns, and fly

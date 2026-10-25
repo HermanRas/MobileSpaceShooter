@@ -12,7 +12,7 @@ func _ready() -> void:
 	var column := VBoxContainer.new()
 	center.add_child(column)
 
-	column.add_child(_label("MSP", 64))
+	column.add_child(_label("MSS", 64))
 	column.add_child(_label("Mobile Space Shooter  v%s" % ProjectSettings.get_setting("application/config/version"), 20))
 
 	if not Data.errors.is_empty():
