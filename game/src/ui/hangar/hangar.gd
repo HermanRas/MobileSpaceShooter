@@ -24,6 +24,9 @@ var _view: ShipView
 var _palette: HangarPalette
 var _paint: PaintPanel
 var _stats: StatsPanel
+var _library := BlueprintLibrary.new()
+var _library_panel: LibraryPanel
+var _thumbs: ThumbnailRenderer
 var _mirror_button: Button
 var _undo_button: Button
 var _redo_button: Button
@@ -68,6 +71,36 @@ func _ready() -> void:
 func load_blueprint(bp: Blueprint) -> void:
 	editor.load_blueprint(bp)
 	_select(-1)
+
+
+## Saves the ship being edited to the library, with a fresh thumbnail.
+func save_current() -> Error:
+	var error := _library.save_ship(editor.blueprint)
+	if error == OK:
+		error = await _thumbs.render(editor.blueprint, placement, _library.thumbnail_path(editor.blueprint.id))
+	_on_changed()
+	return error
+
+
+## Saves a copy under a new name and keeps editing the copy (undo history is kept).
+func save_as(new_name: String) -> void:
+	var copy := _library.save_as(editor.blueprint, new_name)
+	editor.blueprint.id = copy.id
+	editor.blueprint.name = copy.name
+	await _thumbs.render(editor.blueprint, placement, _library.thumbnail_path(copy.id))
+	_on_changed()
+
+
+func load_from_library(id: String) -> void:
+	var bp := _library.load_ship(id)
+	if bp != null:
+		load_blueprint(bp)
+
+
+func _open_library(open: bool) -> void:
+	_library_panel.visible = open
+	if open:
+		_library_panel.refresh()
 
 
 func on_back() -> void:
@@ -454,6 +487,28 @@ func _build_ui() -> void:
 	_stats.position = Vector2(16, 48)
 	_stats.self_modulate = Color(1, 1, 1, 0.85)
 	root.add_child(_stats)
+
+	_tool_button(tools, "Ships", _open_library.bind(true))
+	_thumbs = ThumbnailRenderer.new()
+	add_child(_thumbs)
+	_library_panel = LibraryPanel.new()
+	_library_panel.library = _library
+	_library_panel.visible = false
+	_library_panel.closed.connect(_open_library.bind(false))
+	_library_panel.new_requested.connect(func() -> void:
+		editor.new_ship("New ship")
+		_select(-1)
+		_open_library(false))
+	_library_panel.save_requested.connect(func() -> void:
+		await save_current()
+		_library_panel.refresh())
+	_library_panel.save_as_requested.connect(func(new_name: String) -> void:
+		await save_as(new_name)
+		_library_panel.refresh())
+	_library_panel.load_requested.connect(func(id: String) -> void:
+		load_from_library(id)
+		_open_library(false))
+	root.add_child(_library_panel)
 
 
 func _tool_button(parent: Control, text: String, action: Callable) -> Button:

@@ -36,6 +36,7 @@ func _ready() -> void:
 	await _step_move_selected()
 	await _step_paint()
 	await _step_stats_match_and_refresh_fast()
+	await _step_library()
 	await _step_pinch_zooms()
 	await _step_one_finger_pans()
 
@@ -138,14 +139,54 @@ func _step_stats_match_and_refresh_fast() -> void:
 	bp.tiles[55].pos = Vector2(-5, -7)
 	_hangar.load_blueprint(bp)
 	await _frames(1)
-	_hangar.editor.paint_all(Color.WHITE)
-	var ms: float = _hangar.last_refresh_usec / 1000.0
-	print("drive_hangar: 150-tile refresh took %.1f ms on this machine" % ms)
-	_check(ms < 16.7, "a 150-tile refresh fits in one 60 fps frame here (%.1f ms)" % ms)
-	_hangar.editor.undo()
+	# One wall-clock sample in a shared container swings 2x (8.8 vs 17.1 ms on the same code),
+	# so take the median of five edits.
+	var samples: Array[float] = []
+	for i in 5:
+		_hangar.editor.paint_all(Color.from_hsv(i / 5.0, 0.5, 0.9))
+		samples.append(_hangar.last_refresh_usec / 1000.0)
+		await _frames(1)
+	samples.sort()
+	var ms := samples[2]
+	print("drive_hangar: 150-tile refresh median %.1f ms (min %.1f, max %.1f) on this machine"
+			% [ms, samples[0], samples[4]])
+	_check(ms < 16.7, "a 150-tile refresh fits in one 60 fps frame here (median %.1f ms)" % ms)
+	for i in 5:
+		_hangar.editor.undo()
 	var errors: PackedStringArray = []
 	_hangar.load_blueprint(Blueprint.from_dict(Data.json_dir("blueprints")["starter"], errors))
 	await _frames(1)
+
+
+func _step_library() -> void:
+	var library: BlueprintLibrary = _hangar._library
+	for entry in library.list():
+		library.delete(entry["id"])
+	var saved_error: Error = await _hangar.save_current()
+	var first_id: String = _hangar.editor.blueprint.id
+	_check(saved_error == OK and library.has(first_id), "Save writes the ship to the library")
+	_check(FileAccess.file_exists(library.thumbnail_path(first_id)), "Save renders a thumbnail")
+	var thumb := Image.load_from_file(library.thumbnail_path(first_id))
+	_check(thumb != null and thumb.get_used_rect().size.x > 100, "the thumbnail has the ship in it")
+	var expected := JSON.stringify(_hangar.editor.blueprint.to_dict())
+
+	for i in 9:
+		_hangar.editor.paint_all(Color.from_hsv(i / 9.0, 0.7, 0.9))
+		await _hangar.save_as("Test ship %d" % (i + 1))
+	_check(library.list().size() == 10, "10 ships saved (%d)" % library.list().size())
+
+	_hangar.load_from_library(first_id)
+	_check(JSON.stringify(_hangar.editor.blueprint.to_dict()) == expected, "loading gives back exactly what was saved")
+	library.rename(first_id, "Renamed")
+	_check(library.list().any(func(e: Dictionary) -> bool: return e["name"] == "Renamed"), "rename shows in the list")
+	library.delete(library.list()[0]["id"])
+	_check(library.list().size() == 9, "delete removes one")
+
+	_hangar._open_library(true)
+	await _frames(4)
+	get_viewport().get_texture().get_image().save_png(
+			ProjectSettings.globalize_path("res://dev_preview/out/drive_hangar_library.png"))
+	_hangar._open_library(false)
 
 
 func _step_pinch_zooms() -> void:

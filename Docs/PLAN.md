@@ -724,9 +724,18 @@ reported PASS.
 - [ ] On the phone: a 150-tile edit refresh in under 1 frame (or make it incremental)
 
 #### 2.6 Blueprint library UI
-- [ ] Save, Save As, rename, delete, load
-- [ ] Thumbnails: render the ship to a `SubViewport` → PNG cache
-- **Done when:** 10 ships can be saved, browsed by thumbnail and reloaded on the phone.
+🟡 2026-10-25, built; **the phone check is still open**. `BlueprintLibrary`
+(`src/ship/blueprint_library.gd`) keeps the **device-wide** library `[D6]` in
+`user://library/<id>.json` with a `<id>.png` thumbnail beside each, and writes through `Save`
+(atomic, with `.bak`). `ThumbnailRenderer` draws one frame of a private `SubViewport` per save.
+`LibraryPanel` (the **Ships** button) has a card grid plus New, Save, Save As, Load, Rename and
+Delete (with confirmation); names are typed in a `LineEdit`, so Android shows its keyboard.
+Save As keeps the undo history and carries on editing the copy. `drive_hangar` saves 10 ships,
+checks each thumbnail actually contains the ship, reloads one byte-for-byte, renames and
+deletes. ⚠️ `set_anchors_preset()` leaves the old offsets in place: use
+`set_anchors_and_offsets_preset()` for a full-screen panel. 7.3's "Publish" will mark a library
+ship as buyable rather than add a second store.
+- [ ] On the phone: save 10 ships, browse by thumbnail, reload one
 
 ---
 
