@@ -151,14 +151,16 @@ equilateral triangle and a regular hexagon have equal-length sides (Reassembly's
 
 Starting values for a **Large** tile (multiply by the size factor). **Mass drives
 acceleration** `[D10]`, so heavy armour makes a ship slow unless it carries bigger thrusters.
+**Armor doesn't scale with size**: it's a per-hit reduction (thickness), not an amount. Base
+costs are multiples of 4, so a Small tile still costs whole units; the loader enforces this.
 
 | Type | HP | Armor | Shield | Mass | Cost `[D5]` | Special |
 |---|---|---|---|---|---|---|
 | **Core** `[D7]` | 300 | 5 | – | 2.0 | free, one per ship | Death when destroyed. Its facing is the ship's **forward** (the arrow in the hangar). It has no turning force of its own. |
-| **Hull** | 100 | 0 | – | 1.0 | 10 Hull | Cheapest HP |
-| **Armor** | 150 | 6 | – | 2.5 | 6 Hull + 8 Alloy | Flat damage reduction per hit on this tile |
-| **Shield** | 40 | 0 | +60 cap, +4/s regen | 0.8 | 6 Hull + 8 Crystal | Adds to the **ship-wide shield pool** |
-| **Hardpoint** | 120 | 4 | – | 1.5 | 6 Hull + 6 Alloy + 4 Tech | Armor with mounts: thrusters/edge weapons on its edges, a turret on its face |
+| **Hull** | 100 | 0 | – | 1.0 | 12 Hull | Cheapest HP |
+| **Armor** | 150 | 6 | – | 2.5 | 8 Hull + 12 Alloy | Flat damage reduction per hit on this tile |
+| **Shield** | 40 | 0 | +60 cap, +4/s regen | 0.8 | 8 Hull + 12 Crystal | Adds to the **ship-wide shield pool** |
+| **Hardpoint** | 120 | 4 | – | 1.5 | 8 Hull + 8 Alloy + 4 Tech | Armor with mounts: thrusters/edge weapons on its edges, a turret on its face |
 
 Each tile type has a texture (§6.2), and colour is painted per tile in the hangar.
 
@@ -615,9 +617,11 @@ that isn't a whole number of 0.25 U ports. ⚠️ Sorting `StringName`s orders t
 not alphabetically.
 
 #### 1.2 Tile definitions `[D7]`
-- [ ] `data/tiles.json`: the §4.2 table, the size factors, and `size_stat_curve`
-- [ ] `model/tile_def.gd`: typed accessors; cost as a resource dictionary
-- **Done when:** `Data.tile(&"armor").stats(&"M")` returns the §4.2 values × 0.5.
+✅ 2026-10-25. `data/tiles.json` → `TileLib` / `TileDef` (`src/model/`), tested in
+`tests/model/test_tiles.gd`. Cost and stats scale separately (`size_cost_factor`,
+`size_stat_factor`), so the §4.1 balance trap can be tuned without touching prices. The loader
+rejects fractional costs at any size, unknown materials, zero mass, and anything other than
+exactly one `unique` tile (the core).
 
 #### 1.3 Blueprint format
 - [ ] `model/blueprint.gd`: load/save the §5.4 JSON, a `format` version, and a migration hook
