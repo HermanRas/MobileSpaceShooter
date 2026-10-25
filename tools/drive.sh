@@ -11,6 +11,10 @@ SIZE="${2:-1560x720}"
 # watchdog turns that into exit 124, a failure, instead of a hang.
 LIMIT_S="${DRIVE_TIMEOUT:-240}"
 
+# Refresh the class cache first, or a new `class_name` reads as "not declared" (as in
+# tools/test.sh).
+"$(dirname "${BASH_SOURCE[0]}")/run.sh" /opt/godot/godot --headless --path game --import >/dev/null 2>&1 || true
+
 exec "$(dirname "${BASH_SOURCE[0]}")/run.sh" \
   timeout "$LIMIT_S" xvfb-run -a -s "-screen 0 ${SIZE}x24" \
   /opt/godot/godot --display-driver x11 --audio-driver Dummy --rendering-driver opengl3 \

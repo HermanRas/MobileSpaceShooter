@@ -23,6 +23,7 @@ var _camera: HangarCamera
 var _view: ShipView
 var _palette: HangarPalette
 var _paint: PaintPanel
+var _stats: StatsPanel
 var _mirror_button: Button
 var _undo_button: Button
 var _redo_button: Button
@@ -208,6 +209,7 @@ func _update_ghost() -> void:
 		ghost.rot = _rot_pref
 		ghost.pos = point_u - ShipStats.polygon_centroid(placement.shapes.polygon(ghost.shape, ghost.size, ghost.rot))
 	_view.set_ghost(ghost, _snap != null)
+	_stats.show_delta(placement.tiles.tile(ghost.type) if _snap != null and _carry["moving"] < 0 else null, ghost.size)
 
 
 ## The snap whose tile centre is nearest the finger, preferring the player's chosen rotation
@@ -274,6 +276,7 @@ func _end_carry() -> void:
 	_carry = {}
 	_snap = null
 	_view.set_ghost(null, false)
+	_stats.show_delta(null, &"")
 
 
 # ── toolbar actions ───────────────────────────────────────────────────────────
@@ -357,16 +360,23 @@ func _rotate_selected() -> void:
 	_rot_pref = next.rot
 
 
+## Microseconds the last full refresh (validate + stats + mesh) took; drive_hangar reads it.
+var last_refresh_usec: int = 0
+
+
 func _on_changed() -> void:
-	var problems := placement.validate(editor.blueprint)
-	_view.show_blueprint(editor.blueprint, problems)
+	var started := Time.get_ticks_usec()
+	var analysis := placement.analyze(editor.blueprint)
+	var problems := analysis.problems
+	_view.show_blueprint(editor.blueprint, analysis)
 	if _selected >= 0 and editor.blueprint.tile_by_id(_selected) == null:
 		_select(-1)
 	else:
 		_select(_selected)
 	if _status != null:
-		_status.text = "%d tiles  ·  %s" % [editor.blueprint.tiles.size(),
-				"ready to fly" if problems.is_empty() else problems[0].message]
+		_status.text = "%s  ·  %s" % [editor.blueprint.name, "ready to fly" if problems.is_empty() else "can't fly yet"]
+		_stats.show_stats(ShipStats.compute(editor.blueprint, placement), problems, placement.max_tiles)
+	last_refresh_usec = Time.get_ticks_usec() - started
 
 
 func _refresh_buttons() -> void:
@@ -431,6 +441,7 @@ func _build_ui() -> void:
 	root.add_child(_paint)
 	paint_button.toggled.connect(func(on: bool) -> void:
 		_paint.visible = on
+		_stats.visible = not on
 		_palette.visible = not on
 		_select(-1))
 
@@ -438,6 +449,11 @@ func _build_ui() -> void:
 	_status.position = Vector2(16, 12)
 	_status.add_theme_font_size_override(&"font_size", 20)
 	root.add_child(_status)
+
+	_stats = StatsPanel.new()
+	_stats.position = Vector2(16, 48)
+	_stats.self_modulate = Color(1, 1, 1, 0.85)
+	root.add_child(_stats)
 
 
 func _tool_button(parent: Control, text: String, action: Callable) -> Button:
@@ -460,6 +476,7 @@ func _tool_button(parent: Control, text: String, action: Callable) -> Button:
 func preview_setup(args: Dictionary) -> void:
 	if args.get("paint", "0") == "1":
 		_paint.visible = true
+		_stats.visible = false
 		_palette.visible = false
 	if args.has("ship"):
 		var errors: PackedStringArray = []

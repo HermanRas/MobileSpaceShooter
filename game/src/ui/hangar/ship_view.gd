@@ -45,12 +45,12 @@ func _ready() -> void:
 	_overlay.draw.connect(_draw_overlay)
 
 
-func show_blueprint(bp: Blueprint, problems: Array[Placement.Problem]) -> void:
+func show_blueprint(bp: Blueprint, analysis: Placement.Analysis) -> void:
 	_blueprint = bp
 	_ship.mesh = ShipMesh.build(bp.tiles, placement)
-	_free_ports = placement.free_ports(bp)
+	_free_ports = analysis.free_ports
 	_problem_ids.clear()
-	for problem in problems:
+	for problem in analysis.problems:
 		for tile_id in problem.tile_ids:
 			_problem_ids[tile_id] = true
 	_overlay.queue_redraw()

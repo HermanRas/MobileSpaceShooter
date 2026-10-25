@@ -32,10 +32,23 @@ class Problem:
 		message = text
 
 
+## Everything validate() works out, in one pass (the hangar needs all of it on every edit).
+class Analysis:
+	var problems: Array[Problem] = []
+	## Ports no other tile sits on: where a new tile could attach.
+	var free_ports := PackedVector2Array()
+
+
 var shapes: ShapeLib
 var tiles: TileLib
 var max_tiles: int
 var area_u: float
+
+## Tile geometry by (shape, size, rotation, position). Most tiles don't change between edits,
+## so the hangar's per-edit refresh mostly hits this instead of rebuilding polygons and edges.
+## Cached Edge objects are shared: callers read them and never modify them.
+var _geometry: Dictionary = {}
+const GEOMETRY_CACHE_MAX := 20000
 
 
 static func create(shape_lib: ShapeLib, tile_lib: TileLib, tiles_table: Dictionary) -> Placement:
@@ -49,11 +62,25 @@ static func create(shape_lib: ShapeLib, tile_lib: TileLib, tiles_table: Dictiona
 
 
 func tile_polygon(tile: Blueprint.Tile) -> PackedVector2Array:
-	return shapes.polygon(tile.shape, tile.size, tile.rot, tile.pos)
+	return _cached(tile)[0]
 
 
 func tile_edges(tile: Blueprint.Tile) -> Array[Shape.Edge]:
-	return shapes.edges(tile.shape, tile.size, tile.rot, tile.pos)
+	return _cached(tile)[1]
+
+
+func _cached(tile: Blueprint.Tile) -> Array:
+	var key := "%s|%s|%d|%d|%d" % [tile.shape, tile.size, tile.rot,
+			roundi(tile.pos.x * 100000.0), roundi(tile.pos.y * 100000.0)]
+	var hit: Variant = _geometry.get(key)
+	if hit != null:
+		return hit
+	if _geometry.size() >= GEOMETRY_CACHE_MAX:
+		_geometry.clear()
+	var entry := [shapes.polygon(tile.shape, tile.size, tile.rot, tile.pos),
+			shapes.edges(tile.shape, tile.size, tile.rot, tile.pos)]
+	_geometry[key] = entry
+	return entry
 
 
 ## Every distinct place a tile of this type, shape and size can snap onto `bp` without
@@ -155,13 +182,22 @@ func tile_with_footprint(bp: Blueprint, polygon: PackedVector2Array) -> int:
 
 ## Tile id -> the ids of every tile it shares a port with.
 func neighbours(bp: Blueprint) -> Dictionary:
+	return _neighbours_from(_port_index(bp), bp)
+
+
+func _port_index(bp: Blueprint) -> _PortIndex:
 	var index := _PortIndex.new()
-	var out := {}
 	for tile in bp.tiles:
-		out[tile.id] = PackedInt32Array()
 		for edge in tile_edges(tile):
 			for port in edge.ports:
 				index.add(port, edge.normal, tile.id)
+	return index
+
+
+func _neighbours_from(index: _PortIndex, bp: Blueprint) -> Dictionary:
+	var out := {}
+	for tile in bp.tiles:
+		out[tile.id] = PackedInt32Array()
 	for pair in index.facing_pairs():
 		if not out[pair.x].has(pair.y):
 			out[pair.x].append(pair.y)
@@ -171,21 +207,19 @@ func neighbours(bp: Blueprint) -> Dictionary:
 
 ## Every port no other tile is sitting on: where a new tile could attach.
 func free_ports(bp: Blueprint) -> PackedVector2Array:
-	var index := _PortIndex.new()
-	for tile in bp.tiles:
-		for edge in tile_edges(tile):
-			for port in edge.ports:
-				index.add(port, edge.normal, tile.id)
-	return index.unmatched()
+	return _port_index(bp).unmatched()
 
 
 ## Ids of every tile reachable from the core through shared ports (empty with no core).
 func connected_to_core(bp: Blueprint) -> Dictionary:
+	return _reach(bp, neighbours(bp))
+
+
+func _reach(bp: Blueprint, links: Dictionary) -> Dictionary:
 	var core := _core_tile(bp)
 	var reached := {}
 	if core == null:
 		return reached
-	var links := neighbours(bp)
 	var queue: Array[int] = [core.id]
 	reached[core.id] = true
 	while not queue.is_empty():
@@ -197,7 +231,13 @@ func connected_to_core(bp: Blueprint) -> Dictionary:
 
 
 func validate(bp: Blueprint) -> Array[Problem]:
-	var problems: Array[Problem] = []
+	return analyze(bp).problems
+
+
+## validate() plus the free ports, from one port index.
+func analyze(bp: Blueprint) -> Analysis:
+	var analysis := Analysis.new()
+	var problems := analysis.problems
 	var known: Array[Blueprint.Tile] = []
 	for tile in bp.tiles:
 		if tiles.tile(tile.type) == null:
@@ -209,8 +249,10 @@ func validate(bp: Blueprint) -> Array[Problem]:
 		else:
 			known.append(tile)
 	if not problems.is_empty():
-		return problems
+		return analysis
 
+	var index := _port_index(bp)
+	analysis.free_ports = index.unmatched()
 	var cores := known.filter(func(t: Blueprint.Tile) -> bool: return t.type == tiles.core_id())
 	if cores.is_empty():
 		problems.append(Problem.new(&"no_core", [], "the ship has no core"))
@@ -222,20 +264,25 @@ func validate(bp: Blueprint) -> Array[Problem]:
 		problems.append(Problem.new(&"over_cap", [], "%d tiles; the limit is %d" % [bp.tiles.size(), max_tiles]))
 
 	var placed := _placed_polygons(bp)
+	# Sweep along x instead of testing every pair: only tiles whose x ranges overlap can collide.
+	placed.sort_custom(func(a: _Placed, b: _Placed) -> bool: return a.bounds.position.x < b.bounds.position.x)
 	var bounds := Rect2()
 	for i in placed.size():
 		bounds = placed[i].bounds if i == 0 else bounds.merge(placed[i].bounds)
+		var right := placed[i].bounds.end.x
 		for j in range(i + 1, placed.size()):
+			if placed[j].bounds.position.x >= right:
+				break
 			if placed[i].bounds.intersects(placed[j].bounds) \
 					and _overlap_area(placed[i].polygon, placed[j].polygon) > AREA_EPSILON:
-				problems.append(Problem.new(&"overlap", [placed[i].id, placed[j].id],
-						"tiles %d and %d overlap" % [placed[i].id, placed[j].id]))
+				var pair := PackedInt32Array([mini(placed[i].id, placed[j].id), maxi(placed[i].id, placed[j].id)])
+				problems.append(Problem.new(&"overlap", pair, "tiles %d and %d overlap" % [pair[0], pair[1]]))
 	if bounds.size.x > area_u + POINT_EPSILON or bounds.size.y > area_u + POINT_EPSILON:
 		problems.append(Problem.new(&"over_cap", [], "the ship is %.2f x %.2f U; the limit is %d x %d"
 				% [bounds.size.x, bounds.size.y, area_u, area_u]))
 
 	if cores.size() == 1:
-		var reached := connected_to_core(bp)
+		var reached := _reach(bp, _neighbours_from(index, bp))
 		var loose := PackedInt32Array()
 		for tile in bp.tiles:
 			if not reached.has(tile.id):
@@ -243,7 +290,7 @@ func validate(bp: Blueprint) -> Array[Problem]:
 		if not loose.is_empty():
 			problems.append(Problem.new(&"disconnected", loose,
 					"%d tile(s) aren't connected to the core" % loose.size()))
-	return problems
+	return analysis
 
 
 func _count_type(bp: Blueprint, type: StringName) -> int:
@@ -326,43 +373,69 @@ static func _polygon_key(polygon: PackedVector2Array) -> String:
 ## neighbourhood search, so floating-point error near a cell boundary can't split a pair.
 class _PortIndex:
 	const CELL := 0.1
+	## Shifts the grid so the regular port positions (multiples of 0.125 U) never sit near a
+	## cell boundary; only odd positions (hex and triangle ports) ever need a neighbour check.
+	const SHIFT := 0.37
+	const NEAR_EDGE := POINT_EPSILON / CELL
 
 	var _cells: Dictionary = {}
-	var _entries: Array = []
+	var _points := PackedVector2Array()
+	var _normals := PackedVector2Array()
+	var _tiles := PackedInt32Array()
 
 	func add(point: Vector2, normal: Vector2, tile_id: int) -> void:
-		var cell := Vector2i(floori(point.x / CELL), floori(point.y / CELL))
+		var cell := _cell_of(point)
 		if not _cells.has(cell):
-			_cells[cell] = []
-		_cells[cell].append(_entries.size())
-		_entries.append([point, normal, tile_id])
+			_cells[cell] = PackedInt32Array()
+		var bucket: PackedInt32Array = _cells[cell]
+		bucket.append(_points.size())
+		_cells[cell] = bucket
+		_points.append(point)
+		_normals.append(normal)
+		_tiles.append(tile_id)
 
 	## Unordered (tile, tile) pairs that share a port.
 	func facing_pairs() -> Array[Vector2i]:
 		var out: Array[Vector2i] = []
-		for i in _entries.size():
+		for i in _points.size():
 			for j in _partners(i):
 				if j > i:
-					out.append(Vector2i(_entries[i][2], _entries[j][2]))
+					out.append(Vector2i(_tiles[i], _tiles[j]))
 		return out
 
 	## Positions of ports with no partner.
 	func unmatched() -> PackedVector2Array:
 		var out := PackedVector2Array()
-		for i in _entries.size():
+		for i in _points.size():
 			if _partners(i).is_empty():
-				out.append(_entries[i][0])
+				out.append(_points[i])
 		return out
 
+	func _cell_of(point: Vector2) -> Vector2i:
+		return Vector2i(floori(point.x / CELL + SHIFT), floori(point.y / CELL + SHIFT))
+
+	## Ports at the same spot, on another tile, facing the opposite way. Only the port's own
+	## cell is searched, plus a neighbour on any axis where the port sits within
+	## POINT_EPSILON of a cell boundary.
 	func _partners(i: int) -> PackedInt32Array:
 		var out := PackedInt32Array()
-		var point: Vector2 = _entries[i][0]
-		var cell := Vector2i(floori(point.x / CELL), floori(point.y / CELL))
-		for dx in [-1, 0, 1]:
-			for dy in [-1, 0, 1]:
-				for j: int in _cells.get(cell + Vector2i(dx, dy), []):
-					if j != i and _entries[j][2] != _entries[i][2] \
-							and (_entries[j][0] as Vector2).distance_to(point) < POINT_EPSILON \
-							and (_entries[j][1] as Vector2).dot(_entries[i][1]) < -0.999:
+		var point := _points[i]
+		var fx := point.x / CELL + SHIFT
+		var fy := point.y / CELL + SHIFT
+		var cx := floori(fx)
+		var cy := floori(fy)
+		var x_lo := cx - 1 if fx - cx < NEAR_EDGE else cx
+		var x_hi := cx + 1 if cx + 1 - fx < NEAR_EDGE else cx
+		var y_lo := cy - 1 if fy - cy < NEAR_EDGE else cy
+		var y_hi := cy + 1 if cy + 1 - fy < NEAR_EDGE else cy
+		for x in range(x_lo, x_hi + 1):
+			for y in range(y_lo, y_hi + 1):
+				var bucket: Variant = _cells.get(Vector2i(x, y))
+				if bucket == null:
+					continue
+				for j: int in bucket:
+					if j != i and _tiles[j] != _tiles[i] \
+							and _points[j].distance_to(point) < POINT_EPSILON \
+							and _normals[j].dot(_normals[i]) < -0.999:
 						out.append(j)
 		return out

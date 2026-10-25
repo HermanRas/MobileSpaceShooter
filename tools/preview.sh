@@ -21,6 +21,10 @@ for arg in "$@"; do
   [[ "$arg" == --name=* ]] && NAME="${NAME}_${arg#--name=}"
 done
 
+# Refresh the class cache first, or a new `class_name` reads as "not declared" (as in
+# tools/test.sh).
+"$(dirname "${BASH_SOURCE[0]}")/run.sh" /opt/godot/godot --headless --path game --import >/dev/null 2>&1 || true
+
 exec "$(dirname "${BASH_SOURCE[0]}")/run.sh" \
   xvfb-run -a -s "-screen 0 ${SIZE}x24" \
   /opt/godot/godot --display-driver x11 --audio-driver Dummy --rendering-driver opengl3 \

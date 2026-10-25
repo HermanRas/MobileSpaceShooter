@@ -7,9 +7,23 @@ extends Node
 
 var _hangar: Node
 var _failures: PackedStringArray = []
+var _spy := ScriptErrorSpy.new()
+
+
+## Any script error during a drive is a failure. Without this, a step that crashes half-way
+## skips its remaining checks and the drive still reports PASS (it did, building 2.5).
+## Same idea as the Logger in tests/run_tests.gd.
+class ScriptErrorSpy extends Logger:
+	var seen: PackedStringArray = []
+
+	func _log_error(function: String, file: String, line: int, code: String, rationale: String,
+			_editor_notify: bool, error_type: int, _script_backtraces: Variant) -> void:
+		if error_type == ERROR_TYPE_SCRIPT:
+			seen.append("%s (%s:%d in %s)" % [rationale if rationale != "" else code, file.get_file(), line, function])
 
 
 func _ready() -> void:
+	OS.add_logger(_spy)
 	_hangar = (load("res://scenes/hangar/hangar.tscn") as PackedScene).instantiate()
 	add_child(_hangar)
 	await _frames(5)
@@ -21,11 +35,15 @@ func _ready() -> void:
 	await _step_tap_select_delete_undo()
 	await _step_move_selected()
 	await _step_paint()
+	await _step_stats_match_and_refresh_fast()
 	await _step_pinch_zooms()
 	await _step_one_finger_pans()
 
 	var image := get_viewport().get_texture().get_image()
 	image.save_png(ProjectSettings.globalize_path("res://dev_preview/out/drive_hangar.png"))
+	OS.remove_logger(_spy)
+	for error in _spy.seen:
+		_failures.append("script error: " + error)
 	if _failures.is_empty():
 		print("drive_hangar: PASS")
 		get_tree().quit(0)
@@ -96,6 +114,38 @@ func _step_paint() -> void:
 	var image := get_viewport().get_texture().get_image()
 	image.save_png(ProjectSettings.globalize_path("res://dev_preview/out/drive_hangar_paint.png"))
 	paint.visible = false
+
+
+func _step_stats_match_and_refresh_fast() -> void:
+	var stats := ShipStats.compute(_hangar.editor.blueprint, _hangar.placement)
+	var shown: String = (_hangar._stats._rows[&"hp"][0] as Label).text
+	_check(shown == "%d" % stats.hp, "the panel's HP (%s) matches ShipStats (%d)" % [shown, stats.hp])
+
+	# A full 150-tile ship: how long does one edit's refresh take? (PLAN.md 2.5: under a frame.)
+	var bp := Blueprint.new()
+	bp.id = "big"
+	bp.name = "Big"
+	for i in 150:
+		var tile := Blueprint.Tile.new()
+		tile.id = i
+		tile.type = &"core" if i == 0 else &"hull"
+		tile.shape = &"square"
+		tile.size = &"L"
+		tile.pos = Vector2(i % 10 - 5, i / 10 - 7)
+		tile.paint = Color.GRAY
+		bp.tiles.append(tile)
+	bp.tiles[0].pos = Vector2(0, 0)
+	bp.tiles[55].pos = Vector2(-5, -7)
+	_hangar.load_blueprint(bp)
+	await _frames(1)
+	_hangar.editor.paint_all(Color.WHITE)
+	var ms: float = _hangar.last_refresh_usec / 1000.0
+	print("drive_hangar: 150-tile refresh took %.1f ms on this machine" % ms)
+	_check(ms < 16.7, "a 150-tile refresh fits in one 60 fps frame here (%.1f ms)" % ms)
+	_hangar.editor.undo()
+	var errors: PackedStringArray = []
+	_hangar.load_blueprint(Blueprint.from_dict(Data.json_dir("blueprints")["starter"], errors))
+	await _frames(1)
 
 
 func _step_pinch_zooms() -> void:

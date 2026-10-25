@@ -711,9 +711,17 @@ tap paints. Paint round-trips with the blueprint (1.3), and `drive_hangar` check
 painting.
 
 #### 2.5 Stats panel
-- [ ] Live HP, armor, shield, mass, acceleration and cost, with the change shown on the ghost before placement ("+50 HP, −0.3 accel")
-- [ ] Validation problems are listed, and invalid tiles pulse red
-- **Done when:** every number matches `ship_stats.gd` and updates in under 1 frame of placement.
+🟡 2026-10-25, built; **the phone timing check is still open**. `StatsPanel` shows tiles, HP,
+armor, shield, mass and cost, and while a tile is carried it shows what that tile adds ("+100
+HP"), read from the tile definition so it's cheap during a drag. Acceleration reads "no
+thrusters" until 3.2. Problems are listed (the first 3), and their tiles pulse red. **Speed:** a
+150-tile refresh went from 37.9 ms to **8.8 ms** on the desktop through three changes:
+`Placement.analyze()` (validate and free ports from one port index), a per-tile geometry cache,
+and an allocation-free port search with the grid offset so regular ports never sit on a cell
+boundary. `drive_hangar` checks the panel matches `ShipStats` and the refresh time. ⚠️
+`drive_hangar` also has a script-error watcher: before it, a step that crashed half-way still
+reported PASS.
+- [ ] On the phone: a 150-tile edit refresh in under 1 frame (or make it incremental)
 
 #### 2.6 Blueprint library UI
 - [ ] Save, Save As, rename, delete, load
@@ -1143,7 +1151,7 @@ contract). The owner generates in Gemini, and then we review, slice and stage.
 | # | Item | Sheets / canvases | Needed by |
 |---|---|---|---|
 | A.0 | **Art direction** `[D3]`: palette (hex values quoted in every prompt), style sentence, ART_PROMPT.md header with the contract | – | before A.1 |
-| A.1 | Tile materials: Hull, Armor, Shield, Hardpoint (greyscale and seamless) + Core design. **First sheet, so it also carries the slicer port**: AOD's `slice_ui_sheets.py` → `tools/slice_sheets.py` with a per-sheet config (grid, key colour, glow list), proven on this sheet. | 1 sheet (5 cells + 2 variants each) | 2.4 |
+| A.1 | Tile materials: Hull, Armor, Shield, Hardpoint (greyscale and seamless) + Core design. **First sheet, so it also carries the slicer port**: AOD's `slice_ui_sheets.py` → `tools/slice_sheets.py` with a per-sheet config (grid, key colour, glow list), proven on this sheet. ⚠️ Materials are sampled in ship space (one repeat per U), so a Large hex core shows the canopy several times; the **core design needs tile-local UVs**, unlike the seamless materials. | 1 sheet (5 cells + 2 variants each) | 2.4 |
 | A.2 | Thrusters: pulse, jet and ion nozzles × Small/Medium/Large, top-down, on chroma green. L1–3 shown by a trim colour in the shader. | 1 sheet (9 cells) | 3.6 |
 | A.3 | Weapons: turret **base and barrel as separate cells** (so barrels can rotate), 8 types; level tiers shown by a trim colour | 2–3 sheets | 4.5 |
 | A.4 | Icons: 5 resources (Tech drawn as wires, plus GC), 5 tile types, 8 weapon icons, 3 thruster icons, HUD buttons (fire, switch, pause, boost), WaveTime power-ups | 2 sheets | 4.7, 8.3 |
