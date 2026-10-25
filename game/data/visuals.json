@@ -1,0 +1,5 @@
+{
+	"format": 1,
+	"_doc": "The asset seam: the ONLY place a visual ID maps to a file. Each entry is {\"path\": real art, \"placeholder\": stand-in}. See PLAN.md 5.3.",
+	"visuals": {}
+}

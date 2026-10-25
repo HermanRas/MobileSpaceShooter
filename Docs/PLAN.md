@@ -56,7 +56,7 @@ mode and comes last.
 
 | Decision | Choice | Why |
 |---|---|---|
-| Engine | **Godot 4.7.1-stable**: `~/Downloads/Godot_v4.7.1-stable_linux.x86_64` (also the win64 builds) | Pinned. Upgrades happen deliberately at a phase boundary, with the suite green before and after. |
+| Engine | **Godot 4.7.1-stable**: `~/Downloads/Godot_v4.7.1/Godot_v4.7.1-stable_linux.x86_64` (the win64 builds sit beside it) | Pinned. Upgrades happen deliberately at a phase boundary, with the suite green before and after. |
 | Language | **GDScript**, typed (`var x: int`) everywhere | Matches AOD. Typed code catches errors at parse time. |
 | Renderer | **Compatibility** (`gl_compatibility`), not Mobile | The existing stub uses Mobile. AOD measured that Vulkan-Mobile crashes on older Mali/Adreno and supports *fewer* Android devices, with no benefit in 2D. |
 | Dimension | **2D**, top-down. Godot 2D physics (Jolt is 3D-only and has no effect here). | |
@@ -538,44 +538,37 @@ Goal: an empty but correctly shaped project that boots on a phone, with tests, t
 in place before any gameplay code is written.
 
 #### 0.1 Repository `[D1]`
-- [ ] `git init` in the project folder `[D1]`
-- [ ] `.gitignore`: `.godot/`, `game/assets/**/sliced/`, `*.apk`, `*.aab`, `.android/`, `tools/.venv/`
-- [ ] `.gitattributes`: LF line endings, `*.png *.jpg *.ogg *.wav binary`
-- [ ] Create the GitHub remote (the owner does this; `gh` isn't installed) and push the first commit
-- **Done when:** a clean clone of the remote matches the working tree.
+✅ 2026-10-25. git in the project folder, branch `main`. `insperationPictures/` is **gitignored**,
+because some of the images are third-party screenshots and the repo will be public.
+- [ ] Owner: create the GitHub remote (`gh` isn't installed), then `git remote add origin … && git push -u origin main`
 
 #### 0.2 Folder layout
-- [ ] Move `mobile-space-game/` → `game/`, delete its `.godot/` cache (it regenerates)
-- [ ] Create the §5.1 tree with `.gitkeep` files, and `.gdignore` in any folder Godot shouldn't import
-- [ ] Keep `insperationPictures/` outside `game/` (it's reference, not an asset)
-- **Done when:** the editor opens `game/project.godot` with no errors and the tree matches §5.1.
+✅ 2026-10-25. `mobile-space-game/` → `game/`, with the §5.1 tree. Empty folders hold `.gitkeep`;
+`game/dev_preview/out/` has a `.gdignore`.
 
 #### 0.3 Project settings
-- [ ] `config/name`, renderer → `gl_compatibility` (remove the `d3d12`/Mobile lines)
-- [ ] 1280×720, stretch `canvas_items` / `expand`, landscape lock, `handheld/orientation`
-- [ ] Physics 60 Hz, 2D gravity 0, default linear/angular damp set for space
-- [ ] Input map: `move_*`, `fire`, `switch_weapon`, `boost`, `pause`, with keyboard and gamepad bindings
-- [ ] `input_devices/pointing/emulate_touch_from_mouse = true` for desktop testing
-- **Done when:** the project boots to an empty scene at the right size and orientation.
+✅ 2026-10-25. `game/project.godot`: Compatibility renderer, 1280×720 `canvas_items`/`expand`,
+landscape, zero gravity and damping (ships set their own), touch emulated from the mouse,
+`quit_on_go_back=false`. **Input actions are registered in code** (`Settings._register_inputs()`),
+not in project.godot, so the bindings are readable in one place. There's no `boost` action:
+under §4.3 the ion ramp follows thruster on-time, not a button.
 
 #### 0.4 Licences and credits
-- [ ] `LICENSE` (MIT, owner's name, 2026)
-- [ ] Copy `GeminiCopyRight.md` from AOD, re-read the Google terms, and update the dates
-- [ ] `CREDITS.md`, plus `game/assets/LICENCES.md` with a header and an empty table
-- **Done when:** all four files exist and each one is linked from the README.
+✅ 2026-10-25. `LICENSE` (MIT), `CREDITS.md`, `game/assets/LICENCES.md`, and `GeminiCopyRight.md`
+(condensed from AOD's). ⚠️ Its Google quotes still carry AOD's 2026-09-04 reading. The re-read is
+due before the first public release (8.8).
 
 #### 0.5 Autoload skeleton and asset seam
-- [ ] Stub the seven autoloads in §5.2, registered in `project.godot`
-- [ ] `Data` loader with schema checks; an empty `visuals.json` / `audio.json`
-- [ ] `Assets.tex()` with the placeholder → magenta fallback, plus `game/assets/placeholders/`
-- [ ] Boot scene → `Router` → a placeholder main menu with one label
-- **Done when:** boot reaches the menu, and a call to an unknown visual ID returns magenta instead of crashing.
+✅ 2026-10-25. Seven autoloads in `game/src/autoload/`, with `Save` loading first because
+`Settings` reads its file in `_ready`. `Data` rejects any table without a `format` field.
+`Assets.tex()` falls back to the placeholder, then to a magenta square. Boot → `Router` →
+placeholder main menu, which shows a red count if any data file failed to load.
 
 #### 0.6 Test harness
-- [ ] `tests/test_case.gd` (assert helpers) and `run_tests.tscn` (discovers `tests/**/test_*.gd`, exits non-zero on failure)
-- [ ] `tools/test.sh`: runs `Godot_v4.7.1-stable_linux.x86_64 --headless --path game res://tests/run_tests.tscn`, plus the `--import` cache refresh
-- [ ] `test_model_boundary.gd` (the §5.1 rule)
-- **Done when:** `tools/test.sh` prints a passing count and exits 0. A deliberately failing test exits 1.
+✅ 2026-10-25. `tools/test.sh`, using AOD's runner and `TestCase` (`game/tests/run_tests.gd`,
+`case.gd`). It catches script errors that silently cut a test short through a `Logger`, and it
+fails an empty suite or a test with no assertions. Verified: 9 tests pass, and a deliberately
+failing test exits 1.
 
 #### 0.7 Screenshot previews
 - [ ] `dev_preview/preview.gd`: load a scene, wait N frames, save a PNG to `dev_preview/out/`

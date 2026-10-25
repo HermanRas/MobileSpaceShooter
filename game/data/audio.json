@@ -1,0 +1,5 @@
+{
+	"format": 1,
+	"_doc": "The audio seam: the ONLY place a sound ID maps to a file. Filled in by PLAN.md Phase 14.",
+	"sounds": {}
+}

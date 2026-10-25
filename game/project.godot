@@ -1,0 +1,54 @@
+; Engine configuration file.
+; It's best edited using the editor UI and not directly,
+; since the parameters that go here are not all obvious.
+;
+; Format:
+;   [section] ; section goes between []
+;   param=value ; assign values to parameters
+
+config_version=5
+
+[application]
+
+config/name="MSP"
+config/description="Mobile Space Shooter: build a ship from tiles, then fly it."
+config/version="0.0.1"
+run/main_scene="res://scenes/boot/boot.tscn"
+config/quit_on_go_back=false
+config/features=PackedStringArray("4.7", "GL Compatibility")
+config/icon="res://icon.svg"
+
+[autoload]
+
+Save="*res://src/autoload/save.gd"
+Data="*res://src/autoload/data.gd"
+Assets="*res://src/autoload/assets.gd"
+Settings="*res://src/autoload/settings.gd"
+Profiles="*res://src/autoload/profiles.gd"
+Audio="*res://src/autoload/audio.gd"
+Router="*res://src/autoload/router.gd"
+
+[display]
+
+window/size/viewport_width=1280
+window/size/viewport_height=720
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+window/handheld/orientation=0
+
+[input_devices]
+
+pointing/emulate_touch_from_mouse=true
+
+[physics]
+
+common/physics_ticks_per_second=60
+2d/default_gravity=0.0
+2d/default_linear_damp=0.0
+2d/default_angular_damp=0.0
+
+[rendering]
+
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
+environment/defaults/default_clear_color=Color(0.02, 0.02, 0.05, 1)
