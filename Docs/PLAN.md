@@ -665,23 +665,37 @@ validate (`tests/model/test_sample_blueprints.gd`). Forward is **+x**, Godot's a
 Goal: building a ship on a phone with your thumbs feels good. This is the core of the game, so it
 gets the most polish.
 
+**The hangar's input is checked by a driver**, not just screenshots:
+`tools/drive.sh res://dev_preview/drive_hangar.tscn` feeds real touch events into the scene
+(drag from the palette, tap, delete, undo, move, pinch, pan) and exits non-zero on any failure.
+It caught the first bug in 2.2.
+
 #### 2.1 Hangar scene and camera
-- [ ] A grid backdrop, the ship centred, and the build-area bounds drawn
-- [ ] Pinch zoom and two-finger pan; mouse wheel and middle-drag on desktop
-- **Done when:** you can zoom from the whole ship down to a Small tile filling a thumb on the phone.
+🟡 2026-10-25, built; **the phone check is still open**. `scenes/hangar/hangar.tscn` →
+`src/ui/hangar/`: `hangar.gd` (input and controller), `HangarCamera` (zoom 0.5–12 around the
+pinch point), `ShipView` (grid, 16 U build area, ship mesh, overlays). Reached from the
+placeholder main menu's **Hangar** button.
+- [ ] On the phone: zoom from the whole ship down to a Small tile filling a thumb
 
 #### 2.2 Placing tiles
-- [ ] A palette drawer: type tabs (Hull/Armor/Shield/Hardpoint), shape row, S/M/L toggle
-- [ ] Drag from the palette → a ghost snaps to the nearest valid port within reach, tinted green or red
-- [ ] A rotate button cycles the valid orientations at that port; release to place
-- [ ] Offset the ghost above the finger so the thumb doesn't hide it
-- **Done when:** a 20-tile ship can be built on the phone without a misplacement.
+🟡 2026-10-25, built; **the phone check is still open**. `HangarPalette`: type tabs, shape
+swatches, S/M/L. Dragging a swatch carries a ghost **90 px above the finger** that snaps to the
+nearest valid spot within 1 U, green or red. The snap search runs at most once per frame. Free
+ports show while carrying. **Rotate works on the selected tile** (a second finger can't press a
+button mid-drag on Android), cycling its valid orientations in place; the chosen rotation sticks
+for the next drop. `R` rotates mid-drag on desktop. ⚠️ **The carry's release must not be marked
+handled**, or the GUI keeps touch focus on the palette swatch and the next tap never reaches
+the ship.
+- [ ] On the phone: build a 20-tile ship without a misplacement
 
 #### 2.3 Editing
-- [ ] Tap to select, then delete, move (re-snap) and duplicate
-- [ ] Undo/redo (command stack, 100 deep)
-- [ ] **Mirror mode**: a symmetry axis through the Core, so every placement and delete is mirrored
-- **Done when:** a symmetric ship can be built, and undo restores any state exactly.
+✅ 2026-10-25. `src/model/hangar_editor.gd`: place, remove, move, paint, undo/redo (100 deep,
+whole-blueprint snapshots, so undo is exact by construction), and **mirror** across the
+forward axis through the core. Mirror finds a tile's image by reflecting its outline and trying
+every rotation, so the asymmetric wedge works. Mirror mode builds the starter ship in 5 drops.
+Tested in `tests/model/test_hangar_editor.gd`. Tap selects, dragging a selected tile moves it,
+and the toolbar has Rotate, Duplicate (next free spot beside it), Delete, Undo, Redo and Mirror.
+Desktop keys: Ctrl+Z/Y, Del, R, D, M.
 
 #### 2.4 Paint
 - [ ] Ship shader v0 (§6.2) using placeholder greyscale textures

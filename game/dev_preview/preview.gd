@@ -20,7 +20,12 @@ func _ready() -> void:
 			"res://dev_preview/out/%s.png" % scene_path.get_file().get_basename()))
 	var frames := int(args.get("frames", DEFAULT_FRAMES))
 
-	add_child((load(scene_path) as PackedScene).instantiate())
+	var scene := (load(scene_path) as PackedScene).instantiate()
+	add_child(scene)
+	await get_tree().process_frame
+	# A scene can stage a state worth photographing from the remaining --key=value args.
+	if scene.has_method(&"preview_setup"):
+		scene.preview_setup(args)
 	for i in frames:
 		await get_tree().process_frame
 	await RenderingServer.frame_post_draw

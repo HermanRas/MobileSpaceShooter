@@ -119,6 +119,40 @@ func candidate_snaps(bp: Blueprint, type: StringName, shape_id: StringName, size
 	return out
 
 
+## True when `polygon` overlaps no tile of `bp` (ignoring the ids in `ignore`).
+func footprint_free(bp: Blueprint, polygon: PackedVector2Array, ignore: PackedInt32Array = []) -> bool:
+	var placed := _placed_polygons(bp).filter(func(p: _Placed) -> bool: return not ignore.has(p.id))
+	var typed: Array[_Placed] = []
+	typed.assign(placed)
+	return not _overlaps_any(polygon, typed)
+
+
+## The same tile reflected across the horizontal line y = `axis_y`, as {"pos", "rot"}, or {}
+## if no rotation of the shape produces the reflected outline. Found by trying every rotation,
+## so it works for shapes with no symmetry of their own (the wedge).
+func mirrored(tile: Blueprint.Tile, axis_y: float) -> Dictionary:
+	var reflected := PackedVector2Array()
+	for p in tile_polygon(tile):
+		reflected.append(Vector2(p.x, 2.0 * axis_y - p.y))
+	var target_key := _polygon_key(reflected)
+	var target_center := ShipStats.polygon_centroid(reflected)
+	for rot in shapes.rotation_steps():
+		var at_origin := shapes.polygon(tile.shape, tile.size, rot)
+		var pos := target_center - ShipStats.polygon_centroid(at_origin)
+		if _polygon_key(shapes.polygon(tile.shape, tile.size, rot, pos)) == target_key:
+			return {"pos": pos, "rot": rot}
+	return {}
+
+
+## The id of the tile whose outline is exactly `polygon`, or -1.
+func tile_with_footprint(bp: Blueprint, polygon: PackedVector2Array) -> int:
+	var key := _polygon_key(polygon)
+	for tile in bp.tiles:
+		if _polygon_key(tile_polygon(tile)) == key:
+			return tile.id
+	return -1
+
+
 ## Tile id -> the ids of every tile it shares a port with.
 func neighbours(bp: Blueprint) -> Dictionary:
 	var index := _PortIndex.new()
@@ -133,6 +167,16 @@ func neighbours(bp: Blueprint) -> Dictionary:
 			out[pair.x].append(pair.y)
 			out[pair.y].append(pair.x)
 	return out
+
+
+## Every port no other tile is sitting on: where a new tile could attach.
+func free_ports(bp: Blueprint) -> PackedVector2Array:
+	var index := _PortIndex.new()
+	for tile in bp.tiles:
+		for edge in tile_edges(tile):
+			for port in edge.ports:
+				index.add(port, edge.normal, tile.id)
+	return index.unmatched()
 
 
 ## Ids of every tile reachable from the core through shared ports (empty with no core).
@@ -297,14 +341,28 @@ class _PortIndex:
 	func facing_pairs() -> Array[Vector2i]:
 		var out: Array[Vector2i] = []
 		for i in _entries.size():
-			var point: Vector2 = _entries[i][0]
-			var cell := Vector2i(floori(point.x / CELL), floori(point.y / CELL))
-			for dx in [-1, 0, 1]:
-				for dy in [-1, 0, 1]:
-					for j: int in _cells.get(cell + Vector2i(dx, dy), []):
-						if j <= i or _entries[j][2] == _entries[i][2]:
-							continue
-						if (_entries[j][0] as Vector2).distance_to(point) < POINT_EPSILON \
-								and (_entries[j][1] as Vector2).dot(_entries[i][1]) < -0.999:
-							out.append(Vector2i(_entries[i][2], _entries[j][2]))
+			for j in _partners(i):
+				if j > i:
+					out.append(Vector2i(_entries[i][2], _entries[j][2]))
+		return out
+
+	## Positions of ports with no partner.
+	func unmatched() -> PackedVector2Array:
+		var out := PackedVector2Array()
+		for i in _entries.size():
+			if _partners(i).is_empty():
+				out.append(_entries[i][0])
+		return out
+
+	func _partners(i: int) -> PackedInt32Array:
+		var out := PackedInt32Array()
+		var point: Vector2 = _entries[i][0]
+		var cell := Vector2i(floori(point.x / CELL), floori(point.y / CELL))
+		for dx in [-1, 0, 1]:
+			for dy in [-1, 0, 1]:
+				for j: int in _cells.get(cell + Vector2i(dx, dy), []):
+					if j != i and _entries[j][2] != _entries[i][2] \
+							and (_entries[j][0] as Vector2).distance_to(point) < POINT_EPSILON \
+							and (_entries[j][1] as Vector2).dot(_entries[i][1]) < -0.999:
+						out.append(j)
 		return out

@@ -13,6 +13,7 @@ $GODOT --path game                # run the game
 $GODOT --headless --path game --import   # refresh the class cache after adding a class_name
 
 tools/preview.sh res://scenes/debug/blueprint_view.tscn   # screenshot a scene (Docker, no window)
+tools/drive.sh res://dev_preview/drive_hangar.tscn       # play the hangar with fake touches; exit 0 = pass
                                   # -> game/dev_preview/out/; open the PNG to check it
 tools/run.sh python3 -I tools/licence_audit.py            # every asset declared?
 tools/android.sh export|devices|deploy|logcat             # see Docs/MOBILE_DEPLOY.md

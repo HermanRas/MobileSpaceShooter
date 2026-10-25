@@ -20,6 +20,13 @@ func _ready() -> void:
 		errors.add_theme_color_override(&"font_color", Color(1.0, 0.35, 0.35))
 		column.add_child(errors)
 
+	var hangar := Button.new()
+	hangar.text = "Hangar"
+	hangar.custom_minimum_size = Vector2(260, 72)
+	hangar.add_theme_font_size_override(&"font_size", 28)
+	hangar.pressed.connect(func() -> void: Router.goto("res://scenes/hangar/hangar.tscn"))
+	column.add_child(hangar)
+
 
 func _label(text: String, size: int) -> Label:
 	var label := Label.new()

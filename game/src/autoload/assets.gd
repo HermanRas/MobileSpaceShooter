@@ -26,6 +26,11 @@ func has_real_art(id: StringName) -> bool:
 	return entry.has("path") and ResourceLoader.exists(entry["path"])
 
 
+## The whole `visuals.json` entry for `id` (extra fields such as an atlas's cell order), or {}.
+func meta(id: StringName) -> Dictionary:
+	return _entry(id)
+
+
 func clear_cache() -> void:
 	_cache.clear()
 
