@@ -12,7 +12,8 @@ var _clock := 0.0
 
 func _ready() -> void:
 	var camera := Camera2D.new()
-	camera.position = Vector2(620, 330)
+	camera.position = Vector2(620, 400)
+	camera.zoom = Vector2(0.8, 0.8)  # room for the long ion plumes
 	add_child(camera)
 	var row := 0
 	for type_id: StringName in [&"pulse", &"jet", &"ion"]:

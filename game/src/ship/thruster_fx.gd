@@ -4,7 +4,7 @@ extends Node2D
 ## sits on the middle of the thruster's edge, so the nozzle sticks out along +x first.
 ##   pulse  an orange puff on every kick
 ##   jet    a fire trail whose length follows the throttle
-##   ion    a short round blue torch that brightens as the ramp builds
+##   ion    a long tapered blue plume that grows and brightens as the ramp builds
 ## Bigger for larger sizes (via the width) and higher levels (level_scale in visuals.json).
 ## CPUParticles2D for now; GPUParticles2D gets measured against it on the phone later.
 
@@ -70,7 +70,8 @@ func set_state(throttle: float, ramp: float) -> void:
 			_particles.initial_velocity_max = width_px * 8.0 * _scale * reach
 		&"ion":
 			var wanted := throttle * (0.3 + 0.7 * ramp)
-			if not is_equal_approx(wanted, _torch):
+			# Every frame while lit (the shimmer), and once more as it goes out.
+			if _torch > 0.01 or not is_equal_approx(wanted, _torch):
 				_torch = wanted
 				queue_redraw()
 
@@ -87,16 +88,19 @@ func kick(throttle: float) -> void:
 func _draw() -> void:
 	if type != &"ion" or _torch <= 0.01:
 		return
-	# A short round torch: soft glows, wide and blue outside to small and white-hot inside,
-	# each a little longer than it is wide, starting just past the nozzle.
-	var radius := width_px * 0.45 * _scale * (0.55 + 0.45 * _torch)
+	# A long tapered plume: soft glows anchored at the nozzle, wide and deep blue outside
+	# to short, thin and white-hot inside. It grows with the ramp and shimmers a little.
+	var seconds := Time.get_ticks_msec() / 1000.0
+	var shimmer := 1.0 + 0.04 * sin(seconds * 31.0 + width_px) + 0.03 * sin(seconds * 53.0)
+	var length := width_px * (1.5 + 5.5 * _torch) * _scale * shimmer
+	var half_width := width_px * 0.4 * sqrt(_scale) * (0.7 + 0.3 * _torch)  # length grows with level more than width
 	var start := width_px * NOZZLE_DEPTH
-	for i in range(_colors.size() - 1, -1, -1):
-		var share := float(i + 1) / _colors.size()
-		var half := Vector2(radius * share * 1.4, radius * share)
-		var center := Vector2(start + half.x * 0.8, 0)
-		draw_texture_rect(_dot(), Rect2(center - half, half * 2.0), false,
-				Color(_colors[i], _torch * (0.45 + 0.55 * (1.0 - share))))
+	var count := _colors.size()
+	for i in range(count - 1, -1, -1):
+		var share := float(i + 1) / count
+		var half := Vector2(length * share, half_width * (0.25 + 0.75 * share))
+		draw_texture_rect(_plume(), Rect2(Vector2(start, -half.y), Vector2(half.x, half.y * 2.0)), false,
+				Color(_colors[i], _torch * (0.5 + 0.5 * (1.0 - share))))
 
 
 func _make_particles(amount: int, lifetime: float, explosiveness: float) -> CPUParticles2D:
@@ -130,6 +134,7 @@ func _make_particles(amount: int, lifetime: float, explosiveness: float) -> CPUP
 
 
 static var _dot_texture: GradientTexture2D
+static var _plume_texture: ImageTexture
 static var _add_material: CanvasItemMaterial
 
 
@@ -147,6 +152,24 @@ static func _dot() -> GradientTexture2D:
 		_dot_texture.width = 32
 		_dot_texture.height = 32
 	return _dot_texture
+
+
+## A plume made in code: bright at the left edge, tapering to a point on the right and soft
+## at the sides. Stretched long, it reads as a torch.
+static func _plume() -> ImageTexture:
+	if _plume_texture == null:
+		var w := 128
+		var h := 32
+		var image := Image.create(w, h, false, Image.FORMAT_RGBA8)
+		for x in w:
+			var along := float(x) / (w - 1)
+			var reach := 1.0 - 0.75 * along  # the half-width tapers to a quarter at the tip
+			var fade := pow(1.0 - along, 1.4)
+			for y in h:
+				var across := absf((y + 0.5) / h * 2.0 - 1.0) / reach
+				image.set_pixel(x, y, Color(1, 1, 1, fade * clampf(1.0 - across * across, 0.0, 1.0)))
+		_plume_texture = ImageTexture.create_from_image(image)
+	return _plume_texture
 
 
 static func _additive() -> CanvasItemMaterial:
