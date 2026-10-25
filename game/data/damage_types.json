@@ -1,0 +1,13 @@
+{
+	"format": 1,
+	"_doc": "PLAN.md 4.5. A hit drains the ship's shield pool first (raw x vs_shield). What gets through lands on the tile it struck: max(raw x vs_hull - armor x armor_factor x (1 - pierce), raw x min_share). Splash hits every tile within its radius, scaled from 1 at the centre to splash_edge_share at the rim. The pool regenerates after regen_delay_s without a hit; EMP knocks out shields and thrusters for disable_s.",
+	"min_share": 0.2,
+	"regen_delay_s": 3.0,
+	"splash_edge_share": 0.5,
+	"types": {
+		"kinetic": {"vs_shield": 1.0, "vs_hull": 1.0, "armor_factor": 1.0},
+		"energy": {"vs_shield": 1.5, "vs_hull": 1.0, "armor_factor": 0.5},
+		"explosive": {"vs_shield": 0.75, "vs_hull": 1.0, "armor_factor": 1.0},
+		"emp": {"vs_shield": 3.0, "vs_hull": 0.2, "armor_factor": 0.0, "disable_s": 2.0}
+	}
+}

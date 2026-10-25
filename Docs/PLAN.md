@@ -844,7 +844,8 @@ setting `global_position` on an awake body is overwritten by the next physics st
 `ThrusterFxSet` from the FlightController:
 - **Pulse:** an orange puff on each kick (the controller's `kicked` signal).
 - **Jet:** a fire trail whose length follows the throttle.
-- **Ion:** a short round blue torch that brightens with its ramp.
+- **Ion:** a long tapered blue plume (a code-made texture, layered deep blue to white-hot)
+  that grows and brightens with its ramp.
 
 Size follows the thruster's width, and L2/L3 are ×1.3/×1.6 (`vis.fx.thrusters` in
 `visuals.json`, with the colours). It uses CPUParticles2D with a soft dot generated in code (no
@@ -862,9 +863,17 @@ cost too much with 40 ships (15.1).
 ### Phase 4: Weapons and damage
 
 #### 4.1 Damage model
-- [ ] `model/damage.gd`: the §4.5 pipeline and type matrix; `data/damage_types.json`
-- [ ] Tests: shield first, armor reduction, the 20% floor, splash across tiles, EMP disable
-- **Done when:** every row of the §4.5 table has a passing test.
+✅ 2026-10-25. `DamageTable` (`model/damage_table.gd`, from `data/damage_types.json`) holds the
+rules; `ShipDamage` (`model/ship_damage.gd`) is one ship's fight state: HP per tile, the shield
+pool, regen, the EMP knock-out and core death. `hit()` / `splash()` return a `Result` (shield
+drained, HP lost, tiles destroyed). `test_damage.gd` covers every row of the §4.5 table. Rules
+the table left open:
+- What the pool can't hold carries on to the tile as raw damage (a 60 energy hit on a 60 pool
+  drains it and still deals 20).
+- A splash drains the pool once, then hits each tile in reach, from ×1 at the centre to
+  `splash_edge_share` (×0.5) at the rim.
+- An EMP'd shield soaks nothing and doesn't regen for 2 s, but keeps its points.
+- Weapons can carry `pierce` (0–1, the share of armor ignored) for the cannon.
 
 #### 4.2 Destruction
 - [ ] Remove a destroyed tile → rebuild the mesh and collision, connectivity BFS → debris bodies that fade
