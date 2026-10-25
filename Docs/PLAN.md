@@ -681,14 +681,15 @@ gets the most polish.
 It caught the first bug in 2.2.
 
 #### 2.1 Hangar scene and camera
-🟡 2026-10-25, built; **the phone check is still open**. `scenes/hangar/hangar.tscn` →
+✅ 2026-10-25. The owner confirmed zooming in and out on the phone. `scenes/hangar/hangar.tscn` →
 `src/ui/hangar/`: `hangar.gd` (input and controller), `HangarCamera` (zoom 0.5–12 around the
 pinch point), `ShipView` (grid, 16 U build area, ship mesh, overlays). Reached from the
 placeholder main menu's **Hangar** button.
-- [ ] On the phone: zoom from the whole ship down to a Small tile filling a thumb
 
 #### 2.2 Placing tiles
-🟡 2026-10-25, built; **the phone check is still open**. `HangarPalette`: type tabs, shape
+✅ 2026-10-25. The owner built ships on the phone, including mirror, paint and every tile type.
+It was "hard at first" but easy once learned, so the hangar hints in 15.2 should
+cover the lifted ghost and snapping. `HangarPalette`: type tabs, shape
 swatches, S/M/L. Dragging a swatch carries a ghost **90 px above the finger** that snaps to the
 nearest valid spot within 1 U, green or red. The snap search runs at most once per frame. Free
 ports show while carrying. **Rotate works on the selected tile** (a second finger can't press a
@@ -698,7 +699,6 @@ handled**, or the GUI keeps touch focus on the palette swatch and the next tap n
 the ship. ⚠️ **The tabs sit below the shapes** so that no drag starts in Android's bottom gesture
 strip (§5.5); with the shapes at the bottom, the first drag on the phone sent the game home.
 A real drag from the palette onto the core works on the phone.
-- [ ] On the phone: build a 20-tile ship without a misplacement
 
 #### 2.3 Editing
 ✅ 2026-10-25. `src/model/hangar_editor.gd`: place, remove, move, paint, undo/redo (100 deep,
@@ -1149,7 +1149,7 @@ Goal: put the ship you built into space and fly it.
 - **Done when:** §5.5 holds on the device and the measurements are recorded.
 
 #### 15.2 Onboarding
-- [ ] A first-run controls overlay, hangar hints, a WaveTime tips card, and a short Story tutorial in beat 1
+- [ ] A first-run controls overlay, hangar hints (the lifted ghost, snapping; see 2.2), a WaveTime tips card, and a short Story tutorial in beat 1
 - **Done when:** a new player builds and flies with no outside help.
 
 #### 15.3 Store and distribution `[D14]`
