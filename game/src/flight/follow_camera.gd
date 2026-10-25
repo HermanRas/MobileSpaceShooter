@@ -31,8 +31,8 @@ func configure(table: Dictionary, ship: ShipBody, extent_u: float) -> void:
 
 
 func _process(delta: float) -> void:
-	if target == null:
-		return
+	if not is_instance_valid(target):
+		return  # destroyed (4.2): hold still until the next ship is configured
 	var speed_u := target.linear_velocity.length() / PX
 	var wanted_zoom := _rest_zoom * maxf(1.0 / (1.0 + speed_zoom_out * speed_u), min_zoom_share)
 	zoom = Vector2.ONE * lerpf(zoom.x, wanted_zoom, minf(zoom_rate * delta, 1.0))

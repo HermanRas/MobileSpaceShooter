@@ -876,10 +876,30 @@ the table left open:
 - Weapons can carry `pierce` (0–1, the share of armor ignored) for the cannon.
 
 #### 4.2 Destruction
-- [ ] Remove a destroyed tile → rebuild the mesh and collision, connectivity BFS → debris bodies that fade
-- [ ] Recompute mass and envelope (losing a thruster slows you)
-- [ ] Core death: explosion sequence and ship removal. Damage tint and cracks in the shader.
-- **Done when:** shooting a ship in half in the sandbox leaves a drifting, fading wreck and a crippled survivor.
+✅ 2026-10-25. `ShipBody.enable_damage()` gives a ship a `ShipDamage`; `take_hit()` /
+`take_splash()` feed it.
+- **Breaking off:** `ShipDamage.break_off()` floods from the core through living tiles. Each
+  cut-off group leaves as a wreck: a `ShipBody` built from `Blueprint.subset()`, on its own
+  physics layer (collides with nothing), drifting away and fading out.
+- **The survivor** rebuilds its shapes, mesh, mass and envelope, then emits `rebuilt`. The
+  FlightController and ThrusterFxSet follow it, so losing a hardpoint loses its thruster. An
+  EMP zeroes the throttles.
+- **Core death:** the rest splits into chunks of ≤3 tiles (`split()`) flung outward, plus an
+  `Explosion` (flash, ring, sparks; `vis.fx.explosion`).
+- **Wear:** 4 steps, packed into UV.y in thousands (`ShipMesh.wear_step`). The shader scorches,
+  then cracks with a Voronoi network that glows near the end. The mesh is rebuilt only when a
+  tile's step changes.
+
+The wreck numbers are in `damage_types.json` → `wreck`.
+
+The sandbox parks `data/enemies/target_barge.json` (9×2) ahead of the ship; a tap hits a tile
+for `test_hit` until guns arrive, and destroyed ships respawn. `drive_flight` checks:
+- cutting the barge in half leaves 1 wreck of 7 tiles and a lighter survivor;
+- destroying the core leaves an explosion and chunks, and the target respawns;
+- losing a thruster updates the pilot and the exhaust.
+
+⚠️ The sandbox takes touches only. Mouse clicks also arrive as touches
+(`emulate_touch_from_mouse`), and taking both hit twice.
 
 #### 4.3 Weapon framework
 - [ ] `data/weapons.json` (§4.4), with mount types fixed, swivel and turret

@@ -33,6 +33,7 @@ func _ready() -> void:
 			"the ship is in the world with one shape per tile")
 	print("drive_flight: spawn %.1f ms for %d tiles" % [sandbox.last_spawn_usec / 1000.0, ship.blueprint.tiles.size()])
 
+	sandbox.test_hit = 0.0  # taps only pick here; _step_damage does the shooting
 	await _step_taps_pick_the_right_tile(sandbox)
 	await _step_rays_hit_every_tile(ship)
 	sandbox._picked = -1  # the pick highlight is drawn separately; count the ship alone
@@ -40,6 +41,7 @@ func _ready() -> void:
 	await _step_one_draw_call(ship)
 	_save_shot("drive_flight.png")
 	await _step_ships_collide(sandbox)
+	await _step_damage(sandbox)
 
 	_hangar.on_back()
 	await _frames(3)
@@ -54,12 +56,105 @@ func _ready() -> void:
 	_finish()
 
 
+## Phase 4.2: shoot the practice barge in half (a drifting wreck and a lighter survivor), then
+## blow it up and see it come back; shoot a thruster off our own ship and fly on with less.
+func _step_damage(sandbox: FlightSandbox) -> void:
+	var target := sandbox.target
+	_check(target != null and target.damage != null, "a practice target is parked ahead")
+	if target == null:
+		return
+	var tiles_before := target.blueprint.tiles.size()
+	var mass_before := target.mass
+	var wrecks_before := _wrecks(sandbox).size()
+	# The barge's column at x = -1 (tiles 4 and 12) holds its left end on.
+	for tile_id in [4, 12]:
+		for i in 12:
+			if target.damage.is_destroyed(tile_id):
+				break
+			await _shoot(sandbox, target, tile_id)
+	await _frames(2)
+	var wrecks := _wrecks(sandbox)
+	_check(wrecks.size() == wrecks_before + 1, "cutting the barge in half leaves one wreck (%d)" % (wrecks.size() - wrecks_before))
+	_check(target.blueprint.tiles.size() == tiles_before - 9 and target.get_shape_owners().size() == tiles_before - 9,
+			"the survivor lost the 2 shot tiles and the 7 beyond them (%d left of %d)" % [target.blueprint.tiles.size(), tiles_before])
+	_check(target.mass < mass_before, "and is lighter (%.1f -> %.1f)" % [mass_before, target.mass])
+	if wrecks.size() > wrecks_before:
+		var wreck: ShipBody = wrecks.back()
+		_check(wreck.blueprint.tiles.size() == 7 and wreck.collision_layer == ShipBody.WRECK_LAYER,
+				"the wreck holds the 7 cut-off tiles and collides with nothing")
+		await _physics_frames(30)
+		_check(wreck.linear_velocity.length() > 1.0, "the wreck drifts away")
+	# Wear on the survivor: one tile per step, so the shot shows each.
+	for row: Array in [[6, 30.0], [7, 50.0], [14, 70.0], [15, 95.0]]:
+		target.damage.shield = 0.0
+		target.take_hit(row[0], row[1], &"kinetic")
+	await _frames(2)
+	_check(target._wear.size() == 4, "each damaged tile shows its wear (%d)" % target._wear.size())
+	_save_shot("drive_damage.png")
+
+	for i in 30:
+		if not is_instance_valid(target) or target.damage.dead:
+			break
+		await _shoot(sandbox, target, target.damage.core_id)
+	await _frames(2)
+	_check(sandbox.target == null, "destroying the core removes the ship")
+	_check(sandbox._world.get_children().any(func(n: Node) -> bool: return n is Explosion), "with an explosion")
+	_check(_wrecks(sandbox).size() >= 3, "and flings its pieces apart (%d wrecks)" % _wrecks(sandbox).size())
+	_save_shot("drive_explosion.png")
+	await get_tree().create_timer(float(sandbox._sandbox.get("respawn_s", 3.0)) + 0.3).timeout
+	_check(sandbox.target != null and sandbox.target.blueprint.tiles.size() == tiles_before, "a fresh target comes back")
+
+
+## Phase 4.2: shoot off the tile carrying a thruster, and fly on with the rest.
+func _step_lose_a_thruster(sandbox: FlightSandbox) -> void:
+	var ship := sandbox.ship
+	var thrusters_before := ship.envelope.thrusters.size()
+	_check(thrusters_before > 0, "our ship has thrusters to lose")
+	if thrusters_before == 0:
+		return
+	var host := int(ship.blueprint.mounts[ship.envelope.thrusters[0]["mount"]]["tile"])
+	_check(host != ship.damage.core_id, "the thruster isn't on the core")
+	for i in 30:
+		if ship.damage.is_destroyed(host):
+			break
+		ship.take_hit(host, 60.0, &"kinetic")
+		await _physics_frames(1)
+	await _frames(2)
+	_check(ship.envelope.thrusters.size() == thrusters_before - 1, "losing a hardpoint loses its thruster")
+	_check(sandbox.pilot.model.envelope == ship.envelope, "the pilot flies with the new envelope")
+	_check(ship.get_node(^"Exhaust").get_child_count() == thrusters_before - 1, "and the exhaust follows")
+
+
+## Flight checks want open space: the practice target sits right ahead.
+func _remove_target(sandbox: FlightSandbox) -> void:
+	if sandbox.target != null:
+		sandbox.target.queue_free()
+		sandbox.target = null
+
+
+## A hit on `tile_id` found the way a bullet will find it: a physics query at its centre.
+func _shoot(sandbox: FlightSandbox, body: ShipBody, tile_id: int) -> void:
+	var tile := body.blueprint.tile_by_id(tile_id)
+	var center := body.to_global(ShipStats.polygon_centroid(body.placement.tile_polygon(tile)) * PX)
+	var found: Array = sandbox.ship_tile_at_point(center)
+	if found[0] != body or found[1] != tile_id:
+		_check(false, "a query at tile %d's centre finds it (got %s)" % [tile_id, found])
+		return
+	body.take_hit(tile_id, 60.0, &"kinetic")
+	await _physics_frames(1)
+
+
+func _wrecks(sandbox: FlightSandbox) -> Array:
+	return sandbox._world.get_children().filter(func(n: Node) -> bool: return n is ShipBody and (n as ShipBody).is_wreck())
+
+
 ## Phase 3.5: the camera leads and zooms out at speed; the arena warns and pushes back.
 func _step_camera_and_arena() -> void:
 	var errors: PackedStringArray = []
 	_hangar.load_blueprint(Blueprint.from_dict(Data.json_dir("blueprints")["starter"], errors))
 	await _frames(2)
 	var sandbox: FlightSandbox = _hangar.fly()
+	_remove_target(sandbox)
 	await _frames(3)
 	var ship := sandbox.ship
 	var camera := get_viewport().get_camera_2d()
@@ -161,6 +256,7 @@ func _step_fly_the_starter_with_the_stick() -> void:
 	_hangar.load_blueprint(Blueprint.from_dict(Data.json_dir("blueprints")["starter"], errors))
 	await _frames(2)
 	var sandbox: FlightSandbox = _hangar.fly()
+	_remove_target(sandbox)
 	await _physics_frames(2)
 	var ship := sandbox.ship
 	var base := Vector2(300, 400)
@@ -191,6 +287,7 @@ func _step_fly_the_starter_with_the_stick() -> void:
 	_check(ship.linear_velocity.length() < peak * 0.1,
 			"let go: it brakes (%.2f -> %.2f U/s)" % [peak / PX, ship.linear_velocity.length() / PX])
 	_check(absf(ship.angular_velocity) < 0.1, "and stops turning (%.3f rad/s)" % ship.angular_velocity)
+	await _step_lose_a_thruster(sandbox)
 	_hangar.land()
 	await _frames(2)
 

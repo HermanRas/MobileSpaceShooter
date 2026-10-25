@@ -22,6 +22,7 @@ func _ready() -> void:
 	await _frames(3)
 
 	await _step_drag_from_palette()
+	await _step_snap_follows_the_finger_along_an_edge()
 	await _step_tap_select_delete_undo()
 	await _step_move_selected()
 	await _step_paint()
@@ -55,6 +56,32 @@ func _step_drag_from_palette() -> void:
 	_check(_hangar.editor.blueprint.tiles.size() == before + 1, "dragging a triangle onto the ship adds a tile")
 	_check(_hangar.placement.validate(_hangar.editor.blueprint).is_empty(), "the dropped tile is valid")
 	_check(_hangar._selected >= 0, "the new tile is selected")
+
+
+## The owner's "Golam" bug: a medium wedge under a medium square offered three rot-0 spots
+## slid along the edge, and the first one always won, half a tile forward of the finger.
+func _step_snap_follows_the_finger_along_an_edge() -> void:
+	var bp := Blueprint.new()
+	for row: Array in [[&"core", &"square", &"L", Vector2.ZERO], [&"hardpoint", &"square", &"M", Vector2(0.5, 0.75)],
+			[&"hull", &"square", &"M", Vector2(0.5, 1.25)]]:
+		var tile := Blueprint.Tile.new()
+		tile.id = bp.next_tile_id()
+		tile.type = row[0]
+		tile.shape = row[1]
+		tile.size = row[2]
+		tile.pos = row[3]
+		bp.tiles.append(tile)
+	var placement: Placement = _hangar.placement
+	_hangar._carry = {"type": &"hull", "shape": &"wedge", "size": &"M"}
+	_hangar._rot_pref = 0
+	var wrong := PackedStringArray()
+	for spot: Vector2 in [Vector2(0.5, 1.75), Vector2(0.75, 1.75), Vector2(0.25, 1.75)]:
+		var finger := ShipStats.polygon_centroid(placement.shapes.polygon(&"wedge", &"M", 0, spot))
+		var snap: Placement.Snap = _hangar._choose_snap(placement.candidate_snaps(bp, &"hull", &"wedge", &"M", finger, 2.0), finger)
+		if snap == null or not snap.pos.is_equal_approx(spot) or snap.rot != 0:
+			wrong.append("%s -> %s" % [spot, snap.pos if snap != null else null])
+	_hangar._carry = {}
+	_check(wrong.is_empty(), "a wedge snaps to the spot under the finger along a square's edge %s" % [wrong])
 
 
 func _step_tap_select_delete_undo() -> void:

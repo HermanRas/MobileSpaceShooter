@@ -1,0 +1,31 @@
+{
+	"format": 1,
+	"id": "target_barge",
+	"name": "Target barge",
+	"author": "mss",
+	"tags": ["target"],
+	"_doc": "The flight sandbox's practice target (Phase 4.2): a long 9 x 2 slab with two shield tiles, so it can be shot in half. No thrusters; it just drifts.",
+	"tiles": [
+		{"id": 0, "type": "core", "shape": "square", "size": "L", "pos": [0, 0], "rot": 0, "paint": "#d8d8d8"},
+		{"id": 1, "type": "armor", "shape": "square", "size": "L", "pos": [-4, 0], "rot": 0, "paint": "#6b5a3e"},
+		{"id": 2, "type": "hull", "shape": "square", "size": "L", "pos": [-3, 0], "rot": 0, "paint": "#8a8f99"},
+		{"id": 3, "type": "hull", "shape": "square", "size": "L", "pos": [-2, 0], "rot": 0, "paint": "#8a8f99"},
+		{"id": 4, "type": "hull", "shape": "square", "size": "L", "pos": [-1, 0], "rot": 0, "paint": "#8a8f99"},
+		{"id": 5, "type": "hull", "shape": "square", "size": "L", "pos": [1, 0], "rot": 0, "paint": "#8a8f99"},
+		{"id": 6, "type": "hull", "shape": "square", "size": "L", "pos": [2, 0], "rot": 0, "paint": "#8a8f99"},
+		{"id": 7, "type": "hull", "shape": "square", "size": "L", "pos": [3, 0], "rot": 0, "paint": "#8a8f99"},
+		{"id": 8, "type": "armor", "shape": "square", "size": "L", "pos": [4, 0], "rot": 0, "paint": "#6b5a3e"},
+		{"id": 9, "type": "armor", "shape": "square", "size": "L", "pos": [-4, 1], "rot": 0, "paint": "#6b5a3e"},
+		{"id": 10, "type": "hull", "shape": "square", "size": "L", "pos": [-3, 1], "rot": 0, "paint": "#8a8f99"},
+		{"id": 11, "type": "hull", "shape": "square", "size": "L", "pos": [-2, 1], "rot": 0, "paint": "#8a8f99"},
+		{"id": 12, "type": "hull", "shape": "square", "size": "L", "pos": [-1, 1], "rot": 0, "paint": "#8a8f99"},
+		{"id": 13, "type": "hull", "shape": "square", "size": "L", "pos": [0, 1], "rot": 0, "paint": "#8a8f99"},
+		{"id": 14, "type": "hull", "shape": "square", "size": "L", "pos": [1, 1], "rot": 0, "paint": "#8a8f99"},
+		{"id": 15, "type": "hull", "shape": "square", "size": "L", "pos": [2, 1], "rot": 0, "paint": "#8a8f99"},
+		{"id": 16, "type": "hull", "shape": "square", "size": "L", "pos": [3, 1], "rot": 0, "paint": "#8a8f99"},
+		{"id": 17, "type": "armor", "shape": "square", "size": "L", "pos": [4, 1], "rot": 0, "paint": "#6b5a3e"},
+		{"id": 18, "type": "shield", "shape": "square", "size": "L", "pos": [-2, -1], "rot": 0, "paint": "#3a7bd5"},
+		{"id": 19, "type": "shield", "shape": "square", "size": "L", "pos": [2, -1], "rot": 0, "paint": "#3a7bd5"}
+	],
+	"mounts": []
+}

@@ -9,6 +9,9 @@ const PX_PER_U := 64.0
 ## repeat lines the texture up with Large tiles, which sit centred on whole-U positions, so each
 ## one shows a whole texture cell instead of four quarters. Must match the shader's LOCAL_OFFSET.
 const LOCAL_OFFSET := 100.5
+## Damage shows in this many steps (4.2): scorched, cracked, ... nearly gone. Packed into UV.y
+## in thousands, so changing a tile's step means a mesh rebuild; steps keep those rare.
+const WEAR_STEPS := 4
 const SHADER := preload("res://src/ship/ship.gdshader")
 const ATLAS_ID := &"vis.tiles.material_atlas"
 
@@ -24,8 +27,9 @@ static func make_material() -> ShaderMaterial:
 
 ## The mesh for `tiles` (all of a blueprint's, or one ghost tile). Positions are in pixels,
 ## relative to the ship origin. With `bp`, the thrusters mounted on those tiles are drawn too,
-## in the same mesh, so the whole ship stays one draw call.
-static func build(tiles: Array, placement: Placement, bp: Blueprint = null) -> ArrayMesh:
+## in the same mesh, so the whole ship stays one draw call. `wear` maps tile id -> damage step
+## (0..WEAR_STEPS, from `wear_step()`).
+static func build(tiles: Array, placement: Placement, bp: Blueprint = null, wear: Dictionary = {}) -> ArrayMesh:
 	var cells := _cell_names()
 	var vertices := PackedVector2Array()
 	var colors := PackedColorArray()
@@ -33,7 +37,8 @@ static func build(tiles: Array, placement: Placement, bp: Blueprint = null) -> A
 	var on_ship := {}
 	for tile: Blueprint.Tile in tiles:
 		on_ship[tile.id] = true
-		_add_fan(vertices, colors, uvs, placement.tile_polygon(tile), maxi(cells.find(String(tile.type)), 0), tile.paint)
+		_add_fan(vertices, colors, uvs, placement.tile_polygon(tile), maxi(cells.find(String(tile.type)), 0), tile.paint,
+				wear.get(tile.id, 0))
 	if bp != null and not bp.mounts.is_empty():
 		var thruster_cell := maxi(cells.find("thruster"), 0)
 		var tints: Dictionary = Assets.meta(ATLAS_ID).get("thruster_tints", {})
@@ -55,10 +60,15 @@ static func build(tiles: Array, placement: Placement, bp: Blueprint = null) -> A
 	return mesh
 
 
+## The damage step for a tile with `hp_share` (0..1) of its HP left. A scratch doesn't show.
+static func wear_step(hp_share: float) -> int:
+	return clampi(int((1.0 - hp_share) * (WEAR_STEPS + 1)), 0, WEAR_STEPS)
+
+
 ## One convex polygon as a triangle fan from its centroid; vertex alpha carries the distance
 ## to the nearest edge for the shader's bevel and outline.
 static func _add_fan(vertices: PackedVector2Array, colors: PackedColorArray, uvs: PackedVector2Array,
-		polygon: PackedVector2Array, cell: int, paint: Color) -> void:
+		polygon: PackedVector2Array, cell: int, paint: Color, wear := 0) -> void:
 	var center := ShipStats.polygon_centroid(polygon)
 	for i in polygon.size():
 		var a := polygon[i]
@@ -68,7 +78,7 @@ static func _add_fan(vertices: PackedVector2Array, colors: PackedColorArray, uvs
 			var p: Vector2 = corner[0]
 			vertices.append(p * PX_PER_U)
 			colors.append(Color(paint.r, paint.g, paint.b, corner[1]))
-			uvs.append(Vector2(cell * 1000.0 + LOCAL_OFFSET + p.x, LOCAL_OFFSET + p.y))
+			uvs.append(Vector2(cell * 1000.0 + LOCAL_OFFSET + p.x, wear * 1000.0 + LOCAL_OFFSET + p.y))
 
 
 static func _distance_to_line(p: Vector2, a: Vector2, b: Vector2) -> float:

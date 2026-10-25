@@ -148,6 +148,65 @@ func test_destroying_the_core_kills_the_ship() -> void:
 	assert_almost_eq(ship.hit(1, 50.0, &"kinetic").hull, 0.0, EPS, "a dead ship takes no more hits")
 
 
+func test_cutting_a_link_breaks_off_what_was_beyond_it() -> void:
+	# core(0) - hull(1) - hull(2) - shield(3) in a row, and hull(4) below the core.
+	var ship := ShipDamage.create(_line(), placement, table)
+	assert_true(ship.break_off().is_empty(), "nothing cut yet")
+	ship.shield = 0.0
+	ship.hit(1, 100.0, &"kinetic")
+	var groups := ship.break_off()
+	assert_eq(groups.size(), 1)
+	assert_eq(groups[0].keys().size(), 2)
+	assert_true(groups[0].has(2) and groups[0].has(3))
+	assert_false(ship.is_attached(2))
+	assert_true(ship.is_attached(4))
+	assert_almost_eq(ship.shield_cap, 0.0, EPS, "the shield tile left with the piece")
+	assert_true(ship.break_off().is_empty(), "a group breaks off once")
+	assert_almost_eq(ship.hit(2, 50.0, &"kinetic").hull, 0.0, EPS, "debris isn't the ship")
+	assert_eq(ship.attached_ids().keys().size(), 2, "core and the hull below")
+
+
+func test_losing_the_core_breaks_everything_off() -> void:
+	var ship := ShipDamage.create(_line(), placement, table)
+	ship.shield = 0.0
+	ship.hit(0, 1000.0, &"kinetic")
+	var groups := ship.break_off()
+	assert_eq(groups.size(), 2, "the row to the right and the hull below")
+	assert_true(ship.attached_ids().is_empty())
+
+
+func test_a_wreck_splits_into_small_linked_chunks() -> void:
+	var ship := ShipDamage.create(_line(), placement, table)
+	var everything := {0: true, 1: true, 2: true, 3: true, 4: true}
+	var chunks := ship.split(everything, 2)
+	var seen := {}
+	for chunk in chunks:
+		assert_true(chunk.size() <= 2)
+		for tile_id: int in chunk:
+			assert_false(seen.has(tile_id), "tile %d in two chunks" % tile_id)
+			seen[tile_id] = true
+	assert_eq(seen.size(), 5, "every tile in a chunk")
+	assert_eq(chunks.size(), 3)
+	assert_eq(table.wreck["explode_chunk_tiles"], 3.0, "wreck numbers come from the data")
+
+
+func test_a_subset_keeps_its_tiles_and_their_mounts() -> void:
+	var bp := _line()
+	bp.mounts.append({"part": "thruster.jet", "tile": 2, "edge": 1, "port": 0, "size": "M", "level": 1})
+	bp.mounts.append({"part": "thruster.jet", "tile": 4, "edge": 2, "port": 0, "size": "M", "level": 1})
+	var piece := bp.subset({1: true, 2: true})
+	assert_eq(piece.tiles.size(), 2)
+	assert_eq(piece.tile_by_id(2), bp.tile_by_id(2), "tiles are shared, not copied")
+	assert_eq(piece.mounts.size(), 1)
+	assert_eq(int(piece.mounts[0]["tile"]), 2)
+	assert_eq(bp.mounts.size(), 2, "the original is untouched")
+
+
+func _line() -> Blueprint:
+	return _ship([[&"core", Vector2.ZERO], [&"hull", Vector2(1, 0)], [&"hull", Vector2(2, 0)],
+			[&"shield", Vector2(3, 0)], [&"hull", Vector2(0, 1)]])
+
+
 ## Core, hull to the right (1), shield below (2): a full 60 pool.
 func _shielded() -> ShipDamage:
 	return ShipDamage.create(_ship([[&"core", Vector2.ZERO], [&"hull", Vector2(1, 0)],

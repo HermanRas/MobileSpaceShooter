@@ -9,18 +9,37 @@ extends RigidBody2D
 ##
 ## The body's origin is the blueprint origin (the core's centre), so the mesh and shapes need
 ## no offset; mass, centre of mass and inertia come from ShipStats, converted to pixels.
+##
+## With `enable_damage()` it can be hurt (4.2): hits go to its ShipDamage, the mesh shows wear,
+## lost tiles leave the shapes, mesh, mass and thrust layout, cut-off pieces drift away as
+## fading wrecks, and losing the core blows it apart.
+
+## Tiles were lost: the shapes, mass and `envelope` are new (the pilot and exhaust follow).
+signal rebuilt
+## The core was destroyed; the ship has blown apart and is about to be freed.
+signal destroyed
 
 const PX := ShipMesh.PX_PER_U
+## Wrecks sit on a physics layer of their own and collide with nothing.
+const WRECK_LAYER := 1 << 2
 
 var blueprint: Blueprint
 var placement: Placement
 var stats: ShipStats
 ## What the thrusters can do (3.2); the FlightController flies with it.
 var envelope: ThrustEnvelope
+## Its fight state, once `enable_damage()` has run. Wrecks keep the ship's, for the wear.
+var damage: ShipDamage
+## Seconds left before a wreck is gone, or < 0 for a ship.
+var wreck_left := -1.0
 
 var _mesh := MeshInstance2D.new()
 ## Shape owner id -> tile id.
 var _owner_tiles := {}
+## Tile id -> the wear step the mesh shows.
+var _wear := {}
+var _mesh_stale := false
+var _wreck_fade_s := 1.0
 
 
 ## A ship body for `bp`, ready to add to a scene. Run `Placement.validate()` first: tiles with
@@ -62,7 +81,9 @@ func build(bp: Blueprint, placement_rules: Placement) -> void:
 		shape_owner_add_shape(owner_id, shape)
 		_owner_tiles[owner_id] = tile.id
 		built.append(tile)
-	_mesh.mesh = ShipMesh.build(built, placement, bp)
+	_refresh_wear()
+	_mesh.mesh = ShipMesh.build(built, placement, bp, _wear)
+	_mesh_stale = false
 
 	stats = ShipStats.compute(bp, placement)
 	envelope = ThrustEnvelope.compute(bp, placement, stats)
@@ -84,3 +105,138 @@ func shape_of_tile(tile_id: int) -> int:
 		if _owner_tiles[owner_id] == tile_id:
 			return get_shape_owners().find(owner_id)
 	return -1
+
+
+## Makes the ship take damage, starting at full health.
+func enable_damage(table: DamageTable) -> void:
+	damage = ShipDamage.create(blueprint, placement, table)
+
+
+## `raw` damage of `type_id` striking `tile_id` (from `tile_at_shape`).
+func take_hit(tile_id: int, raw: float, type_id: StringName, pierce := 0.0) -> ShipDamage.Result:
+	if damage == null or is_wreck():
+		return ShipDamage.Result.new()
+	var result := damage.hit(tile_id, raw, type_id, pierce)
+	_after_hit(result)
+	return result
+
+
+## An explosion at `world_point` reaching `radius_u`.
+func take_splash(world_point: Vector2, radius_u: float, raw: float, type_id: StringName) -> ShipDamage.Result:
+	if damage == null or is_wreck():
+		return ShipDamage.Result.new()
+	var result := damage.splash(to_local(world_point) / PX, radius_u, raw, type_id)
+	_after_hit(result)
+	return result
+
+
+func is_wreck() -> bool:
+	return wreck_left >= 0.0
+
+
+## Turns this body into a drifting wreck that fades out over `fade_s` and frees itself.
+func make_wreck(fade_s: float) -> void:
+	wreck_left = fade_s
+	_wreck_fade_s = maxf(fade_s, 0.01)
+	collision_layer = WRECK_LAYER
+	collision_mask = 0
+	linear_damp_mode = RigidBody2D.DAMP_MODE_REPLACE
+	angular_damp_mode = RigidBody2D.DAMP_MODE_REPLACE
+	linear_damp = 0.05
+	angular_damp = 0.05
+
+
+func _physics_process(delta: float) -> void:
+	if damage != null and not is_wreck():
+		damage.tick(delta)
+
+
+func _process(delta: float) -> void:
+	if _mesh_stale:
+		_refresh_wear()
+		_mesh.mesh = ShipMesh.build(blueprint.tiles, placement, blueprint, _wear)
+		_mesh_stale = false
+	if is_wreck():
+		wreck_left -= delta
+		# Full for the first half, then fading out.
+		modulate.a = clampf(wreck_left / (_wreck_fade_s * 0.5), 0.0, 1.0)
+		if wreck_left <= 0.0:
+			queue_free()
+
+
+func _after_hit(result: ShipDamage.Result) -> void:
+	if result.hull > 0.0:
+		_mesh_stale = _mesh_stale or _wear_changed()
+	if result.destroyed.is_empty():
+		return
+	var groups := damage.break_off()
+	var wreck := damage.table.wreck
+	if damage.dead:
+		_blow_apart(groups, wreck)
+		return
+	for group in groups:
+		_spawn_wreck(group, float(wreck["drift_u"]), float(wreck["spin"]), float(wreck["fade_s"]))
+	build(blueprint.subset(damage.attached_ids()), placement)
+	rebuilt.emit()
+
+
+func _blow_apart(groups: Array[Dictionary], wreck: Dictionary) -> void:
+	for group in groups:
+		for chunk in damage.split(group, int(wreck["explode_chunk_tiles"])):
+			_spawn_wreck(chunk, float(wreck["explode_speed_u"]) * randf_range(0.5, 1.0),
+					float(wreck["spin"]) * 3.0, float(wreck["fade_s"]))
+	var blast := Explosion.create(_extent_px())
+	blast.global_position = global_transform * center_of_mass
+	get_parent().add_child(blast)
+	destroyed.emit()
+	queue_free()
+
+
+## A wreck of the tiles in `group`, moving as they were and pushed `drift_u` U/s away from the
+## ship's centre of mass.
+func _spawn_wreck(group: Dictionary, drift_u: float, spin: float, fade_s: float) -> void:
+	var piece := ShipBody.create(blueprint.subset(group), placement)
+	piece.name = "Wreck"
+	piece.damage = damage
+	piece.make_wreck(fade_s)
+	piece._mesh_stale = true
+	piece.transform = transform
+	get_parent().add_child(piece)
+	var from_center := (piece.global_transform * piece.center_of_mass) - (global_transform * center_of_mass)
+	var spin_velocity := Vector2(-from_center.y, from_center.x) * angular_velocity
+	var away := from_center.normalized() if from_center.length() > 0.01 else Vector2.RIGHT.rotated(randf() * TAU)
+	piece.linear_velocity = linear_velocity + spin_velocity + away * drift_u * PX
+	piece.angular_velocity = angular_velocity + randf_range(-spin, spin)
+
+
+## Whether any tile's wear step differs from what the mesh shows.
+func _wear_changed() -> bool:
+	for tile in blueprint.tiles:
+		if _wear.get(tile.id, 0) != _wear_step(tile.id):
+			return true
+	return false
+
+
+func _refresh_wear() -> void:
+	_wear.clear()
+	if damage == null:
+		return
+	for tile in blueprint.tiles:
+		var step := _wear_step(tile.id)
+		if step > 0:
+			_wear[tile.id] = step
+
+
+func _wear_step(tile_id: int) -> int:
+	if damage == null or not damage.max_hp.has(tile_id):
+		return 0
+	return ShipMesh.wear_step(damage.hp[tile_id] / damage.max_hp[tile_id])
+
+
+## The ship's longest side in pixels, for sizing its explosion.
+func _extent_px() -> float:
+	var bounds := Rect2()
+	for tile in blueprint.tiles:
+		for p in placement.tile_polygon(tile):
+			bounds = bounds.expand(p)
+	return maxf(bounds.size.x, bounds.size.y) * PX

@@ -14,6 +14,11 @@
 			"pulse": ["#fff2c0", "#ffa040", "#ff5a00", "#ff3000"],
 			"jet": ["#ffe9a0", "#ff8a30", "#e83010", "#801000"],
 			"ion": ["#ffffff", "#9fe8ff", "#3a8bff", "#1030c0"]
+		},
+		"vis.fx.explosion": {
+			"_doc": "A ship's death (PLAN.md 4.2), drawn in code; no files. A white flash, an expanding ring and a burst of sparks, sized by the ship. Colours run hot -> cooling.",
+			"duration_s": 0.9,
+			"colors": ["#ffffff", "#ffd27a", "#ff7a1a", "#802000"]
 		}
 	}
 }

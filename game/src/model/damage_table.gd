@@ -6,6 +6,8 @@ extends RefCounted
 var min_share := 0.2
 var regen_delay_s := 3.0
 var splash_edge_share := 0.5
+## How wrecks behave (Phase 4.2): drift_u, spin, fade_s, explode_chunk_tiles, explode_speed_u.
+var wreck: Dictionary = {"drift_u": 0.8, "spin": 0.8, "fade_s": 5.0, "explode_chunk_tiles": 3, "explode_speed_u": 4.0}
 var errors: PackedStringArray = []
 
 ## Type id -> {vs_shield, vs_hull, armor_factor, disable_s}.
@@ -17,6 +19,9 @@ static func from_table(table: Dictionary) -> DamageTable:
 	out.min_share = float(table.get("min_share", out.min_share))
 	out.regen_delay_s = float(table.get("regen_delay_s", out.regen_delay_s))
 	out.splash_edge_share = float(table.get("splash_edge_share", out.splash_edge_share))
+	var wreck_table: Dictionary = table.get("wreck", {})
+	for key: String in out.wreck:
+		out.wreck[key] = float(wreck_table.get(key, out.wreck[key]))
 	var types: Dictionary = table.get("types", {})
 	for type_id: String in types:
 		var raw: Dictionary = types[type_id]

@@ -30,6 +30,8 @@ func attach(ship: ShipBody, tuning: Dictionary) -> void:
 	ship.angular_damp_mode = RigidBody2D.DAMP_MODE_REPLACE
 	ship.linear_damp = model.linear_damp
 	ship.angular_damp = model.angular_damp
+	# Losing tiles can lose thrusters (4.2): fly with what's left.
+	ship.rebuilt.connect(func() -> void: model.set_envelope(ship.envelope))
 
 
 func _physics_process(delta: float) -> void:
@@ -38,6 +40,8 @@ func _physics_process(delta: float) -> void:
 	var cmd := model.command(stick, _ship.rotation, _ship.linear_velocity / PX, _ship.angular_velocity)
 	braking = cmd["braking"]
 	throttles = model.throttles(cmd)
+	if _ship.damage != null and _ship.damage.is_disabled():
+		throttles.fill(0.0)  # EMP: the thrusters are out (4.5)
 	var out := model.step(throttles, delta)
 	var turn := Transform2D(_ship.rotation, Vector2.ZERO)
 	for f: Dictionary in out["forces"]:

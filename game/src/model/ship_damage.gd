@@ -2,7 +2,8 @@ class_name ShipDamage
 extends RefCounted
 ## One ship's health in a fight (PLAN.md 4.5): HP per tile, the ship-wide shield pool and its
 ## regen, and the EMP knock-out. Hits go through `hit()` or `splash()`, time through `tick()`.
-## Which tiles fall off when one is destroyed is Phase 4.2.
+## After a hit destroys tiles, `break_off()` says which groups lost their link to the core
+## (Phase 4.2): they leave the ship as debris.
 
 ## What one hit did.
 class Result:
@@ -31,7 +32,12 @@ var shield_regen := 0.0
 var core_id := -1
 var dead := false
 
+## Tile id -> true for tiles that broke off the ship (still with HP, but gone).
+var detached: Dictionary = {}
+
 var _armor: Dictionary = {}
+## Tile id -> the ids of the tiles it shares a port with.
+var _links: Dictionary = {}
 ## Tile id -> [shield_cap, shield_regen] for the tiles that feed the pool.
 var _shield_tiles: Dictionary = {}
 ## Tile id -> polygon in ship-local U, for splash.
@@ -57,6 +63,7 @@ static func create(bp: Blueprint, placement: Placement, damage_table: DamageTabl
 			out._shield_tiles[tile.id] = [float(stats[&"shield_cap"]), float(stats[&"shield_regen"])]
 		if tile.type == core_type:
 			out.core_id = tile.id
+	out._links = placement.neighbours(bp)
 	out._refresh_shield()
 	out.shield = out.shield_cap
 	return out
@@ -64,6 +71,62 @@ static func create(bp: Blueprint, placement: Placement, damage_table: DamageTabl
 
 func is_destroyed(tile_id: int) -> bool:
 	return hp.get(tile_id, 0.0) <= 0.0
+
+
+## Still part of the ship: not destroyed and not broken off.
+func is_attached(tile_id: int) -> bool:
+	return not is_destroyed(tile_id) and not detached.has(tile_id)
+
+
+## Ids of every tile still part of the ship, as a set.
+func attached_ids() -> Dictionary:
+	var out := {}
+	for tile_id: int in hp:
+		if is_attached(tile_id):
+			out[tile_id] = true
+	return out
+
+
+## The groups of tiles that no longer reach the core through living tiles, each a set of
+## ids. They're marked detached, so each group comes back once. With the core gone, every
+## remaining group breaks off.
+func break_off() -> Array[Dictionary]:
+	var reached := {}
+	if not dead and core_id >= 0:
+		reached = _flood(core_id, {})
+	var groups: Array[Dictionary] = []
+	for tile_id: int in hp:
+		if is_attached(tile_id) and not reached.has(tile_id):
+			var group := _flood(tile_id, reached)
+			for member: int in group:
+				detached[member] = true
+			groups.append(group)
+	if not groups.is_empty():
+		_refresh_shield()
+	return groups
+
+
+## `group` cut into linked chunks of at most `max_tiles` each: how a ship flies apart when its
+## core goes.
+func split(group: Dictionary, max_tiles: int) -> Array[Dictionary]:
+	var chunks: Array[Dictionary] = []
+	var taken := {}
+	var ids: Array = group.keys()
+	ids.sort()
+	for start: int in ids:
+		if taken.has(start):
+			continue
+		var chunk := {start: true}
+		taken[start] = true
+		var queue: Array[int] = [start]
+		while not queue.is_empty() and chunk.size() < max_tiles:
+			for next: int in _links.get(queue.pop_front(), PackedInt32Array()):
+				if group.has(next) and not taken.has(next) and chunk.size() < max_tiles:
+					chunk[next] = true
+					taken[next] = true
+					queue.append(next)
+		chunks.append(chunk)
+	return chunks
 
 
 ## Shields and thrusters are knocked out (EMP).
@@ -77,7 +140,7 @@ func hit(tile_id: int, raw: float, type_id: StringName, pierce := 0.0) -> Result
 	if dead or raw <= 0.0:
 		return result
 	var through := _soak(raw, type_id, result)
-	if through > 0.0 and not is_destroyed(tile_id):
+	if through > 0.0 and is_attached(tile_id):
 		_hurt(tile_id, through, type_id, pierce, result)
 	return result
 
@@ -92,7 +155,7 @@ func splash(center_u: Vector2, radius_u: float, raw: float, type_id: StringName)
 	if through <= 0.0:
 		return result
 	for tile_id: int in hp:
-		if is_destroyed(tile_id):
+		if not is_attached(tile_id):
 			continue
 		var distance := _distance_to_tile(center_u, tile_id)
 		if distance > radius_u:
@@ -146,10 +209,22 @@ func _refresh_shield() -> void:
 	shield_cap = 0.0
 	shield_regen = 0.0
 	for tile_id: int in _shield_tiles:
-		if not is_destroyed(tile_id):
+		if is_attached(tile_id):
 			shield_cap += _shield_tiles[tile_id][0]
 			shield_regen += _shield_tiles[tile_id][1]
 	shield = minf(shield, shield_cap)
+
+
+## Every attached tile linked to `start`, skipping those in `skip`, as a set.
+func _flood(start: int, skip: Dictionary) -> Dictionary:
+	var found := {start: true}
+	var queue: Array[int] = [start]
+	while not queue.is_empty():
+		for next: int in _links.get(queue.pop_back(), PackedInt32Array()):
+			if not found.has(next) and not skip.has(next) and is_attached(next):
+				found[next] = true
+				queue.append(next)
+	return found
 
 
 func _distance_to_tile(point: Vector2, tile_id: int) -> float:

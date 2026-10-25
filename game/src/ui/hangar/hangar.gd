@@ -366,20 +366,27 @@ func _update_thruster_ghost() -> void:
 
 
 ## The snap whose tile centre is nearest the finger, preferring the player's chosen rotation
-## among the variants at that spot.
+## among the variants at that spot. An edge often offers several spots in the same rotation
+## (slid along it by a port), so the preferred rotation's nearest one wins, not its first.
 func _choose_snap(snaps: Array[Placement.Snap], point_u: Vector2) -> Placement.Snap:
+	var best := _nearest_snap(snaps, point_u)
+	if best == null or _snap_center(best).distance_to(point_u) > SNAP_REACH_U:
+		return null
+	if best.rot == _rot_pref:
+		return best
+	var preferred := _variants(snaps, best).filter(func(s: Placement.Snap) -> bool: return s.rot == _rot_pref)
+	var nearest := _nearest_snap(preferred, point_u)
+	return nearest if nearest != null else best
+
+
+func _nearest_snap(snaps: Array, point_u: Vector2) -> Placement.Snap:
 	var best: Placement.Snap = null
 	var best_d := INF
-	for snap in snaps:
+	for snap: Placement.Snap in snaps:
 		var d := _snap_center(snap).distance_to(point_u)
 		if d < best_d:
 			best_d = d
 			best = snap
-	if best == null or best_d > SNAP_REACH_U:
-		return null
-	for variant in _variants(snaps, best):
-		if variant.rot == _rot_pref:
-			return variant
 	return best
 
 
@@ -405,10 +412,13 @@ func _cycle_carry_rotation() -> void:
 		var point_u := _camera.screen_to_world(_carry_screen + Vector2(0, -GHOST_LIFT_PX)) / PX
 		var target := editor.blueprint
 		var snaps := placement.candidate_snaps(target, _carry["type"], _carry["shape"], _carry["size"], point_u, SNAP_REACH_U + 1.0)
-		var variants := _variants(snaps, _snap)
-		var at := variants.find_custom(func(s: Placement.Snap) -> bool: return s.rot == _snap.rot)
-		if variants.size() > 1:
-			_rot_pref = variants[(at + 1) % variants.size()].rot
+		# Step through the distinct rotations on offer here (several spots can share one).
+		var rots: Array[int] = []
+		for variant in _variants(snaps, _snap):
+			if not rots.has(variant.rot):
+				rots.append(variant.rot)
+		if rots.size() > 1:
+			_rot_pref = rots[(rots.find(_snap.rot) + 1) % rots.size()]
 	_update_ghost()
 
 

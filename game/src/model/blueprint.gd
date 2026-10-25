@@ -48,6 +48,24 @@ func tile_by_id(tile_id: int) -> Tile:
 	return null
 
 
+## A copy holding only the tiles in `tile_ids` (keyed by id), and the mounts on them: what's
+## left of a ship after it loses tiles, or a piece that broke off (Phase 4.2). The tiles are
+## shared with this blueprint, not copied.
+func subset(tile_ids: Dictionary) -> Blueprint:
+	var out := Blueprint.new()
+	out.id = id
+	out.name = name
+	out.author = author
+	out.tags = tags.duplicate()
+	for tile in tiles:
+		if tile_ids.has(tile.id):
+			out.tiles.append(tile)
+	for mount in mounts:
+		if tile_ids.has(int(mount.get("tile", -1))):
+			out.mounts.append(mount.duplicate(true))
+	return out
+
+
 func next_tile_id() -> int:
 	var highest := -1
 	for tile in tiles:

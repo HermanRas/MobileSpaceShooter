@@ -9,5 +9,13 @@
 		"energy": {"vs_shield": 1.5, "vs_hull": 1.0, "armor_factor": 0.5},
 		"explosive": {"vs_shield": 0.75, "vs_hull": 1.0, "armor_factor": 1.0},
 		"emp": {"vs_shield": 3.0, "vs_hull": 0.2, "armor_factor": 0.0, "disable_s": 2.0}
+	},
+	"wreck": {
+		"_doc": "Phase 4.2. A piece that breaks off drifts away at drift_u U/s plus the ship's motion, spins up to spin rad/s, and fades out over fade_s. When the core goes, the rest splits into chunks of at most explode_chunk_tiles tiles flung out at explode_speed_u U/s.",
+		"drift_u": 0.8,
+		"spin": 0.8,
+		"fade_s": 5.0,
+		"explode_chunk_tiles": 3,
+		"explode_speed_u": 4.0
 	}
 }
