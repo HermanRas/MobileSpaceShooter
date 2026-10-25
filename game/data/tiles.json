@@ -4,6 +4,11 @@
 	"size_cost_factor": {"S": 0.25, "M": 0.5, "L": 1.0},
 	"size_stat_factor": {"S": 0.25, "M": 0.5, "L": 1.0},
 	"materials": ["hull", "alloy", "crystal", "tech"],
+	"build": {
+		"max_tiles": 150,
+		"area_u": 16,
+		"_doc": "PLAN.md 4.1: a ship fits in a 16 x 16 U square and has at most 150 tiles (the performance budget)."
+	},
 	"tiles": {
 		"core": {
 			"hp": 300, "armor": 5, "shield_cap": 0, "shield_regen": 0, "mass": 2.0,

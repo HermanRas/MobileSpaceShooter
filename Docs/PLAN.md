@@ -631,10 +631,14 @@ round-trip test goes through text. Mounts stay untyped until 3.2/4.3, and until 
 whole-number floats in them are turned back into ints, or they'd drift on every save.
 
 #### 1.4 Placement rules
-- [ ] `model/placement.gd`: `candidate_snaps(blueprint, tile_def, shape, size)` → valid (pos, rot) options at free ports
-- [ ] Overlap test, exactly one Core, connectivity BFS over shared edges
-- [ ] `validate(blueprint)` → a list of problems (`disconnected`, `overlap`, `no_core`, `over_cap`)
-- **Done when:** the tests cover a snap on each shape pair, overlap rejection, and detection of a disconnected island.
+✅ 2026-10-25. `src/model/placement.gd`, tested in `tests/model/test_placement.gd`: every
+shape pair at S and L (1,670 snapped placements, each validated), overlaps, corner contact,
+islands, core count, unknown names, and the 16 U / 150-tile caps (now in `tiles.json` →
+`build`). **"Connected" means sharing a port**: same spot, opposite-facing edges. It's found
+with a spatial hash, not by comparing every pair of edges. Snaps slide along the target edge one
+port at a time, and identical footprints are deduped (a hex turned 60° is the same hex).
+Measured on the desktop, a 150-tile ship validates in ~11 ms, and a snap search near the
+finger takes ~4 ms. ⚠️ A phone may be 5–10× slower, so 2.5 may need incremental validation.
 
 #### 1.5 Stats
 - [ ] `model/ship_stats.gd`: HP, armor, shield capacity and regen, mass, centre of mass, moment of inertia, cost breakdown
