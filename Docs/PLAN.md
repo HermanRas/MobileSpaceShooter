@@ -698,9 +698,17 @@ and the toolbar has Rotate, Duplicate (next free spot beside it), Delete, Undo, 
 Desktop keys: Ctrl+Z/Y, Del, R, D, M.
 
 #### 2.4 Paint
-- [ ] Ship shader v0 (§6.2) using placeholder greyscale textures
-- [ ] A colour picker with 12 swatches, HSV, and recent colours. Paint one tile, all tiles of a type, or the whole ship.
-- **Done when:** paint persists through save and load and shows on every shape.
+✅ 2026-10-25. **Renderer:** `ShipMesh` (`src/ship/ship_mesh.gd`) builds one `ArrayMesh` per
+ship, with each tile as a triangle fan. `ship.gdshader` samples the material atlas in ship
+space, multiplies by the paint, keeps trim untinted, and bevels and outlines each edge, using a
+per-triangle distance-to-edge carried in vertex alpha. The placeholder atlas comes from
+`tools/make_placeholders.py` (project-made, MIT). ⚠️ The atlas cell and the ship-local x are
+packed together in UV.x, so local coordinates are shifted positive (`LOCAL_OFFSET`); without
+that, tiles left of the core used the previous cell's texture. The extra half repeat lines the
+texture up with Large tiles. **Panel:** `PaintPanel` has 12 swatches, 6 recent colours
+(device-wide, in Settings), a full HSV picker, and a Tile / Type / Ship scope; while it's open, a
+tap paints. Paint round-trips with the blueprint (1.3), and `drive_hangar` checks the tap
+painting.
 
 #### 2.5 Stats panel
 - [ ] Live HP, armor, shield, mass, acceleration and cost, with the change shown on the ghost before placement ("+50 HP, −0.3 accel")

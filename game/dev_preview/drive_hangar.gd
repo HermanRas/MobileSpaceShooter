@@ -20,6 +20,7 @@ func _ready() -> void:
 	await _step_drag_from_palette()
 	await _step_tap_select_delete_undo()
 	await _step_move_selected()
+	await _step_paint()
 	await _step_pinch_zooms()
 	await _step_one_finger_pans()
 
@@ -72,6 +73,29 @@ func _step_move_selected() -> void:
 	var moved: Blueprint.Tile = _hangar.editor.blueprint.tile_by_id(tile_id)
 	_check(moved != null and moved.pos.distance_to(Vector2(1, 1)) > 0.1, "dragging a selected tile moves it")
 	_check(_hangar.placement.validate(_hangar.editor.blueprint).is_empty(), "the moved tile is valid")
+
+
+func _step_paint() -> void:
+	var paint: PaintPanel = _hangar._paint
+	paint.visible = true
+	paint.choose(Color("#c0392b"))
+	paint.scope = PaintPanel.Scope.TILE
+	await _tap(0, _screen_of_u(Vector2(0, -1)))
+	var top: Blueprint.Tile = _hangar.editor.blueprint.tiles.filter(
+			func(t: Blueprint.Tile) -> bool: return t.pos == Vector2(0, -1))[0]
+	_check(top.paint.is_equal_approx(Color("#c0392b")), "with the paint panel open, a tap paints that tile")
+	paint.scope = PaintPanel.Scope.TYPE
+	paint.choose(Color("#2e86de"))
+	await _tap(0, _screen_of_u(Vector2(-1, -1)))
+	var hardpoints: Array = _hangar.editor.blueprint.tiles.filter(
+			func(t: Blueprint.Tile) -> bool: return t.type == &"hardpoint")
+	_check(hardpoints.all(func(t: Blueprint.Tile) -> bool: return t.paint.is_equal_approx(Color("#2e86de"))),
+			"Type scope paints every hardpoint")
+	_check(Settings.get_value(&"recent_colors")[0] == "2e86de", "the colour lands in recent colours")
+	await _frames(2)
+	var image := get_viewport().get_texture().get_image()
+	image.save_png(ProjectSettings.globalize_path("res://dev_preview/out/drive_hangar_paint.png"))
+	paint.visible = false
 
 
 func _step_pinch_zooms() -> void:

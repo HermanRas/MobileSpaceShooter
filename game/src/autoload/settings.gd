@@ -18,6 +18,7 @@ const DEFAULTS := {
 	"sfx_volume": 1.0,
 	"vibration": true,
 	"screen_shake": true,
+	"recent_colors": [],
 }
 
 ## action -> keyboard keycodes. Gamepad bindings are added alongside in _register_inputs().

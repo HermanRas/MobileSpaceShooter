@@ -22,6 +22,7 @@ var placement: Placement
 var _camera: HangarCamera
 var _view: ShipView
 var _palette: HangarPalette
+var _paint: PaintPanel
 var _mirror_button: Button
 var _undo_button: Button
 var _redo_button: Button
@@ -113,7 +114,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		else:
 			_touches.erase(touch.index)
 			if _gesture == &"tap" and _touches.is_empty():
-				_select(_tile_at(touch.position))
+				_on_tap(touch.position)
 			if _touches.is_empty():
 				_gesture = &""
 	elif event is InputEventScreenDrag:
@@ -277,6 +278,22 @@ func _end_carry() -> void:
 
 # ── toolbar actions ───────────────────────────────────────────────────────────
 
+## A tap selects the tile under the finger, or paints it while the paint panel is open.
+func _on_tap(screen: Vector2) -> void:
+	var tile_id := _tile_at(screen)
+	if not _paint.visible:
+		_select(tile_id)
+		return
+	var tile := editor.blueprint.tile_by_id(tile_id)
+	if tile == null:
+		return
+	match _paint.scope:
+		PaintPanel.Scope.TILE: editor.paint_tiles(PackedInt32Array([tile_id]), _paint.color)
+		PaintPanel.Scope.TYPE: editor.paint_type(tile.type, _paint.color)
+		PaintPanel.Scope.SHIP: editor.paint_all(_paint.color)
+	_paint.remember(_paint.color)
+
+
 func _select(tile_id: int) -> void:
 	_selected = tile_id
 	var ids := PackedInt32Array()
@@ -404,6 +421,18 @@ func _build_ui() -> void:
 	_mirror_button.toggled.connect(func(on: bool) -> void:
 		editor.mirror = on
 		_select(_selected))
+	var paint_button := _tool_button(tools, "Paint", func() -> void: pass)
+	paint_button.toggle_mode = true
+
+	_paint = PaintPanel.new()
+	_paint.position = Vector2(16, 56)
+	_paint.visible = false
+	_paint.ship_paint_requested.connect(func(color: Color) -> void: editor.paint_all(color))
+	root.add_child(_paint)
+	paint_button.toggled.connect(func(on: bool) -> void:
+		_paint.visible = on
+		_palette.visible = not on
+		_select(-1))
 
 	_status = Label.new()
 	_status.position = Vector2(16, 12)
@@ -427,7 +456,11 @@ func _tool_button(parent: Control, text: String, action: Callable) -> Button:
 ##   --select=<tile id>     select a tile
 ##   --ghost=<shape>,<size>,<x>,<y>   show a carried ghost at that screen point
 ##   --mirror=1
+##   --paint=1             open the paint panel
 func preview_setup(args: Dictionary) -> void:
+	if args.get("paint", "0") == "1":
+		_paint.visible = true
+		_palette.visible = false
 	if args.has("ship"):
 		var errors: PackedStringArray = []
 		var bp := Blueprint.from_dict(Data.json_dir("blueprints").get(args["ship"], {}), errors)
