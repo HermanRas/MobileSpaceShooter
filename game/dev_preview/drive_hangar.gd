@@ -5,21 +5,11 @@ extends Node
 ## This is the check a screenshot can't make: that a finger dragging out of the palette,
 ## tapping, pinching and panning actually reach the right code.
 
+const ScriptErrorSpy := preload("res://dev_preview/script_error_spy.gd")
+
 var _hangar: Node
 var _failures: PackedStringArray = []
 var _spy := ScriptErrorSpy.new()
-
-
-## Any script error during a drive is a failure. Without this, a step that crashes half-way
-## skips its remaining checks and the drive still reports PASS (it did, building 2.5).
-## Same idea as the Logger in tests/run_tests.gd.
-class ScriptErrorSpy extends Logger:
-	var seen: PackedStringArray = []
-
-	func _log_error(function: String, file: String, line: int, code: String, rationale: String,
-			_editor_notify: bool, error_type: int, _script_backtraces: Variant) -> void:
-		if error_type == ERROR_TYPE_SCRIPT:
-			seen.append("%s (%s:%d in %s)" % [rationale if rationale != "" else code, file.get_file(), line, function])
 
 
 func _ready() -> void:
@@ -147,6 +137,7 @@ func _step_stats_match_and_refresh_fast() -> void:
 		samples.append(_hangar.last_refresh_usec / 1000.0)
 		await _frames(1)
 	samples.sort()
+	print("drive_hangar: refresh parts " + str(_hangar.last_refresh_parts))
 	var ms := samples[2]
 	print("drive_hangar: 150-tile refresh median %.1f ms (min %.1f, max %.1f) on this machine"
 			% [ms, samples[0], samples[4]])

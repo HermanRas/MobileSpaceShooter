@@ -1,6 +1,6 @@
 extends Node
 ## Debug builds only: every few seconds, prints the frame rate, the slowest frame, draw calls
-## and memory (and the hangar's last edit refresh), so a phone check is `tools/android.sh perf`
+## and memory (plus the scene's own `perf_note()`, if it has one), so a phone check is `tools/android.sh perf`
 ## instead of guessing by eye. Release builds free this node at start.
 ##
 ## Lines also go to `user://perf.log` (cleared each launch): Honor phones drop app output from
@@ -32,12 +32,12 @@ func _process(delta: float) -> void:
 	if _elapsed < INTERVAL_S:
 		return
 	var scene := get_tree().current_scene
-	var line := "perf: %s  %d fps  worst %.1f ms  %d draw calls  %.0f MB" % [
+	var line: String = "perf: %s  %d fps  worst %.1f ms  %d draw calls  %.0f MB" % [
 		scene.scene_file_path.get_file() if scene else "-",
 		Engine.get_frames_per_second(), _worst_ms,
 		Performance.get_monitor(Performance.RENDER_TOTAL_DRAW_CALLS_IN_FRAME),
 		Performance.get_monitor(Performance.MEMORY_STATIC) / 1048576.0,
-	] + (_refresh_note(scene) if scene and &"last_refresh_usec" in scene else "")
+	] + (scene.perf_note() if scene and scene.has_method(&"perf_note") else "")
 	print(line)
 	if _log:
 		_log.store_line(Time.get_time_string_from_system() + " " + line)
@@ -45,10 +45,3 @@ func _process(delta: float) -> void:
 	_elapsed = 0.0
 	_worst_ms = 0.0
 
-
-static func _refresh_note(scene: Node) -> String:
-	var parts: Array[String] = []
-	var detail: Dictionary = scene.get(&"last_refresh_parts")
-	for key: String in detail:
-		parts.append("%s %.1f" % [key, detail[key] / 1000.0])
-	return "  last refresh %.1f ms (%s)" % [scene.get(&"last_refresh_usec") / 1000.0, ", ".join(parts)]

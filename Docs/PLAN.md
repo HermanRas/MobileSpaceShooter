@@ -758,10 +758,17 @@ ship as buyable rather than add a second store.
 Goal: put the ship you built into space and fly it.
 
 #### 3.1 Ship body
-- [ ] `ship/ship_body.gd`: a `RigidBody2D` built from a blueprint, one `CollisionPolygon2D` per tile, mass and CoM from stats
-- [ ] `ship/ship_mesh.gd`: a single `ArrayMesh` with the ship shader (§5.5)
-- [ ] The shape-index → tile-id table
-- **Done when:** a 150-tile ship spawns in under 50 ms and renders in one draw call.
+✅ 2026-10-25. `ShipBody` (`src/ship/ship_body.gd`) is a `RigidBody2D` with one
+`ConvexPolygonShape2D` per tile. These are **shape owners on the body, not a
+`CollisionPolygon2D` node per tile**, so 150 tiles don't cost 150 nodes. It has the `ShipMesh`
+(one draw call, measured), and mass, centre of mass and inertia from `ShipStats` in pixels.
+`tile_at_shape()` maps a hit's shape index to its tile. On the phone, a 150-tile spawn takes
+**9 ms**. The hangar's **Fly** button opens `FlightSandbox` (`src/flight/`) **on top of the
+hangar**, so edits and undo survive the flight; tapping the ship there highlights the tile a
+physics query hit. Tested in `tests/ship/test_ship_body.gd` (each shape has its own tile's
+outline) and `dev_preview/drive_flight.tscn` (taps and rays hit the right tile, 1 draw call, two
+ships collide, back keeps the hangar). ⚠️ A GDScript lambda captures a local bool by value; use
+an array for a flag set from a signal.
 
 #### 3.2 Thruster mounting `[D13]`
 - [ ] `data/thrusters.json` (§4.3: 3 types × Small/Medium/Large × L1–3)

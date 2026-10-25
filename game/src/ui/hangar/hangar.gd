@@ -19,6 +19,8 @@ const VARIANT_SPREAD_U := 0.75
 var editor: HangarEditor
 var placement: Placement
 
+var _world: Node2D
+var _ui: CanvasLayer
 var _camera: HangarCamera
 var _view: ShipView
 var _palette: HangarPalette
@@ -31,6 +33,8 @@ var _mirror_button: Button
 var _undo_button: Button
 var _redo_button: Button
 var _status: Label
+var _fly_button: Button
+var _sandbox: FlightSandbox
 
 var _selected: int = -1
 ## Active carry: {"type", "shape", "size", "paint", "moving": tile id or -1, "finger": index}
@@ -53,15 +57,15 @@ func _ready() -> void:
 	editor = HangarEditor.create(placement)
 	editor.changed.connect(_on_changed)
 
-	var world := Node2D.new()
-	add_child(world)
+	_world = Node2D.new()
+	add_child(_world)
 	_view = ShipView.new()
 	_view.placement = placement
 	_view.area_u = placement.area_u
-	world.add_child(_view)
+	_world.add_child(_view)
 	_camera = HangarCamera.new()
 	_camera.zoom = Vector2(1.6, 1.6)
-	world.add_child(_camera)
+	_world.add_child(_camera)
 
 	_build_ui()
 	_on_changed()
@@ -103,8 +107,56 @@ func _open_library(open: bool) -> void:
 		_library_panel.refresh()
 
 
-func on_back() -> void:
+## Test-flies a copy of the ship on top of the hangar (Phase 3). Returns null if the ship has
+## problems. The hangar is hidden and paused, not freed, so edits and undo survive the flight.
+func fly() -> FlightSandbox:
+	if _sandbox != null or not placement.validate(editor.blueprint).is_empty():
+		return null
 	if not _carry.is_empty():
+		_end_carry()
+	var errors: PackedStringArray = []
+	var copy := Blueprint.from_dict(editor.blueprint.to_dict(), errors)
+	_set_hangar_active(false)
+	_sandbox = FlightSandbox.new()
+	_sandbox.name = "FlightSandbox"
+	add_child(_sandbox)
+	_sandbox.open(copy, placement)
+	_sandbox.closed.connect(land)
+	return _sandbox
+
+
+## Back from a test flight.
+func land() -> void:
+	if _sandbox == null:
+		return
+	_sandbox.queue_free()
+	_sandbox = null
+	_set_hangar_active(true)
+	_camera.make_current()
+
+
+func _set_hangar_active(on: bool) -> void:
+	_world.visible = on
+	_world.process_mode = Node.PROCESS_MODE_INHERIT if on else Node.PROCESS_MODE_DISABLED
+	_ui.visible = on
+	set_process_input(on)
+	set_process_unhandled_input(on)
+
+
+## One line for the debug Perf log.
+func perf_note() -> String:
+	if _sandbox != null:
+		return _sandbox.perf_note()
+	var parts: Array[String] = []
+	for key: String in last_refresh_parts:
+		parts.append("%s %.1f" % [key, last_refresh_parts[key] / 1000.0])
+	return "  last refresh %.1f ms (%s)" % [last_refresh_usec / 1000.0, ", ".join(parts)]
+
+
+func on_back() -> void:
+	if _sandbox != null:
+		land()
+	elif not _carry.is_empty():
 		_end_carry()
 	else:
 		Router.goto_main_menu()
@@ -412,6 +464,7 @@ func _on_changed() -> void:
 		_select(_selected)
 	if _status != null:
 		_status.text = "%s  ·  %s" % [editor.blueprint.name, "ready to fly" if problems.is_empty() else "can't fly yet"]
+		_fly_button.disabled = not problems.is_empty()
 		_stats.show_stats(ShipStats.compute(editor.blueprint, placement), problems, placement.max_tiles)
 	last_refresh_usec = Time.get_ticks_usec() - started
 	last_refresh_parts = {"analyze": analyzed - started, "view": drawn - analyzed,
@@ -441,12 +494,12 @@ func _touch_position_or_mouse(index: int) -> Vector2:
 # ── UI ────────────────────────────────────────────────────────────────────────
 
 func _build_ui() -> void:
-	var ui := CanvasLayer.new()
-	add_child(ui)
+	_ui = CanvasLayer.new()
+	add_child(_ui)
 	var root := Control.new()
 	root.set_anchors_preset(Control.PRESET_FULL_RECT)
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	ui.add_child(root)
+	_ui.add_child(root)
 
 	_palette = HangarPalette.new()
 	_palette.shapes = placement.shapes
@@ -495,6 +548,7 @@ func _build_ui() -> void:
 	root.add_child(_stats)
 
 	_tool_button(tools, "Ships", _open_library.bind(true))
+	_fly_button = _tool_button(tools, "Fly", func() -> void: fly())
 	_thumbs = ThumbnailRenderer.new()
 	add_child(_thumbs)
 	_library_panel = LibraryPanel.new()
