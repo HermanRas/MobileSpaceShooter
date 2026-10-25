@@ -571,15 +571,19 @@ fails an empty suite or a test with no assertions. Verified: 9 tests pass, and a
 failing test exits 1.
 
 #### 0.7 Screenshot previews
-- [ ] `dev_preview/preview.gd`: load a scene, wait N frames, save a PNG to `dev_preview/out/`
-- [ ] It runs windowed on the desktop. If a display-less run is needed later, use an `xvfb` container rather than the host.
-- **Done when:** one command produces a screenshot of the placeholder menu.
+✅ 2026-10-25. `tools/preview.sh res://…tscn [WxH]` → `game/dev_preview/out/<scene>_<size>.png`,
+at the phone's 1560×720 by default. It renders **in the tools container on Xvfb with Mesa
+llvmpipe**, so no window opens on the desktop. ⚠️ `docker run` needs `--init`, or `xvfb-run`
+(as PID 1) never gets Xvfb's ready signal and hangs. The first screenshot caught an
+off-centre menu.
 
 #### 0.8 Tools container
-- [ ] `tools/docker/py.Dockerfile` (Python 3.12, Pillow, numpy) and `tools/run.sh` (mounts the repo, runs as the host uid)
-- [ ] Port AOD's `slice_ui_sheets.py` → `tools/slice_sheets.py`, generalised for a per-sheet config (grid, key colour, glow list)
-- [ ] `tools/licence_audit.py`
-- **Done when:** slicing a test sheet in the container produces keyed PNGs and the audit passes.
+✅ 2026-10-25. One image, `msp-tools:1` (`tools/docker/tools.Dockerfile`: Ubuntu 24.04,
+Pillow, numpy, Xvfb, Mesa), serves both the art pipeline and the screenshots. `tools/run.sh`
+builds it on first use, mounts the repo at `/work` and Godot at `/opt/godot/godot`, and runs as
+the host uid. `tools/licence_audit.py` checks for missing and stale rows (exit 1 on either).
+**The slicer port moved to A.1:** AOD's ~800-line slicer is tuned sheet by sheet, so it gets
+ported against MSP's first real Gemini sheet rather than a made-up one.
 
 #### 0.9 Android pipeline in Docker `[D15]`
 - [ ] `tools/docker/android.Dockerfile`: JDK 17, Android SDK + build-tools, Godot 4.7.1 export templates
@@ -1096,7 +1100,7 @@ contract). The owner generates in Gemini, and then we review, slice and stage.
 | # | Item | Sheets / canvases | Needed by |
 |---|---|---|---|
 | A.0 | **Art direction** `[D3]`: palette (hex values quoted in every prompt), style sentence, ART_PROMPT.md header with the contract | – | before A.1 |
-| A.1 | Tile materials: Hull, Armor, Shield, Hardpoint (greyscale and seamless) + Core design | 1 sheet (5 cells + 2 variants each) | 2.4 |
+| A.1 | Tile materials: Hull, Armor, Shield, Hardpoint (greyscale and seamless) + Core design. **First sheet, so it also carries the slicer port**: AOD's `slice_ui_sheets.py` → `tools/slice_sheets.py` with a per-sheet config (grid, key colour, glow list), proven on this sheet. | 1 sheet (5 cells + 2 variants each) | 2.4 |
 | A.2 | Thrusters: pulse, jet and ion nozzles × Small/Medium/Large, top-down, on chroma green. L1–3 shown by a trim colour in the shader. | 1 sheet (9 cells) | 3.6 |
 | A.3 | Weapons: turret **base and barrel as separate cells** (so barrels can rotate), 8 types; level tiers shown by a trim colour | 2–3 sheets | 4.5 |
 | A.4 | Icons: 5 resources (Tech drawn as wires, plus GC), 5 tile types, 8 weapon icons, 3 thruster icons, HUD buttons (fire, switch, pause, boost), WaveTime power-ups | 2 sheets | 4.7, 8.3 |

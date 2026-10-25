@@ -6,10 +6,11 @@ extends Control
 
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(center)
 	var column := VBoxContainer.new()
-	column.set_anchors_preset(Control.PRESET_CENTER)
-	column.alignment = BoxContainer.ALIGNMENT_CENTER
-	add_child(column)
+	center.add_child(column)
 
 	column.add_child(_label("MSP", 64))
 	column.add_child(_label("Mobile Space Shooter  v%s" % ProjectSettings.get_setting("application/config/version"), 20))
