@@ -807,7 +807,7 @@ prints a frame-by-frame trace.
 Owner, on the phone, 2026-10-25: "tested and working" (flew their own 36-tile swan and three of the samples).
 
 #### 3.4 Touch controls
-✅ 2026-10-25 on the desktop driver; the owner's phone check is open. `FlightControls`
+✅ 2026-10-25; the owner confirmed both schemes, left-handed and stick + FIRE on the phone. `FlightControls`
 (`src/ui/controls/`) lays out from Settings:
 - **2-stick:** a floating `TouchStick` in the left 40%, with `TouchButton` FIRE and SWITCH
   bottom-right (above the gesture strip).
@@ -823,7 +823,7 @@ emulated as a mouse), so on-screen game buttons are `TouchButton`, which reads
 - [ ] Owner, on the phone: both schemes fly, and stick + FIRE work together
 
 #### 3.5 Camera and space
-✅ 2026-10-25 on the desktop driver; the owner's feel check is open.
+✅ 2026-10-25; the owner confirmed speed feels fast and the edge is clear on the phone.
 - **`FollowCamera`** (`src/flight/`): rests with the ship's longest side at 22% of the screen
   height, leads by 0.45 s of velocity, zooms out with speed down to 60%, and snaps on jumps
   longer than a screen.
