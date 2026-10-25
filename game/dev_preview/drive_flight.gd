@@ -50,7 +50,47 @@ func _ready() -> void:
 
 	await _step_fly_the_starter_with_the_stick()
 	await _step_control_layouts()
+	await _step_camera_and_arena()
 	_finish()
+
+
+## Phase 3.5: the camera leads and zooms out at speed; the arena warns and pushes back.
+func _step_camera_and_arena() -> void:
+	var errors: PackedStringArray = []
+	_hangar.load_blueprint(Blueprint.from_dict(Data.json_dir("blueprints")["starter"], errors))
+	await _frames(2)
+	var sandbox: FlightSandbox = _hangar.fly()
+	await _frames(3)
+	var ship := sandbox.ship
+	var camera := get_viewport().get_camera_2d()
+	var rest_zoom := camera.zoom.x
+	var base := Vector2(300, 400)
+	_touch_at(0, base, true)
+	await _frames(1)
+	_drag_to(0, base + Vector2(110, 0))
+	await _physics_frames(150)
+	var lead := camera.get_screen_center_position() - ship.global_position
+	_check(lead.x > 20.0, "the camera leads the ship along its velocity (%.0f px ahead)" % lead.x)
+	_check(camera.zoom.x < rest_zoom * 0.95, "and zooms out at speed (%.2f -> %.2f)" % [rest_zoom, camera.zoom.x])
+	_save_shot("drive_flight_space.png")
+	_touch_at(0, base + Vector2(110, 0), false)
+	await _physics_frames(30)
+
+	var half := sandbox.arena.half_size_u * PX
+	_teleport(ship, Vector2(half - 5.0 * PX, 0))
+	await _physics_frames(2)
+	await _frames(2)
+	_check(sandbox._edge_glow.strength > 0.5 and "leaving" in sandbox._hud.text,
+			"near the edge: the glow (%.2f) and the warning (%s)" % [sandbox._edge_glow.strength, sandbox._hud.text])
+	_save_shot("drive_flight_edge.png")
+	_teleport(ship, Vector2(half + 10.0 * PX, 0))
+	await _physics_frames(2)
+	_check((ship.global_position.x - half) / PX > 9.0, "teleported past the edge")
+	await _physics_frames(180)
+	var depth := (ship.global_position.x - half) / PX
+	_check(depth < 8.0, "past the edge it's pushed back in (10 U out -> %.1f U)" % depth)
+	_hangar.land()
+	await _frames(2)
 
 
 ## Phase 3.4: stick + FIRE with two fingers at once, the 1-stick scheme, and the left-handed
@@ -147,6 +187,14 @@ func _step_fly_the_starter_with_the_stick() -> void:
 	_check(absf(ship.angular_velocity) < 0.1, "and stops turning (%.3f rad/s)" % ship.angular_velocity)
 	_hangar.land()
 	await _frames(2)
+
+
+## Moves a rigid body through the physics server; setting global_position on an awake body is
+## overwritten by the next physics step.
+func _teleport(body: RigidBody2D, at: Vector2) -> void:
+	PhysicsServer2D.body_set_state(body.get_rid(), PhysicsServer2D.BODY_STATE_TRANSFORM, Transform2D(0.0, at))
+	PhysicsServer2D.body_set_state(body.get_rid(), PhysicsServer2D.BODY_STATE_LINEAR_VELOCITY, Vector2.ZERO)
+	PhysicsServer2D.body_set_state(body.get_rid(), PhysicsServer2D.BODY_STATE_ANGULAR_VELOCITY, 0.0)
 
 
 func _touch_at(finger: int, at: Vector2, pressed: bool) -> void:

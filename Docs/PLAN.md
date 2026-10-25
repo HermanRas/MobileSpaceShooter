@@ -823,9 +823,21 @@ emulated as a mouse), so on-screen game buttons are `TouchButton`, which reads
 - [ ] Owner, on the phone: both schemes fly, and stick + FIRE work together
 
 #### 3.5 Camera and space
-- [ ] Follow camera with velocity look-ahead and zoom that scales with ship size
-- [ ] A procedural starfield shader with 3 parallax layers, and arena bounds with a soft edge warning
-- **Done when:** flying fast feels fast, and the edge is clearly signalled.
+✅ 2026-10-25 on the desktop driver; the owner's feel check is open.
+- **`FollowCamera`** (`src/flight/`): rests with the ship's longest side at 22% of the screen
+  height, leads by 0.45 s of velocity, zooms out with speed down to 60%, and snaps on jumps
+  longer than a screen.
+- **`Starfield`:** a screen-space shader, three hashed star layers at 10/30/60% parallax with
+  twinkle; no textures.
+- **`Arena`** (`src/model/arena.gd`, tested): a 240 U square with a 25 U warning margin. The
+  sandbox draws its red edge, glows the screen border red and says "leaving the area", and
+  past the edge pushes back at 3 U/s² per U of depth. Story replaces the push with the world
+  map (4.10).
+
+Tuning is in `flight.json` (`camera`, `arena`). `drive_flight` checks the lead, the zoom-out,
+the warning and the push back. ⚠️ Teleport a RigidBody2D through `PhysicsServer2D.body_set_state`:
+setting `global_position` on an awake body is overwritten by the next physics step.
+- [ ] Owner, on the phone: flying fast feels fast, and the edge is clearly signalled
 
 #### 3.6 Thruster VFX
 - [ ] Pulse: an orange puff burst per pulse. Jet: a red fire trail scaled by throttle. Ion: a short blue circular torch that brightens with the ramp.

@@ -6,7 +6,8 @@ extends Node
 ## its undo history and unsaved edits. The ship spawns as a physics body flown by a
 ## FlightController (3.3) from the FlightControls (3.4: stick, FIRE, SWITCH, laid out from
 ## Settings; WASD/arrows/gamepad too). Tapping the ship highlights the tile a physics query hit
-## (the 3.1 check). The starfield and follow camera come in 3.5.
+## (the 3.1 check). A FollowCamera and a parallax Starfield (3.5); the Arena warns near its edge
+## and pushes the ship back in past it.
 
 signal closed
 
@@ -17,7 +18,11 @@ var pilot: FlightController
 ## How long building the ship body took, for the debug Perf log.
 var last_spawn_usec: int = 0
 
-var _camera := Camera2D.new()
+var arena: Arena
+
+var _camera := FollowCamera.new()
+var _arena_view := _ArenaView.new()
+var _edge_glow := _EdgeGlow.new()
 var _status := Label.new()
 var _picked := -1
 var _overlay := Node2D.new()
@@ -31,11 +36,13 @@ var _note_until := 0
 
 ## Spawns `bp` (already validated) at the origin.
 func open(bp: Blueprint, placement: Placement) -> void:
+	var flight: Dictionary = Data.table(&"flight")
+	arena = Arena.from_table(flight.get("arena", {}))
 	var world := Node2D.new()
 	world.name = "World"
 	add_child(world)
-	var backdrop := _Backdrop.new()
-	world.add_child(backdrop)
+	_arena_view.arena = arena
+	world.add_child(_arena_view)
 
 	var started := Time.get_ticks_usec()
 	ship = ShipBody.create(bp, placement)
@@ -44,13 +51,16 @@ func open(bp: Blueprint, placement: Placement) -> void:
 	pilot = FlightController.new()
 	pilot.name = "Pilot"
 	ship.add_child(pilot)
-	pilot.attach(ship, Data.table(&"flight"))
+	pilot.attach(ship, flight)
 	_overlay.draw.connect(_draw_pick)
 	ship.add_child(_overlay)
 
-	_camera.zoom = Vector2.ONE * _fit_zoom(bp, placement)
 	world.add_child(_camera)
+	_camera.configure(flight.get("camera", {}), ship, _extent_u(bp, placement))
 	_camera.make_current()
+	var stars := Starfield.new()
+	stars.camera = _camera
+	add_child(stars)
 	_build_ui()
 	_show_status()
 
@@ -67,15 +77,24 @@ func _process(_delta: float) -> void:
 	if ship == null:
 		return
 	pilot.stick = controls.stick_value()
-	_camera.position = ship.global_position
+	var warning := arena.warning(ship.global_position / PX)
+	_edge_glow.strength = warning
 	var parts: PackedStringArray = ["%.1f U/s" % (ship.linear_velocity.length() / PX)]
 	if pilot.braking and ship.linear_velocity.length() > 1.0:
 		parts.append("braking")
 	if controls.is_firing():
 		parts.append("FIRE (weapons arrive in Phase 4)")
+	if warning > 0.0:
+		parts.append("leaving the area" if arena.contains(ship.global_position / PX) else "outside the area: turning you back")
 	if Time.get_ticks_msec() < _note_until:
 		parts.append(_note)
 	_hud.text = "  ·  ".join(parts)
+
+
+func _physics_process(_delta: float) -> void:
+	if ship != null:
+		# The sandbox's soft wall. Story mode opens the world map at the edge instead (4.10).
+		ship.apply_central_force(arena.push(ship.global_position / PX) * ship.mass * PX)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -133,6 +152,9 @@ func _build_ui() -> void:
 		_note = "SWITCH: no manual weapons yet"
 		_note_until = Time.get_ticks_msec() + 2000)
 	ui.add_child(controls)
+	_edge_glow.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_edge_glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	ui.add_child(_edge_glow)
 	_status.position = Vector2(16, 12)
 	_status.add_theme_font_size_override(&"font_size", 20)
 	_status.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -168,23 +190,47 @@ func _open_controls_panel(open: bool) -> void:
 		_controls_panel.position = (_controls_panel.get_viewport_rect().size - _controls_panel.size) * 0.5
 
 
-## Zoom that shows the whole ship at about a third of the screen height.
-func _fit_zoom(bp: Blueprint, placement: Placement) -> float:
+## The ship's longest side, in U, for the camera's resting zoom.
+func _extent_u(bp: Blueprint, placement: Placement) -> float:
 	var bounds := Rect2()
 	for tile in bp.tiles:
 		for p in placement.tile_polygon(tile):
 			bounds = bounds.expand(p)  # starts at the origin, which the core always covers
-	var extent := maxf(maxf(bounds.size.x, bounds.size.y), 1.0) * PX
-	return clampf(240.0 / extent, 0.25, 3.0)
+	return maxf(bounds.size.x, bounds.size.y)
 
 
-## A plain reference grid so the ship has something to move against until 3.5's starfield.
-class _Backdrop extends Node2D:
-	const STEP := 256.0
-	const REACH := 40
+## The arena's edge in the world: a red line, drawn the same width on screen at any zoom.
+class _ArenaView extends Node2D:
+	var arena: Arena
+
+	func _process(_delta: float) -> void:
+		queue_redraw()
 
 	func _draw() -> void:
-		var color := Color(0.25, 0.3, 0.4, 0.35)
-		for i in range(-REACH, REACH + 1):
-			draw_line(Vector2(i * STEP, -REACH * STEP), Vector2(i * STEP, REACH * STEP), color, 1.0)
-			draw_line(Vector2(-REACH * STEP, i * STEP), Vector2(REACH * STEP, i * STEP), color, 1.0)
+		if arena == null:
+			return
+		var camera := get_viewport().get_camera_2d()
+		var width := 3.0 / (camera.zoom.x if camera != null else 1.0)
+		var half := arena.half_size_u * ShipMesh.PX_PER_U
+		draw_rect(Rect2(-half, -half, half * 2.0, half * 2.0), Color(1.0, 0.3, 0.25, 0.7), false, width)
+
+
+## A red glow around the screen's edge that strengthens as the ship nears the arena's edge.
+class _EdgeGlow extends Control:
+	const BANDS := 8
+	const DEPTH := 90.0
+
+	var strength := 0.0:
+		set(value):
+			if not is_equal_approx(value, strength):
+				strength = value
+				queue_redraw()
+
+	func _draw() -> void:
+		if strength <= 0.0:
+			return
+		for i in BANDS:
+			var inset := DEPTH * i / BANDS
+			var alpha := strength * 0.45 * (1.0 - float(i) / BANDS)
+			draw_rect(Rect2(Vector2(inset, inset), size - Vector2(inset, inset) * 2.0), Color(1.0, 0.2, 0.15, alpha),
+					false, DEPTH / BANDS)

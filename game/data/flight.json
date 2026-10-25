@@ -11,5 +11,20 @@
 	"stop_speed_u": 0.05,
 	"stop_spin": 0.05,
 	"min_throttle": 0.05,
-	"ion_cooldown_rate": 2.0
+	"ion_cooldown_rate": 2.0,
+	"camera": {
+		"_doc": "Follow camera (3.5). The ship's longest side takes ship_screen_share of the screen height at rest; the view zooms out by speed_zoom_out per U/s, down to min_zoom_share of that. It leads the ship by look_ahead_s of its velocity.",
+		"ship_screen_share": 0.22,
+		"speed_zoom_out": 0.025,
+		"min_zoom_share": 0.6,
+		"look_ahead_s": 0.45,
+		"follow_rate": 6.0,
+		"zoom_rate": 2.0
+	},
+	"arena": {
+		"_doc": "The flight sandbox's bounds (3.5): a square of half_size_u around the start. Inside warn_margin_u of the edge the HUD warns; past the edge a push of push_back U/s^2 per U of depth steers the ship back. Story mode replaces the push with the world map (4.10).",
+		"half_size_u": 120.0,
+		"warn_margin_u": 25.0,
+		"push_back": 3.0
+	}
 }
