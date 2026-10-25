@@ -1,0 +1,23 @@
+{
+	"format": 1,
+	"_doc": "Tile geometry (PLAN.md 4.1). Shapes are defined for an edge length of 1; a size scales them. All lengths are in U (1 U = one Large edge = 64 px). Every attachable edge must be a whole number of port pitches long.",
+	"port_pitch": 0.25,
+	"rotation_step_deg": 15,
+	"sizes": {
+		"S": 0.25,
+		"M": 0.5,
+		"L": 1.0
+	},
+	"shapes": {
+		"square": {"kind": "box", "w": 1, "h": 1},
+		"rect": {"kind": "box", "w": 2, "h": 1},
+		"triangle": {"kind": "regular", "sides": 3},
+		"hex": {"kind": "regular", "sides": 6},
+		"wedge": {
+			"kind": "polygon",
+			"vertices": [[-0.5, -0.5], [0.5, -0.5], [-0.5, 0.5]],
+			"dead_edges": [1],
+			"_doc": "Right-isosceles triangle. Edge 1 is the hypotenuse (length sqrt 2), which has no ports."
+		}
+	}
+}

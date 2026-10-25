@@ -606,10 +606,13 @@ ported against MSP's first real Gemini sheet rather than a made-up one.
 Goal: blueprints load, validate and produce stats. Nothing is drawn except a debug view.
 
 #### 1.1 Shapes
-- [ ] `data/shapes.json`: unit polygons for square, rect, triangle, wedge and hex; which edges are attachable
-- [ ] `model/shape.gd`: scaled polygon, edge list with port positions and outward normals, rotation in 15° steps
-- [ ] Tests: edge lengths, port counts (a Large square has 16 ports), normals point outward after rotation
-- **Done when:** the shape tests pass for every shape × size × 24 rotations.
+✅ 2026-10-25. `data/shapes.json` → `ShapeLib` / `Shape` (`src/model/`), tested in
+`tests/model/test_shapes.gd` across every shape × size × 24 rotations. **The S/M/L edge lengths
+live in `shapes.json`**, because they're geometry; `tiles.json` (1.2) holds only the stat
+curve. Regular shapes are generated from a side count, with edge 0 flat along the bottom, so
+every edge angle lands on the 15° grid (that's tested too). Loading rejects any attachable edge
+that isn't a whole number of 0.25 U ports. ⚠️ Sorting `StringName`s orders them by pointer,
+not alphabetically.
 
 #### 1.2 Tile definitions `[D7]`
 - [ ] `data/tiles.json`: the §4.2 table, the size factors, and `size_stat_curve`
