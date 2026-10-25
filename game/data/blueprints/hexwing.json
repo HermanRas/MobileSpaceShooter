@@ -1,0 +1,18 @@
+{
+	"format": 1,
+	"id": "hexwing",
+	"name": "Hexwing",
+	"author": "msp",
+	"tags": ["sample"],
+	"_doc": "A hex core ringed by triangles, one on each edge (centres 2/sqrt(3) U out along each edge normal).",
+	"tiles": [
+		{"id": 0, "type": "core", "shape": "hex", "size": "L", "pos": [0, 0], "rot": 0, "paint": "#d8d8d8"},
+		{"id": 1, "type": "hardpoint", "shape": "triangle", "size": "L", "pos": [-1.0, 0.5773502692], "rot": 16, "paint": "#3a3f45"},
+		{"id": 2, "type": "hardpoint", "shape": "triangle", "size": "L", "pos": [-1.0, -0.5773502692], "rot": 20, "paint": "#3a3f45"},
+		{"id": 3, "type": "shield", "shape": "triangle", "size": "L", "pos": [0, 1.1547005384], "rot": 12, "paint": "#3d7fbf"},
+		{"id": 4, "type": "shield", "shape": "triangle", "size": "L", "pos": [0, -1.1547005384], "rot": 0, "paint": "#3d7fbf"},
+		{"id": 5, "type": "hull", "shape": "triangle", "size": "L", "pos": [1.0, 0.5773502692], "rot": 8, "paint": "#8c96a0"},
+		{"id": 6, "type": "hull", "shape": "triangle", "size": "L", "pos": [1.0, -0.5773502692], "rot": 4, "paint": "#8c96a0"}
+	],
+	"mounts": []
+}

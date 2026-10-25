@@ -601,9 +601,9 @@ are in [MOBILE_DEPLOY.md](MOBILE_DEPLOY.md). ⚠️ Android export needs
 - **Done when:** the placeholder menu runs on the owner's phone from one command.
 
 #### 0.10 Workflow docs
-- [ ] `README.md` (what it is, how to run, how to test, licences)
-- [ ] `CLAUDE.md` for the project: commands, the model boundary, the asset seam, "nothing on the host", "data not code"
-- **Done when:** a fresh agent session can find how to build, test and deploy from `CLAUDE.md` alone.
+✅ 2026-10-25. `README.md`, plus the project `CLAUDE.md` (every command: test, screenshot,
+audit, Android; and the rules: model boundary, asset seam, data not code, nothing on the host).
+There's no board (D16).
 
 ---
 
@@ -651,9 +651,12 @@ mass and the inertia (about that centre) are exact for every shape. Armor is rep
 (`armor_avg`). Units are U; Phase 3.1 converts to pixels.
 
 #### 1.6 Debug view and sample ships
-- [ ] `scenes/debug/blueprint_view.tscn`: draws a blueprint with flat colours, port dots and an invalid-tile overlay
-- [ ] 3 hand-written blueprints in `data/blueprints/`: `starter`, `brick` (all armor), `hexwing`
-- **Done when:** a dev_preview screenshot shows all three ships drawn correctly.
+✅ 2026-10-25. `tools/preview.sh res://scenes/debug/blueprint_view.tscn` draws every
+`data/blueprints/*.json` with its stats. It shows **only free ports**, so a seam with dots on it
+isn't really connected, which makes connectivity checkable by eye. `starter` (3 hardpoints
+laid out for the §4.3 minimum: rear-left, rear-right, front), `brick` and `hexwing` all
+validate (`tests/model/test_sample_blueprints.gd`). Forward is **+x**, Godot's angle 0. New
+`Data.json_dir()` loads a folder of JSON files.
 
 ---
 

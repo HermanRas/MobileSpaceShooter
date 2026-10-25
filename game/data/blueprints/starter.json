@@ -1,0 +1,20 @@
+{
+	"format": 1,
+	"id": "starter",
+	"name": "Starter",
+	"author": "msp",
+	"tags": ["starter", "pinned"],
+	"_doc": "PLAN.md 4.10. Forward is +x. Hardpoints at rear-left, rear-right and front take the 3 pulse thrusters in Phase 3.2; the front one also takes the single gatling.",
+	"tiles": [
+		{"id": 0, "type": "core", "shape": "square", "size": "L", "pos": [0, 0], "rot": 0, "paint": "#d8d8d8"},
+		{"id": 1, "type": "hull", "shape": "square", "size": "L", "pos": [-1, 0], "rot": 0, "paint": "#8c96a0"},
+		{"id": 2, "type": "hull", "shape": "square", "size": "L", "pos": [0, -1], "rot": 0, "paint": "#8c96a0"},
+		{"id": 3, "type": "hull", "shape": "square", "size": "L", "pos": [0, 1], "rot": 0, "paint": "#8c96a0"},
+		{"id": 4, "type": "hardpoint", "shape": "square", "size": "L", "pos": [-1, -1], "rot": 0, "paint": "#3a3f45"},
+		{"id": 5, "type": "hardpoint", "shape": "square", "size": "L", "pos": [-1, 1], "rot": 0, "paint": "#3a3f45"},
+		{"id": 6, "type": "hardpoint", "shape": "square", "size": "L", "pos": [1, 0], "rot": 0, "paint": "#3a3f45"},
+		{"id": 7, "type": "hull", "shape": "wedge", "size": "L", "pos": [1, -1], "rot": 18, "paint": "#8c96a0"},
+		{"id": 8, "type": "hull", "shape": "wedge", "size": "L", "pos": [1, 1], "rot": 0, "paint": "#8c96a0"}
+	],
+	"mounts": []
+}

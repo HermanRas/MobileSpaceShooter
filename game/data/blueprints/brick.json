@@ -1,0 +1,20 @@
+{
+	"format": 1,
+	"id": "brick",
+	"name": "Brick",
+	"author": "msp",
+	"tags": ["sample"],
+	"_doc": "All armor, 3 x 3: the slow tank end of D10.",
+	"tiles": [
+		{"id": 0, "type": "core", "shape": "square", "size": "L", "pos": [0, 0], "rot": 0, "paint": "#d8d8d8"},
+		{"id": 1, "type": "armor", "shape": "square", "size": "L", "pos": [-1, -1], "rot": 0, "paint": "#6b5a3e"},
+		{"id": 2, "type": "armor", "shape": "square", "size": "L", "pos": [0, -1], "rot": 0, "paint": "#6b5a3e"},
+		{"id": 3, "type": "armor", "shape": "square", "size": "L", "pos": [1, -1], "rot": 0, "paint": "#6b5a3e"},
+		{"id": 4, "type": "armor", "shape": "square", "size": "L", "pos": [-1, 0], "rot": 0, "paint": "#6b5a3e"},
+		{"id": 5, "type": "armor", "shape": "square", "size": "L", "pos": [1, 0], "rot": 0, "paint": "#6b5a3e"},
+		{"id": 6, "type": "armor", "shape": "square", "size": "L", "pos": [-1, 1], "rot": 0, "paint": "#6b5a3e"},
+		{"id": 7, "type": "armor", "shape": "square", "size": "L", "pos": [0, 1], "rot": 0, "paint": "#6b5a3e"},
+		{"id": 8, "type": "armor", "shape": "square", "size": "L", "pos": [1, 1], "rot": 0, "paint": "#6b5a3e"}
+	],
+	"mounts": []
+}

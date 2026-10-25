@@ -24,6 +24,24 @@ func load_all() -> void:
 			_load_table(DATA_DIR.path_join(file_name))
 
 
+## Every `*.json` in `res://data/<subdir>/`, as file name (without `.json`) -> parsed
+## Dictionary. Unparseable files are reported with push_error and skipped. Sorted by name.
+func json_dir(subdir: String) -> Dictionary:
+	var out := {}
+	var dir := DATA_DIR.path_join(subdir)
+	var names := Array(DirAccess.get_files_at(dir)).filter(
+			func(n: String) -> bool: return n.get_extension() == "json")
+	names.sort()
+	for file_name: String in names:
+		var json := JSON.new()
+		if json.parse(FileAccess.get_file_as_string(dir.path_join(file_name))) != OK \
+				or typeof(json.data) != TYPE_DICTIONARY:
+			push_error("Data: %s/%s is not a JSON object" % [dir, file_name])
+			continue
+		out[file_name.get_basename()] = json.data
+	return out
+
+
 ## Returns the table named after its file (without `.json`), or an empty Dictionary.
 func table(table_name: StringName) -> Dictionary:
 	return _tables.get(table_name, {})

@@ -11,6 +11,11 @@ tools/test.sh                     # the headless suite; run before calling anyth
 GODOT=~/Downloads/Godot_v4.7.1/Godot_v4.7.1-stable_linux.x86_64
 $GODOT --path game                # run the game
 $GODOT --headless --path game --import   # refresh the class cache after adding a class_name
+
+tools/preview.sh res://scenes/debug/blueprint_view.tscn   # screenshot a scene (Docker, no window)
+                                  # -> game/dev_preview/out/; open the PNG to check it
+tools/run.sh python3 -I tools/licence_audit.py            # every asset declared?
+tools/android.sh export|devices|deploy|logcat             # see Docs/MOBILE_DEPLOY.md
 ```
 
 ## Rules
