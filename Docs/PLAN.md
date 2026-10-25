@@ -789,7 +789,7 @@ invariants), and `drive_hangar` places and deletes thrusters by touch. ⚠️ Th
 must ignore touches, or once it grew wider it swallowed pans that started under it.
 
 #### 3.3 Flight controller
-✅ 2026-10-25, except the owner's feel check below. `FlightModel` (`src/model/flight_model.gd`):
+✅ 2026-10-25. `FlightModel` (`src/model/flight_model.gd`):
 the stick is **world-space and says where to go**. The ship turns toward it (planning its spin
 so it can stop in time) and pushes that way. Throttle per thruster = how much its push helps
 the move + how much its torque helps the turn, clamped 0..1, so stick up-left on an up-facing
@@ -804,15 +804,23 @@ brake to 0.01 U/s. ⚠️ **All pulse thrusters share one clock**: out of step, 
 one-sided shove and the ship yaws back and forth. A pulse's share of the *feedback* (turning,
 braking) is scaled to one interval's worth, or a kick overshoots. `dev_preview/trace_flight.tscn`
 prints a frame-by-frame trace.
-- [ ] Owner, on the phone: the three thruster types feel distinct, and the bad ships fly as badly as they should
+Owner, on the phone, 2026-10-25: "tested and working" (flew their own 36-tile swan and three of the samples).
 
 #### 3.4 Touch controls
-- [x] A floating virtual stick: `TouchStick` (`src/ui/controls/`), in the left 40% of the
-  sandbox (so taps on the ship still reach it), one finger per stick. The dead zone is in
-  `flight.json`. WASD, the arrows and a gamepad also fly.
-- [ ] The 2-stick layout (FIRE and SWITCH placeholders) and the 1-stick layout; switched in Settings
-- [ ] The handedness mirror
-- **Done when:** both schemes fly on the phone, and multi-touch (stick + fire at once) works.
+✅ 2026-10-25 on the desktop driver; the owner's phone check is open. `FlightControls`
+(`src/ui/controls/`) lays out from Settings:
+- **2-stick:** a floating `TouchStick` in the left 40%, with `TouchButton` FIRE and SWITCH
+  bottom-right (above the gesture strip).
+- **1-stick:** the stick only.
+- **`left_handed`:** swaps the sides. `stick_size` and `stick_opacity` scale everything.
+
+`ControlsPanel` (the flight screen's **Controls** button; later part of 6.4) edits them and
+rebuilds from Settings each time it opens. FIRE and SWITCH are placeholders until Phase 4.
+`drive_flight` checks two fingers at once (stick + FIRE), that 1-stick hides the buttons, and
+that left-handed moves the stick. ⚠️ **Godot's Button only hears the first finger** (the one
+emulated as a mouse), so on-screen game buttons are `TouchButton`, which reads
+`InputEventScreenTouch` per finger.
+- [ ] Owner, on the phone: both schemes fly, and stick + FIRE work together
 
 #### 3.5 Camera and space
 - [ ] Follow camera with velocity look-ahead and zoom that scales with ship size

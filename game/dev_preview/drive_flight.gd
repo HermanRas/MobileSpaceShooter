@@ -49,7 +49,70 @@ func _ready() -> void:
 	_check(_hangar._world.visible and _hangar._ui.visible, "the hangar is visible again")
 
 	await _step_fly_the_starter_with_the_stick()
+	await _step_control_layouts()
 	_finish()
+
+
+## Phase 3.4: stick + FIRE with two fingers at once, the 1-stick scheme, and the left-handed
+## mirror. The player's own settings are put back afterwards.
+func _step_control_layouts() -> void:
+	var saved := {}
+	for key: StringName in [&"control_scheme", &"left_handed", &"stick_size", &"stick_opacity"]:
+		saved[key] = Settings.get_value(key)
+	Settings.set_value(&"control_scheme", "2-stick")
+	Settings.set_value(&"left_handed", false)
+	var errors: PackedStringArray = []
+	_hangar.load_blueprint(Blueprint.from_dict(Data.json_dir("blueprints")["starter"], errors))
+	await _frames(2)
+	var sandbox: FlightSandbox = _hangar.fly()
+	await _frames(3)
+	var controls := sandbox.controls
+
+	var stick_at := Vector2(300, 400)
+	var fire_at := controls.fire.get_global_rect().get_center()
+	_touch_at(0, stick_at, true)
+	await _frames(1)
+	_drag_to(0, stick_at + Vector2(80, 0))
+	_touch_at(1, fire_at, true)
+	await _frames(2)
+	_check(controls.is_firing() and controls.stick_value().x > 0.5,
+			"two fingers: stick (%.2f) and FIRE (%s) at once" % [controls.stick_value().x, controls.is_firing()])
+	_save_shot("drive_flight_controls.png")
+	_touch_at(1, fire_at, false)
+	_touch_at(0, stick_at + Vector2(80, 0), false)
+	await _frames(2)
+	_check(not controls.is_firing() and controls.stick_value() == Vector2.ZERO, "both let go")
+
+	Settings.set_value(&"control_scheme", "1-stick")
+	await _frames(2)
+	_check(not controls.fire.visible and not controls.switch_button.visible, "1-stick hides FIRE and SWITCH")
+
+	Settings.set_value(&"left_handed", true)
+	await _frames(2)
+	_touch_at(0, Vector2(300, 400), true)
+	await _frames(1)
+	_drag_to(0, Vector2(380, 400))
+	await _frames(1)
+	var left_side := controls.stick_value()
+	_touch_at(0, Vector2(380, 400), false)
+	var right := Vector2(get_viewport().get_visible_rect().size.x - 300, 400)
+	_touch_at(0, right, true)
+	await _frames(1)
+	_drag_to(0, right + Vector2(80, 0))
+	await _frames(1)
+	_check(left_side == Vector2.ZERO and controls.stick_value().x > 0.5,
+			"left-handed: the stick lives on the right (left %s, right %s)" % [left_side, controls.stick_value()])
+	_touch_at(0, right + Vector2(80, 0), false)
+	await _frames(1)
+
+	sandbox._open_controls_panel(true)
+	await _frames(3)
+	_save_shot("drive_flight_controls_panel.png")
+	sandbox._open_controls_panel(false)
+	for key: StringName in saved:
+		Settings.set_value(key, saved[key])
+	_hangar.land()
+	await _frames(2)
 
 
 ## Phase 3.3/3.4: real touches on the stick fly the starter, through the real physics.

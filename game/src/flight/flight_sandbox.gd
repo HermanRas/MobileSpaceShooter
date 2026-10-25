@@ -4,16 +4,13 @@ extends Node
 ##
 ## Opened by the hangar on top of itself rather than as a scene change, so the hangar keeps
 ## its undo history and unsaved edits. The ship spawns as a physics body flown by a
-## FlightController (3.3): a floating touch stick on the left of the screen, or WASD/arrows/a
-## gamepad. Tapping the ship elsewhere highlights the tile a physics query hit (the 3.1 check).
-## The starfield and follow camera come in 3.5.
+## FlightController (3.3) from the FlightControls (3.4: stick, FIRE, SWITCH, laid out from
+## Settings; WASD/arrows/gamepad too). Tapping the ship highlights the tile a physics query hit
+## (the 3.1 check). The starfield and follow camera come in 3.5.
 
 signal closed
 
 const PX := ShipMesh.PX_PER_U
-
-## The share of the screen's width, from the left, where a touch starts the stick.
-const STICK_ZONE := 0.4
 
 var ship: ShipBody
 var pilot: FlightController
@@ -24,8 +21,12 @@ var _camera := Camera2D.new()
 var _status := Label.new()
 var _picked := -1
 var _overlay := Node2D.new()
-var _stick := TouchStick.new()
+var controls := FlightControls.new()
 var _hud := Label.new()
+var _controls_panel: ControlsPanel
+## A short message under the HUD (e.g. SWITCH before there are weapons), and when it fades.
+var _note := ""
+var _note_until := 0
 
 
 ## Spawns `bp` (already validated) at the origin.
@@ -65,10 +66,16 @@ func close() -> void:
 func _process(_delta: float) -> void:
 	if ship == null:
 		return
-	pilot.stick = _stick.value if _stick.is_active() \
-			else Input.get_vector(&"move_left", &"move_right", &"move_up", &"move_down")
+	pilot.stick = controls.stick_value()
 	_camera.position = ship.global_position
-	_hud.text = "%.1f U/s%s" % [ship.linear_velocity.length() / PX, "  ·  braking" if pilot.braking and ship.linear_velocity.length() > 1.0 else ""]
+	var parts: PackedStringArray = ["%.1f U/s" % (ship.linear_velocity.length() / PX)]
+	if pilot.braking and ship.linear_velocity.length() > 1.0:
+		parts.append("braking")
+	if controls.is_firing():
+		parts.append("FIRE (weapons arrive in Phase 4)")
+	if Time.get_ticks_msec() < _note_until:
+		parts.append(_note)
+	_hud.text = "  ·  ".join(parts)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -120,10 +127,12 @@ func _show_status() -> void:
 func _build_ui() -> void:
 	var ui := CanvasLayer.new()
 	add_child(ui)
-	_stick.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_stick.anchor_right = STICK_ZONE
-	_stick.offset_right = 0.0
-	ui.add_child(_stick)
+	# First, so the labels and buttons added after it sit on top.
+	controls.name = "Controls"
+	controls.switch_pressed.connect(func() -> void:
+		_note = "SWITCH: no manual weapons yet"
+		_note_until = Time.get_ticks_msec() + 2000)
+	ui.add_child(controls)
 	_status.position = Vector2(16, 12)
 	_status.add_theme_font_size_override(&"font_size", 20)
 	_status.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -138,6 +147,25 @@ func _build_ui() -> void:
 	back.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT, Control.PRESET_MODE_KEEP_SIZE, 16)
 	back.pressed.connect(close)
 	ui.add_child(back)
+	var settings := Button.new()
+	settings.text = "Controls"
+	settings.size = Vector2(132, 56)
+	settings.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT, Control.PRESET_MODE_KEEP_SIZE, 16)
+	settings.position.y += 64
+	settings.pressed.connect(_open_controls_panel.bind(true))
+	ui.add_child(settings)
+	_controls_panel = ControlsPanel.new()
+	_controls_panel.visible = false
+	_controls_panel.closed.connect(_open_controls_panel.bind(false))
+	ui.add_child(_controls_panel)
+
+
+func _open_controls_panel(open: bool) -> void:
+	_controls_panel.visible = open
+	if open:
+		_controls_panel.refresh()
+		_controls_panel.reset_size()
+		_controls_panel.position = (_controls_panel.get_viewport_rect().size - _controls_panel.size) * 0.5
 
 
 ## Zoom that shows the whole ship at about a third of the screen height.
