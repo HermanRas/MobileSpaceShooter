@@ -473,7 +473,7 @@ MediaTek MT6858, **Mali-G610 MC2**, OpenGL ES 3.2, arm64-v8a only, 2600 × 1200 
 | Frame rate | 60 fps; 30 fps is the hard floor |
 | Live ships | 40 |
 | Tiles per ship | 150 (the cap) |
-| Live projectiles | 600 |
+| Live projectiles | 600 (measured 2026-10-26: 60 fps on the phone, pool ~5 ms a frame; 900 also holds) |
 | Ship rendering | **One `ArrayMesh` per ship** built from its tile polygons (one draw call), not a node per tile. Rebuilt only when a tile is destroyed. |
 | Projectiles | Pooled data plus `MultiMeshInstance2D` for drawing. Hits use `intersect_ray` per projectile per tick. **No node per bullet.** |
 | Hit → tile | Each tile is its own `CollisionPolygon2D`, and a shape-index → tile-id table resolves which tile was hit |
@@ -935,9 +935,14 @@ gun on a ship shares `ShipBody.gun_level`, and the sandbox's **Guns L1** button 
 - [ ] Owner, on the phone: mount guns in the hangar, fly the gunboat, FIRE, try Guns L1 → L999
 
 #### 4.4 Projectile pool
-- [x] `combat/projectile_pool.gd`: struct-of-arrays, `MultiMeshInstance2D` draw, `intersect_ray` hits per tick (pulled into 4.3; 1024 slots, counts `dropped`)
-- [ ] Stress scene: 600 projectiles, measured on the reference phone
-- **Done when:** 600 projectiles hold 60 fps on the phone (or the budget gets revised in §5.5 with the measured number).
+✅ 2026-10-26. `ProjectilePool` (`src/combat/projectile_pool.gd`, built in 4.3): packed arrays,
+1024 slots, one `MultiMeshInstance2D` of additive streaks, one `intersect_ray` per shot per
+tick, masked by team layer. **On the phone, 600 shots hold 60 fps** (pool physics 3.0 ms avg /
+5.4 max, draw 1.9 ms), and so do 900. The debug menu's **Shot stress test**
+(`scenes/debug/shot_stress.tscn`) ramps 150/300/600/900 at a ring of barges and writes a
+`stress:` line per stage to the Perf log; `tools/drive.sh res://dev_preview/drive_shots.tscn`
+runs one ramp on the PC. Hits in the test are on undamageable barges, so the cost of
+`ShipDamage` per hit isn't in these numbers.
 
 #### 4.5 Weapons batch A: kinetic
 - [ ] Single gatling, multi gatling (spin-up), cannon (armour-piercing, on every mount, so the turret version is the "cannon turret")
