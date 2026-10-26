@@ -1132,14 +1132,43 @@ levels, faction, boss, `flee_below`) and loaded by `EnemyRoster` (`src/model/ene
 - **Tests:** `tests/model/test_enemy_roster.gd` checks the counts, validity, roles' weapons,
   the escort's shape, bosses outgrowing their tier, and that every level 1–100 has enemies.
 
-⚠️ Big ships brake weakly (0.2–0.6 U/s² back against 4–6 forward). The AI (5.2) should turn and
-burn rather than count on reverse thrust; more brakes are a design change in make_enemies.gd.
+⚠️ Big ships brake weakly (0.2–0.6 U/s² back against 4–6 forward), and most have little side
+thrust. The owner accepted this for the MVP (2026-10-26). The AI (5.2) turns and burns rather
+than counting on reverse thrust; more variety in brakes and side thrusters comes with the v2
+faction rosters (§9).
 - [ ] Owner: look over the gallery (and the bosses on the sandbox's Target button)
 
 #### 5.2 AI pilot
-- [ ] `ai/ai_pilot.gd`: drives the same `flight_controller` the player uses (no AI-only physics)
-- [ ] Behaviours: chase, orbit and strafe, keep range, ram, lay mines, flee at low HP. Avoids friends and debris.
-- **Done when:** each behaviour is recognisable in a 1v1 sandbox, and the AI never gets stuck on arena edges.
+✅ 2026-10-26.
+- **Brain:** `AiBrain` (`src/model/ai_brain.gd`, tuned in `data/ai.json`) turns where the ship,
+  its target, its friends, its charge and the arena are into a stick. That's the same
+  world-space stick the player's thumb moves, so the ship flies through the same
+  `FlightModel`, with no AI-only physics.
+- **Behaviours:** each picks a velocity it wants, and the stick steers toward it:
+  - **chase:** close in to a stand-off distance, nose on the lead point.
+  - **strafe:** circle the target.
+  - **keep_range:** hold a band of its gun range.
+  - **ram:** full speed at the intercept point.
+  - **lay_mines:** circle inside mine range.
+  - **escort:** hold a post beside its charge; with a raider near, the post moves between the
+    charge and the raider.
+  - **flee:** below `flee_below` of its hull, it runs.
+- **Always on:** friends push each other apart, and the arena edge pulls ships back in.
+- **Pilot node:** `AiPilot` (`src/ai/ai_pilot.gd`) feeds the brain each physics tick, before the
+  `FlightController`.
+- **Sandbox:** a roster ship on the Target list gets a pilot, an exhaust and the arena push.
+  The practice targets still sit still.
+- **Tests:** `tests/model/test_ai_pilot.gd` flies each behaviour headless in `FlightSim` with
+  real roster ships, including a chaser on a circling target and six ships at an arena corner
+  with the player past the edge. drive_flight checks Wasp and Marauder fly themselves in the
+  game.
+
+⚠️ The flight model won't turn a ship toward a stick held straight behind it (the thrusters
+that would turn it push against the stick), and most enemies brake weakly. So the brain turns
+first: it holds the stick at most 90° off the nose. A ship closing too fast while nose-on lets
+go of the stick instead, so the auto-brake slows it without turning. Debris avoidance is left
+to physics, since wrecks fade in seconds.
+- [ ] Owner, on the phone: fight Wasp (strafe), Pike (escort, without a charge it keeps range) and the bosses on the sandbox's Target button. Bosses hit hard at L1 (the Marauder is about 500 dmg/s against the starter's 1,160 HP); enemy gun levels and the balance come with 5.3
 
 #### 5.3 Level scaling 1–100
 - [ ] `data/levels.json`: a budget curve, tier mix per level band, weapon-level bands, enemy count
@@ -1494,9 +1523,15 @@ and A.2/A.3 parts.
   - **Each faction has its own look and arsenal** (owner, 2026-10-26), so a ship is recognisable
     at a glance. For example: **green**, pointed mono-hull fronts; **blue**, catamaran twin hulls;
     **purple**, round ships; **orange**, U-shaped hulls. Weapon preferences differ too, e.g. lasers
-    and shields for one, armour and cannons for another. v1's roster stays `neutral`; v2 adds a
+    and shields for one, armour and cannons for another. Flight handling should vary as well:
+    more brake and side thrusters on some designs (v1's enemies have little of either). v1's
+    roster stays `neutral`; v2 adds a
     roster per faction in the same `enemies.json` format, and the encounter generator (5.3)
     picks by faction.
+- **Attack groups and formations** (owner, 2026-10-26): 3+ enemy ships that fly and fight
+  together (a wedge of chasers, strafers screening a sniper, escorts round a boss). Hooks for v1:
+  the AI pilot (5.2) takes its goal from outside (a target, a point, a ship to guard), so a group
+  leader can hand out slots; the encounter generator (5.3) spawns ships in clusters.
 - More player bases, and a layered customiser (hairstyles, outfits) on top of v1's recolouring
 - True twin-stick aiming
 - More thrusters and weapons, plus weapon mods

@@ -1,0 +1,24 @@
+{
+	"format": 1,
+	"_doc": "PLAN.md 5.2. How enemy pilots fly. Each tick a behaviour picks a velocity it wants (U/s, world space); the stick steers toward it (stick = (wanted - velocity) / (top speed x steer_gain), at most 1), so the flight model turns and burns just as it does for the player. With nothing left to correct (stick under face_below), the ship keeps its nose on its aim at face_stick, just past the stick's dead zone, so it turns without pushing (fixed guns line up). A ship whose back push is under turn_first_below of its forward push turns round to brake: the stick is held at most 90 degrees off its nose. Closing on its aim more than overspeed U/s too fast while facing within brake_facing_deg of it, it lets go of the stick: the auto-brake slows it with the nose kept on. It approaches no faster than it could stop: a chaser (nose on) at its back push, others at that or turn_and_burn_share of their forward push, whichever is more (never under min_brake). top speed is the ship's forward push / (mass x linear_damp). Distances in U; a share is of the ship's longest gun range (range_default_u for a ship without guns).",
+	"steer_gain": 0.2,
+	"face_stick": 0.17,
+	"face_below": 0.35,
+	"turn_first_below": 0.6,
+	"turn_and_burn_share": 0.4,
+	"overspeed": 0.5,
+	"brake_facing_deg": 60.0,
+	"min_brake": 0.5,
+	"range_default_u": 12.0,
+	"edge_margin_u": 30.0,
+	"edge_push": 2.0,
+	"separation_u": 3.0,
+	"behaviours": {
+		"chase": {"_doc": "Close to stand_off_u behind the lead point and hold there, nose on it.", "stand_off_u": 6.0, "slow_within_u": 14.0},
+		"strafe": {"_doc": "Circle the target at radius_share of range, at speed_share of top speed.", "radius_share": 0.55, "speed_share": 0.8, "pull": 0.8},
+		"keep_range": {"_doc": "Stay between min_share and max_share of range, nose on the target.", "min_share": 0.6, "max_share": 0.85},
+		"ram": {"_doc": "Full speed at where the target will be.", "speed_share": 1.0},
+		"lay_mines": {"_doc": "Circle close, so mines drop across the target's path.", "radius_u": 7.0, "speed_share": 0.8, "pull": 0.8},
+		"escort": {"_doc": "Hold a post offset_u beside the ship it guards; with an enemy within guard_u of that ship, the post moves between the two and its turrets fight.", "offset_u": 4.0, "guard_u": 20.0, "hold_gain": 0.8}
+	}
+}

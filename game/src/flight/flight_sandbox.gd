@@ -74,6 +74,8 @@ var loot_earned := {}
 var _level_button := Button.new()
 ## Which of the sandbox's `targets` is parked ahead.
 var target_index := 0
+## The enemy roster (5.1): a target on it flies itself (5.2).
+var roster: EnemyRoster
 var _target_button := Button.new()
 
 
@@ -85,6 +87,7 @@ func open(bp: Blueprint, placement: Placement) -> void:
 	_sandbox = _flight.get("sandbox", {})
 	arena = Arena.from_table(_flight.get("arena", {}))
 	damage_table = DamageTable.from_table(Data.table(&"damage_types"))
+	roster = EnemyRoster.from_table(Data.table(&"enemies"), Data.json_dir("enemies"))
 	test_hit = float(_sandbox.get("test_hit", test_hit))
 	_world.name = "World"
 	add_child(_world)
@@ -184,7 +187,30 @@ func _spawn_target() -> void:
 		var view := GunView.new()
 		target.add_child(view)
 		view.attach(guns)
+	var entry := roster.entry(StringName(bp.id))
+	if entry != null and not target.envelope.thrusters.is_empty():
+		_give_pilot(target, entry)
 	_target_button.text = "Target: %s" % target.blueprint.name
+
+
+## A roster ship flies itself (PLAN.md 5.2): a FlightController like the player's, its exhaust,
+## and an AiPilot set on the player.
+func _give_pilot(body: ShipBody, entry: EnemyRoster.Entry) -> void:
+	var flier := FlightController.new()
+	flier.name = "Pilot"
+	body.add_child(flier)
+	flier.attach(body, _flight)
+	var exhaust := ThrusterFxSet.new()
+	exhaust.name = "Exhaust"
+	body.add_child(exhaust)
+	exhaust.attach(body, flier)
+	var brain := AiBrain.for_ship(Data.table(&"ai"), entry.behaviour, body.blueprint, _placement, flier.model.linear_damp, arena)
+	brain.flee_below = entry.flee_below
+	var ai := AiPilot.new()
+	ai.name = "Ai"
+	body.add_child(ai)
+	ai.attach(body, flier, brain)
+	ai.target = func() -> ShipBody: return ship
 
 
 ## Parks the next practice target in place of this one.
@@ -324,9 +350,11 @@ func _process(_delta: float) -> void:
 
 
 func _physics_process(_delta: float) -> void:
-	if ship != null:
-		# The sandbox's soft wall. Story mode opens the world map at the edge instead (4.10).
-		ship.apply_central_force(arena.push(ship.global_position / PX) * ship.mass * PX)
+	# The sandbox's soft wall, for the player and a flying target. Story mode opens the world map
+	# at the edge instead (4.10).
+	for body: ShipBody in [ship, target]:
+		if is_instance_valid(body) and not body.is_wreck():
+			body.apply_central_force(arena.push(body.global_position / PX) * body.mass * PX)
 
 
 func _unhandled_input(event: InputEvent) -> void:

@@ -54,6 +54,7 @@ func _ready() -> void:
 	await _step_rockets_and_flak()
 	await _step_specials()
 	await _step_switch_and_hud()
+	await _step_enemies_fly_themselves()
 	await _step_fly_the_starter_with_the_stick()
 	await _step_control_layouts()
 	await _step_camera_and_arena()
@@ -278,6 +279,50 @@ func _step_specials() -> void:
 	_teleport(sandbox.target, mine + Vector2(0, 0.8 * PX))
 	await _physics_frames(6)
 	_check(pool.explosions > blasts, "an enemy beside the mine sets it off")
+	_hangar.on_back()
+	await _frames(3)
+
+
+## Phase 5.2: a roster ship on the Target list flies itself with the player's own flight
+## controller: it gets a pilot, moves, turns and stays in the arena, and a practice barge doesn't.
+func _step_enemies_fly_themselves() -> void:
+	var errors: PackedStringArray = []
+	_hangar.load_blueprint(Blueprint.from_dict(Data.json_dir("blueprints")["starter"], errors))
+	await _frames(2)
+	var sandbox: FlightSandbox = _hangar.fly()
+	if sandbox == null:
+		_check(false, "the starter flies")
+		return
+	_check(sandbox.target.get_node_or_null("Ai") == null, "a practice barge has no pilot")
+	for id: String in ["wasp", "marauder"]:
+		while sandbox.target == null or sandbox.target.blueprint.id != id:
+			sandbox._next_target()
+			await _physics_frames(1)
+		var enemy := sandbox.target
+		var ai := enemy.get_node_or_null("Ai") as AiPilot
+		_check(ai != null, "%s gets an AI pilot" % id)
+		if ai == null:
+			continue
+		var start := enemy.global_position
+		var turned := 0.0
+		var last := enemy.global_rotation
+		var sticks := 0
+		for i in 240:
+			await _physics_frames(1)
+			if not is_instance_valid(enemy):
+				break
+			turned += absf(angle_difference(last, enemy.global_rotation))
+			last = enemy.global_rotation
+			if (enemy.get_node("Pilot") as FlightController).stick.length() > 0.15:
+				sticks += 1
+		if not is_instance_valid(enemy):
+			_check(false, "%s survived 4 s" % id)
+			continue
+		var moved := enemy.global_position.distance_to(start) / ShipMesh.PX_PER_U
+		_check(sticks > 60 and moved > 2.0 and turned > 0.3,
+				"%s flies itself: %.1f U, turned %.0f°, stick held %d of 240 ticks (%s)" % [id, moved, rad_to_deg(turned), sticks, ai.brain.behaviour])
+		_check(sandbox.arena.contains(enemy.global_position / ShipMesh.PX_PER_U), "%s stays in the arena" % id)
+	_save_shot("drive_flight_ai.png")
 	_hangar.on_back()
 	await _frames(3)
 
