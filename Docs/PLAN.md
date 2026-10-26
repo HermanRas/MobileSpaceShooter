@@ -1381,6 +1381,9 @@ flight.
   about 14 kills it dropped 2 guns and 1 thruster at the 4% part chance, maybe too often (keep
   for now). A found L265 gatling was a huge, satisfying upgrade. The Spinner's mines rarely land
   against a lone player, but that's fine: it's meant to fly with a boss or a group.
+- [ ] Keep dying part of the loop (owner, 2026-10-26): with the L265 gatling the Marauder took 2
+  tries. An early loss should steer the player to add armour and shields and try again, in
+  WaveTime and Story alike. Don't tune deaths away.
 - **Done when:** a fresh profile's first 10 runs each show progress (playtest notes in the PR).
 
 #### 8.8 Alpha release
