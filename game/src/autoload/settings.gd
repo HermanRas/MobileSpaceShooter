@@ -77,6 +77,13 @@ func get_value(key: StringName) -> Variant:
 	return _values.get(key, DEFAULTS.get(key))
 
 
+## Applies `value` everywhere at once without saving it, e.g. while a slider is dragged;
+## set_value() saves it when the thumb lets go.
+func preview_value(key: StringName, value: Variant) -> void:
+	_values[key] = value
+	changed.emit(key)
+
+
 func set_value(key: StringName, value: Variant) -> void:
 	_values[key] = value
 	var data := _values.duplicate()

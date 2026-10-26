@@ -95,6 +95,27 @@ func _ready() -> void:
 	_check(_is(settings, "res://scenes/menu/settings.tscn") and settings.find_child("Controls", true, false) != null,
 			"Settings shows the controls")
 	_save_shot("drive_menu_settings.png")
+	# 6.4: a setting applies at once and is saved (the player's own values are put back).
+	var music := settings.find_child("music_volume", true, false) as HSlider
+	var was_music: float = Settings.get_value(&"music_volume")
+	var was_shake: bool = Settings.get_value(&"screen_shake")
+	_check(music != null, "Settings has a music volume")
+	if music != null:
+		music.value = 0.3
+		var bus := AudioServer.get_bus_index(Audio.MUSIC)
+		_check(absf(AudioServer.get_bus_volume_db(bus) - linear_to_db(0.3)) < 0.1, "moving it sets the Music bus at once")
+		await get_tree().create_timer(0.6).timeout
+		_check(absf(float(Save.read_json(Settings.PATH).get("music_volume", -1.0)) - 0.3) < 0.01, "and it's saved")
+		music.value = 0.0
+		_check(AudioServer.is_bus_mute(bus), "0 mutes it")
+	var shake := _find_text(settings, "Screen shake")
+	if shake != null:
+		shake.button_pressed = not was_shake
+		_check(Save.read_json(Settings.PATH).get("screen_shake") == (not was_shake), "a toggle is saved at once")
+		shake.button_pressed = was_shake
+	if music != null:
+		music.value = was_music
+		await get_tree().create_timer(0.6).timeout
 	var done := _find_text(settings, "Done")
 	_check(done != null, "with a Done button")
 	if done != null:

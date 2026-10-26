@@ -1336,8 +1336,16 @@ in the same `user://` as the PC build.
   renames, a corrupt file, and a migration from v0.
 
 #### 6.4 Settings
-- [ ] Control scheme, handedness, stick size and opacity, music/SFX volume, vibration, screen shake
-- **Done when:** every setting persists and applies immediately.
+✅ 2026-10-26. `ControlsPanel` (main menu → Settings, and the flight sandbox's Controls) has
+three columns:
+- **Controls:** scheme, handedness, stick size and opacity.
+- **Sound & feel:** music and SFX volume, vibration, screen shake, view zoom.
+- **Hotkeys.**
+
+The `Audio` autoload makes **Music** and **SFX** buses and sets them from Settings; 0 mutes a
+bus. A slider applies at every step (`Settings.preview_value`) and saves once it has been still
+for 0.4 s. Toggles save at once. `drive_menu` checks that the volume applies at once, is saved,
+and mutes at 0, and that a toggle is saved. The panel fits a 1280-wide PC window.
 
 #### 6.5 Pause and app lifecycle
 - [ ] Pause menu: **Save and return to hangar** in Story (only after 10 s without combat) and **Return to hangar** in the other modes (§4.10, `[D18]`)

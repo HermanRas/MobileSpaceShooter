@@ -1,12 +1,14 @@
 class_name ControlsPanel
 extends PanelContainer
-## The control settings (PLAN.md 4.7): scheme, handedness, stick size and opacity, the
-## combat HUD's vibration and screen shake (4.7), the flight view's zoom, and a list of the
-## hotkeys (owner, 2026-10-26). Writes
-## straight to Settings; FlightControls re-lays itself out on the change. Opened from the
-## flight sandbox now, and part of the Settings menu later (6.4).
+## Every setting (PLAN.md 4.7, 6.4) in three columns: Controls (scheme, handedness, stick size
+## and opacity), Sound & feel (music and SFX volume, vibration, screen shake, the flight view's
+## zoom) and the hotkeys (owner, 2026-10-26). Each applies at once (a slider while it's dragged)
+## and is saved to Settings. Opened from the flight sandbox and the main menu's Settings.
 
 signal closed
+
+## How long a slider must be still before its value is saved, in seconds.
+const SAVE_AFTER_S := 0.4
 
 
 func _ready() -> void:
@@ -44,7 +46,7 @@ func refresh() -> void:
 		button.text = scheme[1]
 		button.toggle_mode = true
 		button.button_group = group
-		button.custom_minimum_size = Vector2(220, 56)
+		button.custom_minimum_size = Vector2(180, 56)
 		button.button_pressed = Settings.get_value(&"control_scheme") == scheme[0]
 		button.toggled.connect(func(on: bool) -> void:
 			if on:
@@ -52,20 +54,30 @@ func refresh() -> void:
 		schemes.add_child(button)
 
 	_toggle(column, "Left-handed (stick on the right)", &"left_handed")
-	_toggle(column, "Vibrate when hit", &"vibration")
-	_toggle(column, "Screen shake", &"screen_shake")
-
 	_slider(column, "Stick size", &"stick_size", 0.6, 1.6)
 	_slider(column, "Opacity", &"stick_opacity", 0.2, 1.0)
-	var camera: Dictionary = Data.table(&"flight").get("camera", {})
-	_slider(column, "View zoom", &"view_zoom", float(camera.get("view_zoom_min", 0.35)),
-			float(camera.get("view_zoom_max", 2.5)))
 
 	var close := Button.new()
 	close.text = "Done"
 	close.custom_minimum_size = Vector2(160, 56)
 	close.pressed.connect(func() -> void: closed.emit())
 	column.add_child(close)
+
+	var feel := VBoxContainer.new()
+	feel.name = "SoundAndFeel"
+	feel.add_theme_constant_override(&"separation", 14)
+	sides.add_child(feel)
+	var heading := Label.new()
+	heading.text = "Sound & feel"
+	heading.add_theme_font_size_override(&"font_size", 26)
+	feel.add_child(heading)
+	_slider(feel, "Music", &"music_volume", 0.0, 1.0)
+	_slider(feel, "Sound effects", &"sfx_volume", 0.0, 1.0)
+	_toggle(feel, "Vibrate when hit", &"vibration")
+	_toggle(feel, "Screen shake", &"screen_shake")
+	var camera: Dictionary = Data.table(&"flight").get("camera", {})
+	_slider(feel, "View zoom", &"view_zoom", float(camera.get("view_zoom_min", 0.35)),
+			float(camera.get("view_zoom_max", 2.5)))
 	sides.add_child(_hotkeys())
 
 
@@ -124,12 +136,21 @@ func _slider(parent: Control, text: String, key: StringName, low: float, high: f
 	label.custom_minimum_size = Vector2(140, 0)
 	row.add_child(label)
 	var slider := HSlider.new()
+	slider.name = String(key)
 	slider.min_value = low
 	slider.max_value = high
 	slider.step = 0.05
 	slider.value = float(Settings.get_value(key))
-	slider.custom_minimum_size = Vector2(300, 48)
+	slider.custom_minimum_size = Vector2(220, 48)
 	slider.size_flags_vertical = Control.SIZE_SHRINK_CENTER
-	# Saved when the thumb lets go, not on every step of the drag.
-	slider.drag_ended.connect(func(_changed: bool) -> void: Settings.set_value(key, slider.value))
+	# Applies at every step; saved once the slider has been still for SAVE_AFTER_S, not on every
+	# step of a drag (a tap on the track moves it without a drag ending).
+	var moves := [0]
+	slider.value_changed.connect(func(value: float) -> void:
+		Settings.preview_value(key, value)
+		moves[0] += 1
+		var this_move: int = moves[0]
+		get_tree().create_timer(SAVE_AFTER_S).timeout.connect(func() -> void:
+			if moves[0] == this_move:
+				Settings.set_value(key, value)))
 	row.add_child(slider)
