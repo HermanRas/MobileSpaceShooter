@@ -1,0 +1,24 @@
+{
+	"format": 1,
+	"id": "dart",
+	"name": "Dart",
+	"author": "mss",
+	"tags": ["enemy","role:kamikaze","tier:1"],
+	"_doc": "Tier 1 kamikaze: no guns, two jets and an armoured ram. Written by dev_preview/make_enemies.gd; change it there.",
+	"tiles": [
+		{"id": 0, "type": "core", "shape": "square", "size": "L", "pos": [0.0, 0.0], "rot": 0, "paint": "#d8d8d8"},
+		{"id": 1, "type": "hardpoint", "shape": "square", "size": "L", "pos": [-1.0, -1.0], "rot": 0, "paint": "#3a3f45"},
+		{"id": 2, "type": "hardpoint", "shape": "square", "size": "L", "pos": [0.0, -1.0], "rot": 0, "paint": "#3a3f45"},
+		{"id": 3, "type": "hull", "shape": "square", "size": "L", "pos": [-1.0, 0.0], "rot": 0, "paint": "#7a5050"},
+		{"id": 4, "type": "armor", "shape": "square", "size": "L", "pos": [1.0, 0.0], "rot": 0, "paint": "#6b5a3e"},
+		{"id": 5, "type": "armor", "shape": "square", "size": "L", "pos": [2.0, 0.0], "rot": 0, "paint": "#6b5a3e"},
+		{"id": 6, "type": "hardpoint", "shape": "square", "size": "L", "pos": [-1.0, 1.0], "rot": 0, "paint": "#3a3f45"},
+		{"id": 7, "type": "hardpoint", "shape": "square", "size": "L", "pos": [0.0, 1.0], "rot": 0, "paint": "#3a3f45"}
+	],
+	"mounts": [
+		{"part": "thruster.jet", "size": "L", "level": 1, "tile": 1, "edge": 3, "port": 0},
+		{"part": "thruster.jet", "size": "L", "level": 1, "tile": 6, "edge": 3, "port": 0},
+		{"part": "thruster.pulse", "size": "M", "level": 1, "tile": 2, "edge": 1, "port": 1},
+		{"part": "thruster.pulse", "size": "M", "level": 1, "tile": 7, "edge": 1, "port": 1}
+	]
+}

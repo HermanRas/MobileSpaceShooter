@@ -1,0 +1,28 @@
+{
+	"format": 1,
+	"id": "wasp",
+	"name": "Wasp",
+	"author": "mss",
+	"tags": ["enemy","role:strafer","tier:1"],
+	"_doc": "Tier 1 strafer: gatling turrets on its wing tips, so it shoots while it circles. Written by dev_preview/make_enemies.gd; change it there.",
+	"tiles": [
+		{"id": 0, "type": "core", "shape": "square", "size": "L", "pos": [0.0, 0.0], "rot": 0, "paint": "#d8d8d8"},
+		{"id": 1, "type": "hardpoint", "shape": "square", "size": "L", "pos": [0.0, -2.0], "rot": 0, "paint": "#3a3f45"},
+		{"id": 2, "type": "hardpoint", "shape": "square", "size": "L", "pos": [-1.0, -1.0], "rot": 0, "paint": "#3a3f45"},
+		{"id": 3, "type": "hull", "shape": "square", "size": "L", "pos": [0.0, -1.0], "rot": 0, "paint": "#7a5050"},
+		{"id": 4, "type": "hull", "shape": "wedge", "size": "L", "pos": [1.0, -1.0], "rot": 18, "paint": "#7a5050"},
+		{"id": 5, "type": "hull", "shape": "square", "size": "L", "pos": [-1.0, 0.0], "rot": 0, "paint": "#7a5050"},
+		{"id": 6, "type": "hardpoint", "shape": "square", "size": "L", "pos": [1.0, 0.0], "rot": 0, "paint": "#3a3f45"},
+		{"id": 7, "type": "hardpoint", "shape": "square", "size": "L", "pos": [-1.0, 1.0], "rot": 0, "paint": "#3a3f45"},
+		{"id": 8, "type": "hull", "shape": "square", "size": "L", "pos": [0.0, 1.0], "rot": 0, "paint": "#7a5050"},
+		{"id": 9, "type": "hull", "shape": "wedge", "size": "L", "pos": [1.0, 1.0], "rot": 0, "paint": "#7a5050"},
+		{"id": 10, "type": "hardpoint", "shape": "square", "size": "L", "pos": [0.0, 2.0], "rot": 0, "paint": "#3a3f45"}
+	],
+	"mounts": [
+		{"part": "thruster.pulse", "size": "L", "level": 1, "tile": 2, "edge": 3, "port": 0},
+		{"part": "thruster.pulse", "size": "L", "level": 1, "tile": 7, "edge": 3, "port": 0},
+		{"part": "thruster.pulse", "size": "M", "level": 1, "tile": 6, "edge": 1, "port": 1},
+		{"part": "weapon.gatling_single", "mount": "turret", "mode": "auto", "tile": 1, "face": true},
+		{"part": "weapon.gatling_single", "mount": "turret", "mode": "auto", "tile": 10, "face": true}
+	]
+}

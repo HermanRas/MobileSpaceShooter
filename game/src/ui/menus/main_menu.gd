@@ -50,6 +50,11 @@ func _ready() -> void:
 					DirAccess.remove_absolute(file)
 			reset.text = "Stocked hangar reset")
 		column.add_child(reset)
+		var gallery := Button.new()
+		gallery.text = "Enemy gallery"
+		gallery.custom_minimum_size = Vector2(260, 56)
+		gallery.pressed.connect(func() -> void: Router.goto("res://scenes/debug/enemy_gallery.tscn"))
+		column.add_child(gallery)
 		var stress := Button.new()
 		stress.text = "Shot stress test"
 		stress.custom_minimum_size = Vector2(260, 56)

@@ -1113,9 +1113,28 @@ hangar**.
 ### Phase 5: Enemies and encounters
 
 #### 5.1 Enemy roster
-- [ ] Build 12 enemy blueprints in the hangar: 4 tiers × roles (chaser, strafer, sniper, kamikaze, minelayer, brute)
-- [ ] `data/enemies.json`: blueprint id, tier, role, AI behaviour, min/max level
-- **Done when:** all 12 load, validate and appear in a debug gallery.
+✅ 2026-10-26. 17 ships in `data/enemies/`, listed in `data/enemies.json` (tier, role, behaviour,
+levels, faction, boss, `flee_below`) and loaded by `EnemyRoster` (`src/model/enemy_roster.gd`).
+
+| Tier (levels) | Ships | Boss (Kill HVT) |
+|---|---|---|
+| 1 (L1–30) | Gnat chaser, Dart kamikaze, Wasp strafer | Marauder, 21 tiles |
+| 2 (L15–55) | Hornet chaser, Spinner minelayer, Lance sniper | Gorgon, 31 tiles |
+| 3 (L35–80) | Bulwark brute, Harrier strafer, Longbow sniper | Tyrant, 45 tiles |
+| 4 (L60–100) | Mauler brute, Widow minelayer, Meteor kamikaze | Leviathan, 67 tiles |
+
+- **Escort:** Pike (L1–100), a 9 U armoured spine with three turrets.
+- **Authoring:** the ships are drawn as ASCII grids in `dev_preview/make_enemies.gd`, which
+  writes the blueprints and refuses any ship with a placement problem, a thrust warning or a
+  blocked gun. Edit a ship there, not in the JSON.
+- **Gallery:** the main menu's debug **Enemy gallery** (`scenes/debug/enemy_gallery.tscn`).
+- **Sandbox:** Wasp, Pike and the four bosses are on its Target list.
+- **Tests:** `tests/model/test_enemy_roster.gd` checks the counts, validity, roles' weapons,
+  the escort's shape, bosses outgrowing their tier, and that every level 1–100 has enemies.
+
+⚠️ Big ships brake weakly (0.2–0.6 U/s² back against 4–6 forward). The AI (5.2) should turn and
+burn rather than count on reverse thrust; more brakes are a design change in make_enemies.gd.
+- [ ] Owner: look over the gallery (and the bosses on the sandbox's Target button)
 
 #### 5.2 AI pilot
 - [ ] `ai/ai_pilot.gd`: drives the same `flight_controller` the player uses (no AI-only physics)
@@ -1469,6 +1488,15 @@ and A.2/A.3 parts.
 - **Factions and reputation**: station ownership, prices that rise or fall with rep, factions turning
   hostile. Hooks for v1: every station and enemy blueprint carries a `faction` field (defaulting to
   `neutral`), and shop prices go through one `price(item, station)` function.
+  - **Rep sets the rates** (owner, 2026-10-26): the 75% part sell rate rises with your reputation
+    with the station's faction, and so does the **market exchange rate** (buy and sell prices
+    for materials).
+  - **Each faction has its own look and arsenal** (owner, 2026-10-26), so a ship is recognisable
+    at a glance. For example: **green**, pointed mono-hull fronts; **blue**, catamaran twin hulls;
+    **purple**, round ships; **orange**, U-shaped hulls. Weapon preferences differ too, e.g. lasers
+    and shields for one, armour and cannons for another. v1's roster stays `neutral`; v2 adds a
+    roster per faction in the same `enemies.json` format, and the encounter generator (5.3)
+    picks by faction.
 - More player bases, and a layered customiser (hairstyles, outfits) on top of v1's recolouring
 - True twin-stick aiming
 - More thrusters and weapons, plus weapon mods

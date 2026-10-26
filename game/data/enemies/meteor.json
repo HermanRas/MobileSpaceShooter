@@ -1,0 +1,35 @@
+{
+	"format": 1,
+	"id": "meteor",
+	"name": "Meteor",
+	"author": "mss",
+	"tags": ["enemy","role:kamikaze","tier:4"],
+	"_doc": "Tier 4 kamikaze: three ion engines behind a long armoured ram, flak on its fins. Written by dev_preview/make_enemies.gd; change it there.",
+	"tiles": [
+		{"id": 0, "type": "core", "shape": "square", "size": "L", "pos": [0.0, 0.0], "rot": 0, "paint": "#d8d8d8"},
+		{"id": 1, "type": "hardpoint", "shape": "square", "size": "L", "pos": [0.0, -2.0], "rot": 0, "paint": "#3a3f45"},
+		{"id": 2, "type": "hardpoint", "shape": "square", "size": "L", "pos": [-2.0, -1.0], "rot": 0, "paint": "#3a3f45"},
+		{"id": 3, "type": "hardpoint", "shape": "square", "size": "L", "pos": [-1.0, -1.0], "rot": 0, "paint": "#3a3f45"},
+		{"id": 4, "type": "armor", "shape": "square", "size": "L", "pos": [0.0, -1.0], "rot": 0, "paint": "#6b5a3e"},
+		{"id": 5, "type": "armor", "shape": "wedge", "size": "L", "pos": [1.0, -1.0], "rot": 18, "paint": "#6b5a3e"},
+		{"id": 6, "type": "hardpoint", "shape": "square", "size": "L", "pos": [-2.0, 0.0], "rot": 0, "paint": "#3a3f45"},
+		{"id": 7, "type": "hull", "shape": "square", "size": "L", "pos": [-1.0, 0.0], "rot": 0, "paint": "#7a5050"},
+		{"id": 8, "type": "armor", "shape": "square", "size": "L", "pos": [1.0, 0.0], "rot": 0, "paint": "#6b5a3e"},
+		{"id": 9, "type": "armor", "shape": "square", "size": "L", "pos": [2.0, 0.0], "rot": 0, "paint": "#6b5a3e"},
+		{"id": 10, "type": "armor", "shape": "square", "size": "L", "pos": [3.0, 0.0], "rot": 0, "paint": "#6b5a3e"},
+		{"id": 11, "type": "hardpoint", "shape": "square", "size": "L", "pos": [-2.0, 1.0], "rot": 0, "paint": "#3a3f45"},
+		{"id": 12, "type": "hardpoint", "shape": "square", "size": "L", "pos": [-1.0, 1.0], "rot": 0, "paint": "#3a3f45"},
+		{"id": 13, "type": "armor", "shape": "square", "size": "L", "pos": [0.0, 1.0], "rot": 0, "paint": "#6b5a3e"},
+		{"id": 14, "type": "armor", "shape": "wedge", "size": "L", "pos": [1.0, 1.0], "rot": 0, "paint": "#6b5a3e"},
+		{"id": 15, "type": "hardpoint", "shape": "square", "size": "L", "pos": [0.0, 2.0], "rot": 0, "paint": "#3a3f45"}
+	],
+	"mounts": [
+		{"part": "thruster.ion", "size": "L", "level": 1, "tile": 2, "edge": 3, "port": 0},
+		{"part": "thruster.ion", "size": "L", "level": 1, "tile": 11, "edge": 3, "port": 0},
+		{"part": "thruster.ion", "size": "L", "level": 1, "tile": 6, "edge": 3, "port": 0},
+		{"part": "thruster.pulse", "size": "M", "level": 1, "tile": 1, "edge": 1, "port": 1},
+		{"part": "thruster.pulse", "size": "M", "level": 1, "tile": 15, "edge": 1, "port": 1},
+		{"part": "weapon.flak", "mount": "turret", "mode": "auto", "tile": 1, "face": true},
+		{"part": "weapon.flak", "mount": "turret", "mode": "auto", "tile": 15, "face": true}
+	]
+}

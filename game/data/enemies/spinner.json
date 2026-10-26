@@ -1,0 +1,26 @@
+{
+	"format": 1,
+	"id": "spinner",
+	"name": "Spinner",
+	"author": "mss",
+	"tags": ["enemy","role:minelayer","tier:2"],
+	"_doc": "Tier 2 minelayer: drops mines behind it and covers itself with a flak turret. Written by dev_preview/make_enemies.gd; change it there.",
+	"tiles": [
+		{"id": 0, "type": "core", "shape": "square", "size": "L", "pos": [0.0, 0.0], "rot": 0, "paint": "#d8d8d8"},
+		{"id": 1, "type": "hardpoint", "shape": "square", "size": "L", "pos": [-1.0, -1.0], "rot": 0, "paint": "#3a3f45"},
+		{"id": 2, "type": "hull", "shape": "square", "size": "L", "pos": [0.0, -1.0], "rot": 0, "paint": "#7a5050"},
+		{"id": 3, "type": "hull", "shape": "wedge", "size": "L", "pos": [1.0, -1.0], "rot": 18, "paint": "#7a5050"},
+		{"id": 4, "type": "hardpoint", "shape": "square", "size": "L", "pos": [-1.0, 0.0], "rot": 0, "paint": "#3a3f45"},
+		{"id": 5, "type": "hardpoint", "shape": "square", "size": "L", "pos": [1.0, 0.0], "rot": 0, "paint": "#3a3f45"},
+		{"id": 6, "type": "hardpoint", "shape": "square", "size": "L", "pos": [-1.0, 1.0], "rot": 0, "paint": "#3a3f45"},
+		{"id": 7, "type": "hull", "shape": "square", "size": "L", "pos": [0.0, 1.0], "rot": 0, "paint": "#7a5050"},
+		{"id": 8, "type": "hull", "shape": "wedge", "size": "L", "pos": [1.0, 1.0], "rot": 0, "paint": "#7a5050"}
+	],
+	"mounts": [
+		{"part": "thruster.pulse", "size": "L", "level": 1, "tile": 1, "edge": 3, "port": 0},
+		{"part": "thruster.pulse", "size": "L", "level": 1, "tile": 6, "edge": 3, "port": 0},
+		{"part": "weapon.mines", "mount": "fixed", "mode": "auto", "tile": 4, "edge": 3, "port": 1},
+		{"part": "thruster.pulse", "size": "M", "level": 1, "tile": 5, "edge": 1, "port": 1},
+		{"part": "weapon.flak", "mount": "turret", "mode": "auto", "tile": 5, "face": true}
+	]
+}

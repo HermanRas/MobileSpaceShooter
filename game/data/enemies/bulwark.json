@@ -1,0 +1,42 @@
+{
+	"format": 1,
+	"id": "bulwark",
+	"name": "Bulwark",
+	"author": "mss",
+	"tags": ["enemy","role:brute","tier:3"],
+	"_doc": "Tier 3 brute: armour and shields round its core, cannon turrets, flak behind. Written by dev_preview/make_enemies.gd; change it there.",
+	"tiles": [
+		{"id": 0, "type": "core", "shape": "square", "size": "L", "pos": [0.0, 0.0], "rot": 0, "paint": "#d8d8d8"},
+		{"id": 1, "type": "armor", "shape": "wedge", "size": "L", "pos": [1.0, 2.0], "rot": 0, "paint": "#6b5a3e"},
+		{"id": 2, "type": "armor", "shape": "square", "size": "L", "pos": [0.0, 2.0], "rot": 0, "paint": "#6b5a3e"},
+		{"id": 3, "type": "hardpoint", "shape": "square", "size": "L", "pos": [-1.0, 2.0], "rot": 0, "paint": "#3a3f45"},
+		{"id": 4, "type": "armor", "shape": "wedge", "size": "L", "pos": [2.0, 1.0], "rot": 0, "paint": "#6b5a3e"},
+		{"id": 5, "type": "hardpoint", "shape": "square", "size": "L", "pos": [1.0, 1.0], "rot": 0, "paint": "#3a3f45"},
+		{"id": 6, "type": "shield", "shape": "square", "size": "L", "pos": [0.0, 1.0], "rot": 0, "paint": "#3d5f8f"},
+		{"id": 7, "type": "armor", "shape": "square", "size": "L", "pos": [-1.0, 1.0], "rot": 0, "paint": "#6b5a3e"},
+		{"id": 8, "type": "hardpoint", "shape": "square", "size": "L", "pos": [-2.0, 1.0], "rot": 0, "paint": "#3a3f45"},
+		{"id": 9, "type": "hardpoint", "shape": "square", "size": "L", "pos": [2.0, 0.0], "rot": 0, "paint": "#3a3f45"},
+		{"id": 10, "type": "shield", "shape": "square", "size": "L", "pos": [1.0, 0.0], "rot": 0, "paint": "#3d5f8f"},
+		{"id": 11, "type": "shield", "shape": "square", "size": "L", "pos": [-1.0, 0.0], "rot": 0, "paint": "#3d5f8f"},
+		{"id": 12, "type": "hull", "shape": "square", "size": "L", "pos": [-2.0, 0.0], "rot": 0, "paint": "#7a5050"},
+		{"id": 13, "type": "armor", "shape": "wedge", "size": "L", "pos": [2.0, -1.0], "rot": 18, "paint": "#6b5a3e"},
+		{"id": 14, "type": "hardpoint", "shape": "square", "size": "L", "pos": [1.0, -1.0], "rot": 0, "paint": "#3a3f45"},
+		{"id": 15, "type": "shield", "shape": "square", "size": "L", "pos": [0.0, -1.0], "rot": 0, "paint": "#3d5f8f"},
+		{"id": 16, "type": "armor", "shape": "square", "size": "L", "pos": [-1.0, -1.0], "rot": 0, "paint": "#6b5a3e"},
+		{"id": 17, "type": "hardpoint", "shape": "square", "size": "L", "pos": [-2.0, -1.0], "rot": 0, "paint": "#3a3f45"},
+		{"id": 18, "type": "armor", "shape": "wedge", "size": "L", "pos": [1.0, -2.0], "rot": 18, "paint": "#6b5a3e"},
+		{"id": 19, "type": "armor", "shape": "square", "size": "L", "pos": [0.0, -2.0], "rot": 0, "paint": "#6b5a3e"},
+		{"id": 20, "type": "hardpoint", "shape": "square", "size": "L", "pos": [-1.0, -2.0], "rot": 0, "paint": "#3a3f45"}
+	],
+	"mounts": [
+		{"part": "thruster.pulse", "size": "L", "level": 1, "tile": 17, "edge": 3, "port": 0},
+		{"part": "thruster.pulse", "size": "L", "level": 1, "tile": 8, "edge": 3, "port": 0},
+		{"part": "thruster.pulse", "size": "L", "level": 1, "tile": 20, "edge": 3, "port": 0},
+		{"part": "thruster.pulse", "size": "L", "level": 1, "tile": 3, "edge": 3, "port": 0},
+		{"part": "thruster.pulse", "size": "M", "level": 1, "tile": 9, "edge": 1, "port": 1},
+		{"part": "weapon.cannon", "mount": "turret", "mode": "auto", "tile": 14, "face": true},
+		{"part": "weapon.cannon", "mount": "turret", "mode": "auto", "tile": 5, "face": true},
+		{"part": "weapon.flak", "mount": "turret", "mode": "auto", "tile": 20, "face": true},
+		{"part": "weapon.flak", "mount": "turret", "mode": "auto", "tile": 3, "face": true}
+	]
+}

@@ -1,0 +1,32 @@
+{
+	"format": 1,
+	"id": "pike",
+	"name": "Pike",
+	"author": "mss",
+	"tags": ["enemy","role:escort","tier:2"],
+	"_doc": "Escort (owner, 2026-10-26): long, skinny and armoured, it rides beside transports with three turrets along its spine. Written by dev_preview/make_enemies.gd; change it there.",
+	"tiles": [
+		{"id": 0, "type": "core", "shape": "square", "size": "L", "pos": [0.0, 0.0], "rot": 0, "paint": "#d8d8d8"},
+		{"id": 1, "type": "hardpoint", "shape": "square", "size": "L", "pos": [-4.0, -1.0], "rot": 0, "paint": "#3a3f45"},
+		{"id": 2, "type": "hardpoint", "shape": "square", "size": "L", "pos": [-4.0, 0.0], "rot": 0, "paint": "#3a3f45"},
+		{"id": 3, "type": "armor", "shape": "square", "size": "L", "pos": [-3.0, 0.0], "rot": 0, "paint": "#6b5a3e"},
+		{"id": 4, "type": "hardpoint", "shape": "square", "size": "L", "pos": [-2.0, 0.0], "rot": 0, "paint": "#3a3f45"},
+		{"id": 5, "type": "armor", "shape": "square", "size": "L", "pos": [-1.0, 0.0], "rot": 0, "paint": "#6b5a3e"},
+		{"id": 6, "type": "armor", "shape": "square", "size": "L", "pos": [1.0, 0.0], "rot": 0, "paint": "#6b5a3e"},
+		{"id": 7, "type": "hardpoint", "shape": "square", "size": "L", "pos": [2.0, 0.0], "rot": 0, "paint": "#3a3f45"},
+		{"id": 8, "type": "armor", "shape": "square", "size": "L", "pos": [3.0, 0.0], "rot": 0, "paint": "#6b5a3e"},
+		{"id": 9, "type": "hardpoint", "shape": "square", "size": "L", "pos": [4.0, 0.0], "rot": 0, "paint": "#3a3f45"},
+		{"id": 10, "type": "hardpoint", "shape": "square", "size": "L", "pos": [-4.0, 1.0], "rot": 0, "paint": "#3a3f45"}
+	],
+	"mounts": [
+		{"part": "thruster.pulse", "size": "L", "level": 1, "tile": 1, "edge": 3, "port": 0},
+		{"part": "thruster.pulse", "size": "L", "level": 1, "tile": 10, "edge": 3, "port": 0},
+		{"part": "thruster.pulse", "size": "L", "level": 1, "tile": 2, "edge": 3, "port": 0},
+		{"part": "thruster.pulse", "size": "M", "level": 1, "tile": 9, "edge": 1, "port": 1},
+		{"part": "thruster.pulse", "size": "M", "level": 1, "tile": 9, "edge": 0, "port": 1},
+		{"part": "thruster.pulse", "size": "M", "level": 1, "tile": 9, "edge": 2, "port": 1},
+		{"part": "weapon.flak", "mount": "turret", "mode": "auto", "tile": 4, "face": true},
+		{"part": "weapon.gatling_multi", "mount": "turret", "mode": "auto", "tile": 7, "face": true},
+		{"part": "weapon.cannon", "mount": "turret", "mode": "auto", "tile": 9, "face": true}
+	]
+}

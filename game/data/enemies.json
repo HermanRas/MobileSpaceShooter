@@ -1,0 +1,25 @@
+{
+	"format": 1,
+	"_doc": "PLAN.md 5.1. The enemy roster: each entry names a blueprint in data/enemies/ (built by dev_preview/make_enemies.gd), its tier (1-4), its role, the AI behaviour that flies it (5.2), the encounter levels it appears at, and its faction (neutral until v2, PLAN.md §9). A boss is unique: one per tier, for Kill HVT (12.2). The escort guards transports (owner, 2026-10-26). The practice targets in data/enemies/ (target_barge, rocket_pod, shield_block) aren't on the roster.",
+	"roles": ["chaser", "strafer", "sniper", "kamikaze", "minelayer", "brute", "escort", "boss"],
+	"behaviours": ["chase", "strafe", "keep_range", "ram", "lay_mines", "escort"],
+	"enemies": {
+		"gnat":      {"tier": 1, "role": "chaser",    "behaviour": "chase",      "levels": [1, 30]},
+		"dart":      {"tier": 1, "role": "kamikaze",  "behaviour": "ram",        "levels": [1, 30]},
+		"wasp":      {"tier": 1, "role": "strafer",   "behaviour": "strafe",     "levels": [1, 30]},
+		"hornet":    {"tier": 2, "role": "chaser",    "behaviour": "chase",      "levels": [15, 55]},
+		"spinner":   {"tier": 2, "role": "minelayer", "behaviour": "lay_mines",  "levels": [15, 55]},
+		"lance":     {"tier": 2, "role": "sniper",    "behaviour": "keep_range", "levels": [15, 55], "flee_below": 0.25},
+		"pike":      {"tier": 2, "role": "escort",    "behaviour": "escort",     "levels": [1, 100]},
+		"bulwark":   {"tier": 3, "role": "brute",     "behaviour": "chase",      "levels": [35, 80]},
+		"harrier":   {"tier": 3, "role": "strafer",   "behaviour": "strafe",     "levels": [35, 80]},
+		"longbow":   {"tier": 3, "role": "sniper",    "behaviour": "keep_range", "levels": [35, 80], "flee_below": 0.25},
+		"mauler":    {"tier": 4, "role": "brute",     "behaviour": "chase",      "levels": [60, 100]},
+		"widow":     {"tier": 4, "role": "minelayer", "behaviour": "lay_mines",  "levels": [60, 100]},
+		"meteor":    {"tier": 4, "role": "kamikaze",  "behaviour": "ram",        "levels": [60, 100]},
+		"marauder":  {"tier": 1, "role": "boss",      "behaviour": "chase",      "levels": [5, 30],   "boss": true},
+		"gorgon":    {"tier": 2, "role": "boss",      "behaviour": "strafe",     "levels": [25, 55],  "boss": true},
+		"tyrant":    {"tier": 3, "role": "boss",      "behaviour": "keep_range", "levels": [45, 80],  "boss": true},
+		"leviathan": {"tier": 4, "role": "boss",      "behaviour": "keep_range", "levels": [70, 100], "boss": true}
+	}
+}
