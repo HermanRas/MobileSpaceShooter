@@ -7,7 +7,9 @@ extends RefCounted
 ## and turns toward it at its mount's turn rate. An auto gun fires once its barrel is on that
 ## point. A manual gun fires while FIRE is held, wherever it points (a manual swivel still
 ## tracks a target in its arc). In the 1-stick scheme every gun is auto (`all_auto`, §4.7).
-## A side-mounted gun never fires into its own ship; a turret fires over it (GunLayout). Shots carry the ship's velocity, and the
+## A side-mounted gun never fires into its own ship; a turret fires over it (GunLayout).
+## 4.6a: an anti-missile gun (flak) also considers enemy rockets as targets; a flak pellet's fuse
+## is timed to its target, and a homing shot names the target it should steer for. Shots carry the ship's velocity, and the
 ## lead accounts for it.
 
 var layout: GunLayout
@@ -56,16 +58,19 @@ func set_layout(gun_layout: GunLayout) -> void:
 
 
 ## One tick. The ship's position (U), rotation and velocity (U/s) are in world space, and so are
-## `targets`: [{"pos", "vel"}]. Returns the shots fired, in world space:
-## [{"gun": index, "from", "vel", "life", "damage", "type", "pierce"}].
+## `targets` and the enemy `missiles`: [{"pos", "vel"}]. Returns the shots fired, in world space:
+## [{"gun": index, "from", "vel", "life", "damage", "type", "pierce", "splash_u",
+## "splash_damage", "splash_type", "airburst", "homing", "rocket", "target"}], where `target`
+## indexes `targets` then `missiles` (-1 for none).
 func step(delta: float, ship_pos: Vector2, ship_rotation: float, ship_vel: Vector2, targets: Array,
-		fire_held: bool) -> Array[Dictionary]:
+		fire_held: bool, missiles: Array = []) -> Array[Dictionary]:
 	var shots: Array[Dictionary] = []
+	var everything := targets + missiles if not missiles.is_empty() else targets
 	for i in layout.guns.size():
 		var gun := layout.guns[i]
 		var pivot := ship_pos + gun.pivot.rotated(ship_rotation)
 		var muzzle := pivot + Vector2.from_angle(angles[i] + ship_rotation) * gun.muzzle
-		var aim := _choose(gun, muzzle, ship_rotation, ship_vel, targets)
+		var aim := _choose(gun, muzzle, ship_rotation, ship_vel, everything if gun.stats["anti_missile"] else targets)
 		aims[i] = aim[0]
 		var want: float = aim[1] if aim[0] >= 0 else gun.facing
 		angles[i] = _turn(gun, angles[i], want, delta)
@@ -81,7 +86,9 @@ func step(delta: float, ship_pos: Vector2, ship_rotation: float, ship_vel: Vecto
 			cooldowns[i] = maxf(cooldowns[i], 0.0)
 			continue
 		while cooldowns[i] <= 0.0:
-			shots.append(_shot(i, gun, pivot, ship_rotation, ship_vel))
+			fired[i] += 1
+			for p in int(gun.stats["pellets"]):
+				shots.append(_shot(i, gun, pivot, ship_rotation, ship_vel, aim[0], aim[2]))
 			cooldowns[i] += 1.0 / rate
 	return shots
 
@@ -104,13 +111,14 @@ static func intercept_time(rel_pos: Vector2, rel_vel: Vector2, speed: float) -> 
 	return t if t > 0.0 else -1.0
 
 
-## [target index, ship-local angle to its lead point] for the nearest target this gun can
-## reach, in range and with a clear line; [-1, 0] if none. The lead is worked out from where the
-## muzzle is now, which is where the shot will start once the barrel is on.
+## [target index, ship-local angle to its lead point, seconds to get there] for the nearest
+## target this gun can reach, in range and with a clear line; [-1, 0, 0] if none. The lead is
+## worked out from where the muzzle is now, which is where the shot will start once the barrel
+## is on.
 func _choose(gun: GunLayout.Gun, muzzle: Vector2, ship_rotation: float, ship_vel: Vector2, targets: Array) -> Array:
 	var speed := float(gun.stats["speed_u"])
 	var reach_s := float(gun.stats["range_u"]) / speed
-	var best := [-1, 0.0]
+	var best := [-1, 0.0, 0.0]
 	var best_d := INF
 	for t in targets.size():
 		var rel_pos: Vector2 = targets[t]["pos"] - muzzle
@@ -123,7 +131,7 @@ func _choose(gun: GunLayout.Gun, muzzle: Vector2, ship_rotation: float, ship_vel
 			continue
 		if rel_pos.length_squared() < best_d:
 			best_d = rel_pos.length_squared()
-			best = [t, angle]
+			best = [t, angle, time]
 	return best
 
 
@@ -146,14 +154,27 @@ static func _turn(gun: GunLayout.Gun, from: float, to: float, delta: float) -> f
 	return gun.facing + move_toward(angle_difference(gun.facing, from), target_off, step)
 
 
-func _shot(index: int, gun: GunLayout.Gun, pivot: Vector2, ship_rotation: float, ship_vel: Vector2) -> Dictionary:
-	fired[index] += 1
+## Turns a homing shot's velocity toward `toward` (the way to its target) by at most
+## `turn_rate` × `delta`, keeping its speed.
+static func steer(vel: Vector2, toward: Vector2, turn_rate: float, delta: float) -> Vector2:
+	var step := turn_rate * delta
+	return vel.rotated(clampf(angle_difference(vel.angle(), toward.angle()), -step, step))
+
+
+## One shot (or one flak pellet) at `target` (-1 for none), which the aim reaches in `time` s.
+func _shot(index: int, gun: GunLayout.Gun, pivot: Vector2, ship_rotation: float, ship_vel: Vector2,
+		target: int, time: float) -> Dictionary:
+	var stats := gun.stats
 	var barrel := Vector2.from_angle(angles[index] + ship_rotation)
 	var spread := gun.spread
 	var heading := Vector2.from_angle(angles[index] + ship_rotation + rng.randf_range(-spread, spread))
-	var speed := float(gun.stats["speed_u"])
+	var speed := float(stats["speed_u"])
+	var life := float(stats["range_u"]) / speed
+	if stats["airburst"] and target >= 0:
+		life = minf(time, life)  # the fuse: burst where the target will be
 	return {
 		"gun": index, "from": pivot + barrel * gun.muzzle, "vel": ship_vel + heading * speed,
-		"life": float(gun.stats["range_u"]) / speed, "damage": gun.stats["damage"],
-		"type": gun.stats["damage_type"], "pierce": gun.stats["pierce"],
+		"life": life, "damage": stats["damage"], "type": stats["damage_type"], "pierce": stats["pierce"],
+		"splash_u": stats["splash_u"], "splash_damage": stats["splash_damage"], "splash_type": stats["splash_type"],
+		"airburst": stats["airburst"], "homing": stats["homing"], "rocket": stats["rocket"], "target": target,
 	}

@@ -229,7 +229,7 @@ Alloy + Tech cost. It keeps its XP `[D8]`.
 | Flak (shotgun) | Kinetic + Explosive airburst | F / S / T | Close range, swarms, shoots down rockets |
 | Cannon | Kinetic, armour-piercing | F / S / T | Slow heavy shell. IDEA.md's "mounted cannon" and "cannon turret" are the same gun on different mounts, so refitting moves it between them. |
 | EMP | EMP | F / T | Area pulse. Low damage, but knocks out shields and thrusters for 2 s. |
-| Rockets | Explosive | F / S / T | Homing salvo with splash |
+| Rockets | Explosive | F / S / T | Four launchers (owner, 2026-10-26): **Seeker** (homing) or **Rocket** (fire and forget, faster), each with an **HE** warhead (big splash) or **AP** (concentrated, armour-piercing hit, small splash). Flak can shoot them down. |
 | Laser | Energy | F / S / T | Hitscan beam with heat build-up. Shield breaker. |
 | Mines | Explosive | Rear edge (F) | Dropped behind, proximity trigger |
 
@@ -961,10 +961,31 @@ at 0.8/s, `pierce` 0.6, slower shells). All three kinetic guns go on all three m
 a drive ran. `tests/core/test_scripts_compile.gd` now compiles everything in `src/` and
 `dev_preview/`.
 
-#### 4.6 Weapons batch B: specials
-- [ ] Flak (spread and airburst; can shoot down rockets), rockets (homing and splash)
+#### 4.6a Rockets and flak
+✅ 2026-10-26. `weapons.json` adds flak and the four rockets, with new optional fields:
+`pellets`, `splash_u`/`splash_damage`/`splash_type`, `airburst`, `homing_deg_s`, `rocket`
+(can be shot down) and `anti_missile`.
+- **Fire control:** `Gunnery` fires `pellets` shots per trigger and sets an airburst fuse to the
+  target's intercept time. An anti-missile gun also targets enemy rockets (`step(…, missiles)`).
+  `Gunnery.steer()` turns a seeker no faster than its rate.
+- **The pool:** keeps each weapon's shot rules once (`_specs`). It steers homing shots,
+  explodes splash shots on a hit (and airbursts when their fuse runs out) with a circle query,
+  and destroys enemy rockets inside a blast. `ImpactFx.blast/pop` draw the explosions.
+- **Sandbox:** a **Target** button cycles `targets` in `flight.json`. The new `rocket_pod`
+  shoots seekers back.
+- **Samples:** `skirmisher` has a manual AP rocket, Seeker HE swivels and flak turrets.
+- **Tests:** `tests/model/test_rockets_and_flak.gd` covers the four-rocket matrix, flak pellets
+  and fuses, anti-missile targeting, the homing turn rate, and that every sandbox target is a
+  valid ship. `drive_flight` checks splash hurting several barge tiles, and flak shooting down
+  the pod's seekers.
+
+⚠️ The skirmisher can kill the pod mid-check and a new one respawns, so the drive counts shots
+from whichever pod is alive.
+
+#### 4.6b Weapons batch B: laser, EMP, mines
 - [ ] Laser (hitscan beam with a `Line2D` shader, heat bar), EMP (area pulse, disables), mines (rear drop, proximity)
-- **Done when:** all five work, and each one has a sandbox target that shows what it's for.
+- [ ] The Weapons palette row holds 8 guns at 84 px; with 11 it needs grouping or scrolling
+- **Done when:** all three work, and each one has a sandbox target that shows what it's for.
 
 #### 4.7 Combat HUD and weapon switch
 - [ ] Shield/hull bars, hit flash, optional screen shake, vibration on taking damage

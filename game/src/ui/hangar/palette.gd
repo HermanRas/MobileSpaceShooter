@@ -140,7 +140,7 @@ func _thruster_row() -> void:
 func _weapon_row() -> void:
 	for weapon_id in weapons.weapon_ids():
 		var swatch := _ShapeSwatch.new()
-		swatch.custom_minimum_size = Vector2(96, BUTTON.y)
+		swatch.custom_minimum_size = Vector2(84, BUTTON.y)  # 8+ guns and the mount/mode buttons share the row
 		swatch.polygon = PackedVector2Array(GUN)
 		swatch.fill = Color(0.35, 0.38, 0.42)
 		swatch.caption = weapons.weapon(weapon_id)["name"]
@@ -213,5 +213,8 @@ class _ShapeSwatch extends PanelContainer:
 		draw_colored_polygon(points, Color(fill, 0.35) if disabled else fill)
 		draw_polyline(points + PackedVector2Array([points[0]]), Color(0, 0, 0, 0.8), 2.0, true)
 		if not caption.is_empty():
-			draw_string(get_theme_default_font(), Vector2(0, size.y - 6), caption,
-					HORIZONTAL_ALIGNMENT_CENTER, size.x, 14)
+			var font := get_theme_default_font()
+			var font_size := 14
+			while font_size > 9 and font.get_string_size(caption, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x > size.x - 4:
+				font_size -= 1
+			draw_string(font, Vector2(0, size.y - 6), caption, HORIZONTAL_ALIGNMENT_CENTER, size.x, font_size)

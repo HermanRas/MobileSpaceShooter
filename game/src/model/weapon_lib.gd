@@ -88,6 +88,17 @@ static func from_table(table: Dictionary) -> WeaponLib:
 		if def["rate_start"] <= 0.0 or def["rate_start"] > def["rate"]:
 			lib.errors.append("%s: rate_start must be > 0 and no more than rate" % weapon_id)
 			continue
+		def["pellets"] = maxi(int(raw.get("pellets", 1)), 1)
+		def["splash_u"] = maxf(float(raw.get("splash_u", 0.0)), 0.0)
+		def["splash_damage"] = float(raw.get("splash_damage", 0.0))
+		def["splash_type"] = StringName(raw.get("splash_type", "explosive"))
+		def["airburst"] = bool(raw.get("airburst", false))
+		def["homing"] = deg_to_rad(maxf(float(raw.get("homing_deg_s", 0.0)), 0.0))
+		def["rocket"] = bool(raw.get("rocket", false))
+		def["anti_missile"] = bool(raw.get("anti_missile", false))
+		if (def["splash_u"] > 0.0) != (def["splash_damage"] > 0.0) or (def["airburst"] and def["splash_u"] <= 0.0):
+			lib.errors.append("%s: splash_u and splash_damage go together, and airburst needs them" % weapon_id)
+			continue
 		def.make_read_only()
 		lib._weapons[StringName(weapon_id)] = def
 	return lib
@@ -108,7 +119,9 @@ func has_weapon(weapon_id: StringName) -> bool:
 ##   name, damage_type, mounts (allowed mount types), damage (per shot), rate (shots/s),
 ##   speed_u, range_u, spread and spread_best (rad either side, at L1 and at max_level),
 ##   pierce (0-1), edge_u, length_u, turret_radius_u, mass, price_gc, and for a gun that spins
-##   up: rate_start (shots/s when it starts), spin_up_s, spin_down_s (spin_up_s 0 if it doesn't)
+##   up: rate_start (shots/s when it starts), spin_up_s, spin_down_s (spin_up_s 0 if it doesn't);
+##   pellets (shots per trigger), splash_u, splash_damage, splash_type, airburst, homing (rad/s),
+##   rocket (can be shot down), anti_missile (also targets enemy rockets)
 func weapon(weapon_id: StringName) -> Dictionary:
 	return _weapons.get(weapon_id, {})
 

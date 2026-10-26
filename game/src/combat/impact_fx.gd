@@ -3,6 +3,7 @@ extends Node2D
 ## Sparks where shots strike (Phase 4.5): a flash and a few sparks thrown back the way the shot
 ## came, all in one MultiMesh of soft dots, like the ProjectilePool. A busy fight lands dozens of
 ## hits a second, so this keeps them out of the node tree. Looks per weapon in `vis.fx.impacts`.
+## Explosions (4.6a) flash as wide as their splash and throw sparks all round.
 
 const CAPACITY := 768
 const PX := ShipMesh.PX_PER_U
@@ -54,6 +55,22 @@ func burst(point: Vector2, velocity: Vector2, weapon_id: StringName) -> void:
 	for i in int(look["sparks"]):
 		var heading := back.rotated(_rng.randf_range(-1.1, 1.1)) * speed * _rng.randf_range(0.3, 1.0)
 		_add(point, heading, life * _rng.randf_range(0.6, 1.0), look["size"], look["color"])
+
+
+## An explosion at `point` reaching `radius` (world pixels).
+func blast(point: Vector2, radius: float, weapon_id: StringName) -> void:
+	var look := _look(weapon_id)
+	var life: float = look["life"]
+	_add(point, Vector2.ZERO, life * 0.5, radius * 1.1, Color(1.0, 0.95, 0.85))
+	_add(point, Vector2.ZERO, life, radius * 1.6, look["color"])
+	for i in int(look["sparks"]) * 2:
+		var heading := Vector2.from_angle(_rng.randf() * TAU) * radius * _rng.randf_range(1.5, 3.5)
+		_add(point, heading, life * _rng.randf_range(0.5, 1.0), look["size"], look["color"])
+
+
+## A rocket destroyed in flight.
+func pop(point: Vector2) -> void:
+	_add(point, Vector2.ZERO, 0.15, 0.5 * PX, Color(1.0, 0.9, 0.6))
 
 
 func _process(delta: float) -> void:

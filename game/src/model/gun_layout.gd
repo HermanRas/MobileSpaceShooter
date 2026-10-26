@@ -90,11 +90,13 @@ func manual_count() -> int:
 	return guns.filter(func(g: Gun) -> bool: return not g.auto).size()
 
 
-## Total damage per second with every gun firing (before armor and shields).
+## Total damage per second with every gun firing at its top rate, every pellet and splash
+## landing (before armor and shields).
 func dps() -> float:
 	var total := 0.0
 	for gun in guns:
-		total += float(gun.stats["damage"]) * float(gun.stats["rate"])
+		var stats := gun.stats
+		total += (float(stats["damage"]) + float(stats["splash_damage"])) * int(stats["pellets"]) * float(stats["rate"])
 	return total
 
 

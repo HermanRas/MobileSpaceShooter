@@ -35,7 +35,6 @@ var _step_max_usec := 0
 var _draw_usec := 0
 var _last_tick := 0
 var _dropped_at_start := 0
-var _mask := ShipBody.enemy_mask(0)
 var _hud := Label.new()
 
 
@@ -78,8 +77,8 @@ func _physics_process(delta: float) -> void:
 	var want := STAGES[_stage]
 	while pool.count < want:
 		_angle = fmod(_angle + 2.39996, TAU)  # the golden angle spreads them evenly
-		pool.fire(Vector2.ZERO, Vector2.from_angle(_angle) * SPEED_U, RANGE_U / SPEED_U, 1.0, &"kinetic", 0.0,
-				_mask, &"default")
+		pool.fire({"from": Vector2.ZERO, "vel": Vector2.from_angle(_angle) * SPEED_U, "life": RANGE_U / SPEED_U,
+				"damage": 1.0, "type": &"kinetic"}, 0, &"default")
 	if _clock >= SETTLE_S:
 		_steps += 1
 		_step_usec += pool.step_usec

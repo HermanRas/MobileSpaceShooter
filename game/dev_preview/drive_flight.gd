@@ -51,6 +51,7 @@ func _ready() -> void:
 	_check(_hangar._world.visible and _hangar._ui.visible, "the hangar is visible again")
 
 	await _step_guns()
+	await _step_rockets_and_flak()
 	await _step_fly_the_starter_with_the_stick()
 	await _step_control_layouts()
 	await _step_camera_and_arena()
@@ -163,6 +164,55 @@ func _step_guns() -> void:
 	_check(fired[4] > before[4], "the right-wing turret can (%d more)" % (fired[4] - before[4]))
 	_check(fired[3] > before[3], "so can the left-wing one, over the hull (%d more)" % (fired[3] - before[3]))
 	_check(health.call(ship) == ours_before, "and its shots pass over our own tiles")
+	_hangar.on_back()
+	await _frames(3)
+
+
+## Phase 4.6a: the skirmisher's Seeker swivels blow holes in the barge (splash hurts several
+## tiles), the manual AP rocket fires on FIRE, and against the rocket pod, whose seekers come at
+## us, the flak turrets shoot rockets down.
+func _step_rockets_and_flak() -> void:
+	var errors: PackedStringArray = []
+	_hangar.load_blueprint(Blueprint.from_dict(Data.json_dir("blueprints")["skirmisher"], errors))
+	await _frames(2)
+	var sandbox: FlightSandbox = _hangar.fly()
+	_check(sandbox != null, "the skirmisher can fly")
+	if sandbox == null:
+		return
+	await _physics_frames(2)
+	var fired := sandbox.weapons.gunnery.fired
+	await _physics_frames(150)
+	_check(fired[1] > 0 and fired[2] > 0, "the Seeker swivels launch on their own (%d, %d)" % [fired[1], fired[2]])
+	_check(sandbox.pool.explosions > 0, "rockets explode (%d)" % sandbox.pool.explosions)
+	var target := sandbox.target
+	var hurt := 0
+	if target != null:
+		for tile_id: int in target.damage.hp:
+			if target.damage.hp[tile_id] < target.damage.max_hp[tile_id]:
+				hurt += 1
+	_check(hurt >= 3 or target == null, "the splash hurts several tiles (%d)" % hurt)
+	_save_shot("drive_rockets.png")
+	Input.action_press(&"fire")
+	await _physics_frames(20)
+	Input.action_release(&"fire")
+	_check(fired[0] >= 1, "FIRE launches the nose AP rocket (%d)" % fired[0])
+
+	sandbox._next_target()
+	await _physics_frames(2)
+	_check(sandbox.target != null and sandbox.target.blueprint.id == "rocket_pod", "Target swaps in the rocket pod")
+	# The skirmisher can destroy the pod (it comes back), so count from whichever one is there.
+	var pod_shots := 0
+	for i in 360:
+		await _physics_frames(1)
+		if sandbox.target != null and sandbox.target.has_node(^"Weapons"):
+			var fired_now: PackedInt32Array = (sandbox.target.get_node(^"Weapons") as WeaponController).gunnery.fired
+			var total := 0
+			for n in fired_now:
+				total += n
+			pod_shots = maxi(pod_shots, total)
+	_check(pod_shots > 0, "the pod fires seekers at us (%d)" % pod_shots)
+	_check(sandbox.pool.downed > 0, "the flak shoots rockets down (%d)" % sandbox.pool.downed)
+	_save_shot("drive_flak.png")
 	_hangar.on_back()
 	await _frames(3)
 

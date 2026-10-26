@@ -13,7 +13,8 @@ extends Node
 ## `test_hit`, if data sets one).
 ##
 ## Guns (4.3): the ship's WeaponController fires into one ProjectilePool. Auto guns pick off the
-## target on their own; FIRE fires the manual ones (in 1-stick, every gun is auto).
+## target on their own; FIRE fires the manual ones (in 1-stick, every gun is auto). The Target
+## button swaps the practice target; one with guns (the rocket pod, 4.6a) shoots back.
 
 signal closed
 
@@ -58,6 +59,9 @@ var _last_hit := ""
 ## The level the player's guns are at (the Guns button steps through `gun_levels`).
 var gun_level := 1
 var _level_button := Button.new()
+## Which of the sandbox's `targets` is parked ahead.
+var target_index := 0
+var _target_button := Button.new()
 
 
 ## Spawns `bp` (already validated) at the origin, and the practice target ahead of it.
@@ -85,6 +89,9 @@ func open(bp: Blueprint, placement: Placement) -> void:
 	_world.add_child(impacts)
 	pool.hit.connect(func(_body: ShipBody, _tile: int, point: Vector2, velocity: Vector2, weapon_id: StringName) -> void:
 		impacts.burst(point, velocity, weapon_id))
+	pool.exploded.connect(impacts.blast)
+	pool.shot_down.connect(impacts.pop)
+	pool.shot_down.connect(func(_point: Vector2) -> void: _show_status())
 	_spawn_player()
 	_camera.make_current()
 	_spawn_target()
@@ -126,8 +133,11 @@ func _spawn_player() -> void:
 
 
 func _spawn_target() -> void:
+	if target != null:
+		return  # a respawn that a Target press already beat
 	var errors: PackedStringArray = []
-	var raw: Dictionary = Data.json_dir("enemies").get(str(_sandbox.get("target", "")), {})
+	var names: Array = _sandbox.get("targets", ["target_barge"])
+	var raw: Dictionary = Data.json_dir("enemies").get(str(names[target_index % names.size()]), {})
 	var bp := Blueprint.from_dict(raw, errors) if not raw.is_empty() else null
 	if bp == null:
 		push_warning("sandbox: no target blueprint %s" % [errors])
@@ -147,6 +157,25 @@ func _spawn_target() -> void:
 		_clear_pick()
 		_after_respawn_delay(_spawn_target))
 	_world.add_child(target)
+	if not target.guns.guns.is_empty():
+		var guns := WeaponController.new()
+		guns.name = "Weapons"
+		target.add_child(guns)
+		guns.attach(target, pool, _placement.weapons, func() -> Array: return [ship] if ship != null else [])
+		var view := GunView.new()
+		target.add_child(view)
+		view.attach(guns)
+	_target_button.text = "Target: %s" % target.blueprint.name
+
+
+## Parks the next practice target in place of this one.
+func _next_target() -> void:
+	target_index += 1
+	if target != null:
+		target.queue_free()
+		target = null
+	_clear_pick()
+	_spawn_target()
 
 
 func _on_player_destroyed() -> void:
@@ -286,6 +315,8 @@ func _show_status() -> void:
 			ship.get_shape_owners().size(), ship.guns.guns.size()]
 	if _last_hit != "":
 		text += "  ·  " + _last_hit
+	if pool.downed > 0:
+		text += "  ·  %d rockets shot down" % pool.downed
 	_status.text = text
 
 
@@ -328,6 +359,13 @@ func _build_ui() -> void:
 	_level_button.position.y += 128
 	_level_button.pressed.connect(_next_gun_level)
 	ui.add_child(_level_button)
+	_target_button.size = Vector2(220, 56)
+	_target_button.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT, Control.PRESET_MODE_KEEP_SIZE, 16)
+	_target_button.position.y += 192
+	_target_button.pressed.connect(_next_target)
+	ui.add_child(_target_button)
+	if target != null:
+		_target_button.text = "Target: %s" % target.blueprint.name
 	_controls_panel = ControlsPanel.new()
 	_controls_panel.visible = false
 	_controls_panel.closed.connect(_open_controls_panel.bind(false))

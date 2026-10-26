@@ -1,0 +1,23 @@
+{
+	"format": 1,
+	"id": "rocket_pod",
+	"name": "Rocket pod",
+	"author": "mss",
+	"tags": ["target"],
+	"_doc": "The flight sandbox's flak target (Phase 4.6a): a squat armoured block with two Seeker HE turrets that fire homing rockets at the player. No thrusters; it just drifts.",
+	"tiles": [
+		{"id": 0, "type": "core", "shape": "square", "size": "L", "pos": [0, 0], "rot": 0, "paint": "#d8d8d8"},
+		{"id": 1, "type": "hardpoint", "shape": "square", "size": "L", "pos": [0, -1], "rot": 0, "paint": "#5a3a3a"},
+		{"id": 2, "type": "hardpoint", "shape": "square", "size": "L", "pos": [0, 1], "rot": 0, "paint": "#5a3a3a"},
+		{"id": 3, "type": "armor", "shape": "square", "size": "L", "pos": [-1, 0], "rot": 0, "paint": "#6b5a3e"},
+		{"id": 4, "type": "armor", "shape": "square", "size": "L", "pos": [1, 0], "rot": 0, "paint": "#6b5a3e"},
+		{"id": 5, "type": "armor", "shape": "square", "size": "L", "pos": [-1, -1], "rot": 0, "paint": "#6b5a3e"},
+		{"id": 6, "type": "armor", "shape": "square", "size": "L", "pos": [1, -1], "rot": 0, "paint": "#6b5a3e"},
+		{"id": 7, "type": "armor", "shape": "square", "size": "L", "pos": [-1, 1], "rot": 0, "paint": "#6b5a3e"},
+		{"id": 8, "type": "armor", "shape": "square", "size": "L", "pos": [1, 1], "rot": 0, "paint": "#6b5a3e"}
+	],
+	"mounts": [
+		{"tile": 1, "face": true, "part": "weapon.rocket_homing_he", "mount": "turret", "mode": "auto"},
+		{"tile": 2, "face": true, "part": "weapon.rocket_homing_he", "mount": "turret", "mode": "auto"}
+	]
+}
