@@ -1305,9 +1305,16 @@ scene of its own.
 - **Done when:** 3 profiles exist on one phone, each with separate inventories, and switching between them works.
 
 #### 6.3 Save service
-- [ ] Atomic write (tmp → rename), `format` version, migrations, keep the last good copy if the newest is corrupt
-- [ ] Tests: interrupted write, corrupt file, migration from v0
-- **Done when:** the tests pass, and killing the app mid-save never loses the previous save.
+✅ 2026-10-26. The `Save` autoload writes `.tmp`, renames the old file to `.bak`, then renames
+`.tmp` into place.
+- **Reading** takes the newest complete copy: a finished `.tmp` first (one is left behind only
+  if a write was killed between its renames), then the main file, then the `.bak`. A
+  half-written `.tmp` doesn't parse, so it's skipped.
+- **`read_versioned(path, current, steps)`** migrates one step at a time, and a file without a
+  `format` counts as version 0. A file from a newer build reads as nothing, so it isn't
+  overwritten as if it were ours.
+- **Tests** (`tests/core/test_save.gd`): a write killed mid-write, one killed between its
+  renames, a corrupt file, and a migration from v0.
 
 #### 6.4 Settings
 - [ ] Control scheme, handedness, stick size and opacity, music/SFX volume, vibration, screen shake
