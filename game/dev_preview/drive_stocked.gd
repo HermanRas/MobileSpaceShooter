@@ -154,23 +154,66 @@ func _step_a_kill_earns_the_guns_xp() -> void:
 	if victim == null:
 		return
 	var core: int = victim.blueprint.tiles.filter(func(t: Blueprint.Tile) -> bool: return t.type == &"core")[0].id
+	sandbox.economy.part_chance = 1.0  # so this kill drops a part too
+	var guns_before: int = _hangar.editor.stock.guns.size()
+	var wallet_before: Dictionary = _hangar.editor.stock.wallet.duplicate()
+	var wreck_at := victim.global_position
 	victim.take_hit(core, 1.0e9, &"kinetic", 1.0, StringName(id))
 	await _frames(3)
 	var item: Inventory.GunItem = _hangar.editor.stock.guns[id]
 	_check(sandbox.xp_earned > 0 and item.xp == sandbox.xp_earned, "the kill's XP all goes to it (%d)" % item.xp)
 	_note_seen = sandbox._hud.text
 	_check("+%d XP" % sandbox.xp_earned in _note_seen, "the HUD says so (%s)" % _note_seen)
-	var loot: Dictionary = sandbox.loot_earned.duplicate()
+
+	# 5.4: the kill drops pickups; within the magnet radius they fly to the ship.
+	var dropped := sandbox.pickups.count()
+	_check(dropped > 1 and sandbox.cargo.is_empty(), "the kill drops pickups (%d), not straight into the hold" % dropped)
+	await _frames(90)  # the blast fades and the loot drifts to a stop
+	var near := wreck_at + Vector2(0, sandbox.pickups.magnet_u * 0.6) * ShipMesh.PX_PER_U
+	PhysicsServer2D.body_set_state(sandbox.ship.get_rid(), PhysicsServer2D.BODY_STATE_TRANSFORM, Transform2D(0.0, near))
+	PhysicsServer2D.body_set_state(sandbox.ship.get_rid(), PhysicsServer2D.BODY_STATE_LINEAR_VELOCITY, Vector2.ZERO)
+	get_viewport().get_camera_2d().position = near
+	await _frames(4)
+	_save_shot("drive_stocked_pickups.png")
+	for i in 300:
+		await get_tree().physics_frame
+		if sandbox.pickups.count() == 0:
+			break
+	await _frames(2)
+	_check(sandbox.pickups.count() == 0, "they fly to the ship (%d of %d left)" % [sandbox.pickups.count(), dropped])
+	var cargo := sandbox.cargo.to_dict()
+	_check(sandbox.cargo.amount(&"gc") > 0 and sandbox.cargo.amount(&"hull") > 0, "the hold has GC and hull (%s)" % [cargo])
+	# The barge has no parts to drop: one of a wasp's guns, as a kill would drop it.
+	var errors: PackedStringArray = []
+	var wasp := Blueprint.from_dict(Data.json_dir("enemies")["wasp"], errors)
+	var gun_pick := wasp.mounts.filter(func(m: Dictionary) -> bool: return Mounting.is_weapon(m) or Mounting.is_thruster(m)) \
+			.find_custom(Mounting.is_weapon)
+	var part := sandbox.economy.part_drop(_hangar.placement, wasp, 0.0, gun_pick, 30)
+	sandbox.pickups.drop(sandbox.ship.global_position + Vector2(3, 0) * ShipMesh.PX_PER_U, Vector2.ZERO, [part])
+	for i in 120:
+		await get_tree().physics_frame
+		if sandbox.pickups.count() == 0:
+			break
+	await _frames(2)
+	_check(sandbox.cargo.guns.size() == 1 and (sandbox.cargo.guns.values()[0] as Inventory.GunItem).xp == int(part["xp"]),
+			"a dropped gun is picked up with its XP (%s)" % [part])
+	_check("Found a" in sandbox._hud.text, "and the HUD says so (%s)" % sandbox._hud.text)
+	_check("cargo" in sandbox._hud.text and "GC" in sandbox._hud.text, "the HUD counts the cargo (%s)" % sandbox._hud.text)
+	var hold := sandbox.cargo.wallet.duplicate()
+	var found_gun := not sandbox.cargo.guns.is_empty()
 	_hangar.land()
 	await _frames(2)
 	var saved := Save.read_json(Profiles.profile_dir(PROFILE).path_join(StockStore.FILE))
 	var guns: Array = saved.get("inventory", {}).get("guns", [])
 	_check(guns.any(func(g: Dictionary) -> bool: return g["id"] == id and int(g["xp"]) == item.xp), "and it's saved on landing")
 	_check(not _hangar.editor.can_undo(), "nothing before the flight can be undone")
-	_check(int(loot.get(&"gc", 0)) > 0 and int(loot.get(&"hull", 0)) > 0, "the kill paid GC and hull (%s)" % [loot])
-	_check("+%d GC" % int(loot.get(&"gc", 0)) in _note_seen, "the HUD said so (%s)" % _note_seen)
-	_check(int(saved.get("inventory", {}).get("wallet", {}).get("gc", 0)) == _hangar.editor.stock.amount(&"gc"),
-			"and the pay is saved")
+	var stock: Inventory = _hangar.editor.stock
+	_check(stock.amount(&"gc") == int(wallet_before.get(&"gc", 0)) + int(hold[&"gc"])
+			and stock.amount(&"hull") == int(wallet_before.get(&"hull", 0)) + int(hold[&"hull"]),
+			"landing banks the hold into the wallet (%s)" % [hold])
+	_check(stock.guns.size() == guns_before + (1 if found_gun else 0), "and a found gun into the inventory")
+	_check(int(saved.get("inventory", {}).get("wallet", {}).get("gc", 0)) == stock.amount(&"gc"),
+			"and it's saved")
 
 
 ## 4.8c: the wallet opens the market; buying costs GC at the buy price, selling earns the sell

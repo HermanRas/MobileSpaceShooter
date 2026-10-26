@@ -90,7 +90,12 @@ var stock: Inventory
 var economy: Economy
 ## XP earned this flight, all guns together, and what the kills paid.
 var xp_earned := 0
-var loot_earned := {}
+## What this flight has picked up (5.4): banked into `stock` on landing; lost with the run
+## otherwise. Kept through the ship's own respawns in the sandbox.
+var cargo := Inventory.new()
+## Loot floating in space, and the dice for part drops.
+var pickups := PickupField.new()
+var _rng := RandomNumberGenerator.new()
 var _level_button := Button.new()
 ## The roster (5.1): its enemies fly themselves (5.2), and its ally is the carrier.
 var roster: EnemyRoster
@@ -122,6 +127,14 @@ func open(bp: Blueprint, placement: Placement) -> void:
 	_overlay.z_index = 2
 	_world.add_child(_overlay)
 	_world.add_child(_camera)
+	if economy == null:
+		economy = Economy.from_table(Data.table(&"economy"))  # Creative: loot drops, nothing is banked
+	_rng.randomize()
+	pickups.name = "Pickups"
+	pickups.z_index = 2  # over wrecks and debris
+	pickups.configure(_flight.get("pickups", {}))
+	pickups.collected.connect(_on_pickup)
+	_world.add_child(pickups)
 	pool.name = "Shots"
 	pool.z_index = 2
 	_world.add_child(pool)
@@ -155,6 +168,8 @@ func _spawn_player() -> void:
 	last_spawn_usec = Time.get_ticks_usec() - started
 	ship.enable_damage(damage_table)
 	_world.add_child(ship)
+	pickups.target = ship
+	pickups.reach_u = _extent_u(_bp, _placement) * 0.5
 	pilot = FlightController.new()
 	pilot.name = "Pilot"
 	ship.add_child(pilot)
@@ -261,7 +276,8 @@ func _spawn_enemy(bp: Blueprint, entry: EnemyRoster.Entry, level: int, gun_level
 		enemies.erase(enemy)
 		target = enemies.back() if not enemies.is_empty() else null
 		_clear_pick()
-		_on_kill(enemy, bp))
+		_drop_loot(enemy, bp)
+		_on_kill(enemy))
 	_world.add_child(enemy)
 	enemies.append(enemy)
 	target = enemy
@@ -456,11 +472,60 @@ func _on_player_destroyed() -> void:
 		_show_status())
 
 
+## What `body` (built as `built`) drops when it's destroyed, by whoever (5.4): its materials
+## and GC as a few pickups each, and now and then one of its parts, a gun at the level it
+## fought at.
+func _drop_loot(body: ShipBody, built: Blueprint) -> void:
+	var pieces := economy.loot_pieces(economy.kill_loot(_placement, built, body.level))
+	var part := economy.part_drop(_placement, built, _rng.randf(), _rng.randi(), body.gun_level)
+	if not part.is_empty():
+		pieces.append(part)
+	pickups.drop(body.global_position, body.linear_velocity, pieces)
+
+
+## A pickup reached the ship: into the cargo hold. A part gets a note.
+func _on_pickup(piece: Dictionary) -> void:
+	if piece.has("gun"):
+		var xp := _placement.weapons.xp
+		cargo.add_found_gun(piece["gun"], piece["mount"], int(piece["xp"]))
+		_note = "Found a %s, L%d!" % [_placement.weapons.weapon(piece["gun"]).get("name", piece["gun"]),
+				xp.level_for(int(piece["xp"]))]
+		_note_until = Time.get_ticks_msec() + 3000
+	elif piece.has("thruster"):
+		cargo.add_thrusters(piece["thruster"], 1)
+		var parts := Inventory.thruster_parts(piece["thruster"])
+		_note = "Found a thruster: %s %s L%d!" % [String(parts[0]).capitalize(), parts[1], parts[2]]
+		_note_until = Time.get_ticks_msec() + 3000
+	else:
+		cargo.receive(piece)
+
+
+## The cargo hold for the HUD: "cargo 12 hull 3 crystal 40 GC 1 part", or "" when it's empty.
+func cargo_text() -> String:
+	if cargo.is_empty():
+		return ""
+	var parts: PackedStringArray = []
+	for resource: StringName in Inventory.MATERIALS + [Inventory.GC]:
+		if cargo.amount(resource) > 0:
+			parts.append("%d %s" % [cargo.amount(resource), "GC" if resource == Inventory.GC else String(resource)])
+	var found := cargo.guns.size()
+	for key: String in cargo.thrusters:
+		found += int(cargo.thrusters[key])
+	if found > 0:
+		parts.append("%d part%s" % [found, "" if found == 1 else "s"])
+	return "cargo " + " ".join(parts)
+
+
+## Lands the cargo hold in the profile's stock (the hangar calls it on landing). Creative has
+## no stock, so its cargo is only for show.
+func bank_cargo() -> void:
+	if stock != null:
+		stock.bank(cargo)
+
+
 ## A kill the player's guns had a hand in: its XP (PLAN.md 4.8b), split between the gun items by
-## the damage each dealt to `body`, and what it pays (4.8c, from `built`, the ship as it spawned)
-## straight into the wallet until there are pickups (5.4). Guns that level up fly at their new
-## level straight away.
-func _on_kill(body: ShipBody, built: Blueprint) -> void:
+## the damage each dealt to `body`. Guns that level up fly at their new level straight away.
+func _on_kill(body: ShipBody) -> void:
 	if stock == null or body.damage == null:
 		return
 	var xp := _placement.weapons.xp
@@ -470,11 +535,7 @@ func _on_kill(body: ShipBody, built: Blueprint) -> void:
 			dealt[String(source)] = body.damage_by[source]
 	if dealt.is_empty():
 		return
-	var level := body.level
-	var loot := economy.kill_loot(_placement, built, level) if economy != null else {}
-	stock.receive(loot)
-	loot_earned = Economy.add(loot_earned, loot)
-	var total := xp.kill_xp(body.damage.hp.size(), level)
+	var total := xp.kill_xp(body.damage.hp.size(), body.level)
 	var ups: PackedStringArray = []
 	var shares := WeaponXp.split(total, dealt)
 	for id: String in shares:
@@ -484,10 +545,7 @@ func _on_kill(body: ShipBody, built: Blueprint) -> void:
 		if xp.level_for(item.xp) > before:
 			ups.append("%s L%d" % [_placement.weapons.weapon(item.weapon).get("name", item.weapon), xp.level_for(item.xp)])
 	xp_earned += total
-	var paid: PackedStringArray = []
-	for resource: StringName in loot:
-		paid.append("+%d %s" % [loot[resource], "GC" if resource == Inventory.GC else String(resource)])
-	_note = "+%d XP  ·  %s%s" % [total, ", ".join(paid), "  ·  " + ", ".join(ups) + "!" if not ups.is_empty() else ""]
+	_note = "+%d XP%s" % [total, "  ·  " + ", ".join(ups) + "!" if not ups.is_empty() else ""]
 	_note_until = Time.get_ticks_msec() + 2500
 	if not ups.is_empty() and ship != null:
 		ship.gun_levels = _item_levels()
@@ -568,6 +626,8 @@ func _process(_delta: float) -> void:
 		parts.append("leaving the area" if arena.contains(ship.global_position / PX) else "outside the area: turning you back")
 	if is_instance_valid(carrier) and carrier.damage != null:
 		parts.append("carrier %d%%" % roundi(_hull_share(carrier) * 100.0))
+	if not cargo.is_empty():
+		parts.append(cargo_text())
 	if Time.get_ticks_msec() < _note_until:
 		parts.append(_note)
 	_hud.text = "  ·  ".join(parts)

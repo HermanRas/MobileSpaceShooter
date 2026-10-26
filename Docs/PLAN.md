@@ -1218,9 +1218,26 @@ laser's 18 U reach.
 - [ ] Owner, on the phone: Spawn → Level 1/10/25 with the starter, and a boss fight; is the damage share right?
 
 #### 5.4 Drops and pickups
-- [ ] Material drops derived from composition (§4.6), the part-drop chance (a dropped gun keeps its XP), pickups with a magnet radius
-- [ ] Run cargo (in memory), plus a HUD counter
-- **Done when:** killing an all-shield enemy drops mostly Crystal (a test), and pickups fly to the ship.
+✅ 2026-10-26.
+- **Model** (`Economy`, tested in `tests/model/test_drops.gd`): `kill_loot` drops 2% of the
+  enemy's tile materials, plus 1 Tech for each mounted part and GC by tile count, all scaled by
+  level. `loot_pieces` splits each resource into at most 3 pickups. `part_drop` gives a 4%
+  chance of one of the enemy's guns (with the XP of the level it fought at) or thrusters.
+  `Inventory.bank()` moves cargo into the stock, giving found guns new ids.
+- **`PickupField`** (`src/flight/`): every pickup lives in arrays and is drawn in one
+  `_draw`. Pickups scatter from the wreck and drift to a stop. Within 8 U of the hull they fly
+  in at 14 U/s plus the ship's speed; touching the ship collects them. They vanish after 45 s,
+  blinking first. Placeholder shapes: Hull a pentagon scrap, Alloy a hexagon, Crystal a shard,
+  Tech a wire bundle, GC a coin, a part a crate.
+- **Sandbox:** every enemy destroyed drops loot, whoever killed it, in Creative too. XP still
+  needs the player's guns. The pickups go into `cargo`, which shows on the HUD with a
+  "Found a …" note for parts. `hangar.land()` banks the cargo into the stock and saves it
+  (Creative's is only for show).
+- `drive_stocked` checks the drop, the magnet, the HUD counter, a found gun's XP, and the
+  banking on landing.
+
+The kill no longer pays straight into the wallet (4.8c did); anything left floating when you
+land is lost.
 
 #### 5.5 Spawner
 - [ ] Spawn off-screen around the player

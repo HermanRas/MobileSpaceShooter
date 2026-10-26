@@ -24,6 +24,17 @@
 		"view_zoom_max": 2.5,
 		"zoom_step": 1.15
 	},
+	"pickups": {
+		"_doc": "Phase 5.4. A kill's loot (economy.json drops) scatters from the wreck at up to scatter_u_s and drifts to a stop (drift_damp a second). Within magnet_u of the player's hull it flies in at pull_u_s plus the ship's own speed, turning at pull_accel_u_s2, and within collect_u it's in the cargo hold. Uncollected pickups go after life_s, blinking for the last blink_s.",
+		"magnet_u": 8.0,
+		"collect_u": 0.6,
+		"pull_u_s": 14.0,
+		"pull_accel_u_s2": 60.0,
+		"scatter_u_s": 4.0,
+		"drift_damp": 1.5,
+		"life_s": 45.0,
+		"blink_s": 5.0
+	},
 	"edge_markers": {
 		"_doc": "Owner, 2026-10-26: a mark at the screen's edge points at the carrier when it's off screen. Within dot_within_u of the edge it's a full-size dot (about to come into view); further off an arrow, shrinking from full size to smallest_share at smallest_at_u. An enemy that has been on screen gets a solid dot of fixed size at the edge while it's off screen and within sight_range_u of the player's ship; beyond that it's forgotten until seen again (5.5, owner 2026-10-26). Radar tech (v2) marks the rest.",
 		"dot_within_u": 4.0,
@@ -32,7 +43,7 @@
 		"sight_range_u": 60.0
 	},
 	"sandbox": {
-		"_doc": "Flight sandbox extras (4.2): start_target (a practice target from data/enemies) is parked ahead at the start. The Spawn button (owner, 2026-10-26) lists every ship to spawn: practice targets, the roster, the carrier and the player's own ships. An enemy appears spawn_gap_u ahead of the player's ship (owner, 2026-10-26: twice as far as the first 6 U), turned spawn_facing_deg from the player (one without thrusters, a practice target, target_rotation_deg); a roster ship flies itself (5.2). The carrier (the roster's ally) appears carrier_beside_u to the player's right, pointing the same way, and flies carrier_route round and round (laid out in the player's frame at spawn: x ahead, y to the right); enemies go for whichever of the player and the carrier is nearer, the carrier's distance counted at carrier_bias, so they make for it (an escort mission, 12.3). A tap on any ship's tile highlights it, and hits it for test_hit raw damage of test_hit_type (0 since the guns arrived in 4.3). The player's ship comes back respawn_s after it's destroyed. The Guns button steps a Creative ship's guns through gun_levels (4.3); a stocked ship's guns are inventory items at their own levels, and a single spawned enemy comes at encounter_level (its guns about 10x that, at the level's damage share, levels.json), and a kill earns XP and pay at the enemy's own level (4.8b, 4.8c). The Spawn list's encounter_buttons spawn a generated fight at that level, and hvt_buttons a Kill HVT one led by a boss (5.3).",
+		"_doc": "Flight sandbox extras (4.2): start_target (a practice target from data/enemies) is parked ahead at the start. The Spawn button (owner, 2026-10-26) lists every ship to spawn: practice targets, the roster, the carrier and the player's own ships. An enemy appears spawn_gap_u ahead of the player's ship (owner, 2026-10-26: twice as far as the first 6 U), turned spawn_facing_deg from the player (one without thrusters, a practice target, target_rotation_deg); a roster ship flies itself (5.2). The carrier (the roster's ally) appears carrier_beside_u to the player's right, pointing the same way, and flies carrier_route round and round (laid out in the player's frame at spawn: x ahead, y to the right); enemies go for whichever of the player and the carrier is nearer, the carrier's distance counted at carrier_bias, so they make for it (an escort mission, 12.3). A tap on any ship's tile highlights it, and hits it for test_hit raw damage of test_hit_type (0 since the guns arrived in 4.3). The player's ship comes back respawn_s after it's destroyed. The Guns button steps a Creative ship's guns through gun_levels (4.3); a stocked ship's guns are inventory items at their own levels, and a single spawned enemy comes at encounter_level (its guns about 10x that, at the level's damage share, levels.json), and a kill earns XP at the enemy's own level (4.8b) and drops its loot as pickups (5.4, flight.json pickups). The Spawn list's encounter_buttons spawn a generated fight at that level, and hvt_buttons a Kill HVT one led by a boss (5.3).",
 		"target_rotation_deg": 90,
 		"test_hit": 0,
 		"test_hit_type": "kinetic",

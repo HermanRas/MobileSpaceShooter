@@ -182,13 +182,14 @@ func fly() -> FlightSandbox:
 func land() -> void:
 	if _sandbox == null:
 		return
+	_sandbox.bank_cargo()
 	_sandbox.queue_free()
 	_sandbox = null
 	_set_hangar_active(true)
 	_camera.make_current()
 	if stocked():
 		editor.clear_history()  # nothing before the flight may undo what it earned
-		_on_changed()  # saves the XP and pay the flight earned, and shows them
+		_on_changed()  # saves the XP and the cargo the flight brought back, and shows them
 
 
 func _set_hangar_active(on: bool) -> void:

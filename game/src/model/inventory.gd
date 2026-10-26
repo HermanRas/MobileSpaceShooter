@@ -113,6 +113,32 @@ func add_thrusters(key: String, count: int) -> void:
 		thrusters.erase(key)
 
 
+
+## Adds a gun found in flight (PLAN.md 5.4) with the XP it came with.
+func add_found_gun(weapon: StringName, mount: StringName, xp: int) -> GunItem:
+	var item := new_gun(weapon, mount)
+	item.xp = xp
+	return item
+
+
+## Moves everything in `cargo` (a run's pickups) into this stock; guns get ids here.
+func bank(cargo: Inventory) -> void:
+	receive(cargo.wallet)
+	for id: String in cargo.guns:
+		var found: GunItem = cargo.guns[id]
+		add_found_gun(found.weapon, found.mount, found.xp)
+	for key: String in cargo.thrusters:
+		add_thrusters(key, cargo.thrusters[key])
+	cargo.wallet.clear()
+	cargo.guns.clear()
+	cargo.thrusters.clear()
+
+
+## Whether there's nothing in it.
+func is_empty() -> bool:
+	return guns.is_empty() and thrusters.is_empty() and wallet.values().all(func(n: Variant) -> bool: return int(n) == 0)
+
+
 func to_dict() -> Dictionary:
 	var wallet_out := {}
 	for resource: StringName in wallet:
