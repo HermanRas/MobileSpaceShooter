@@ -1,13 +1,14 @@
 class_name PickupField
 extends Node2D
-## Loot floating in space (PLAN.md 5.4): what a kill drops scatters from the wreck, drifts to a
+## Loot floating in space (PLAN.md 5.4): what a kill drops scatters from the tiles that were
+## left, as hard as the ship blew up (owner, 2026-10-26: a big blast throws it wide), drifts to a
 ## stop, and flies to the player's ship once it's within the magnet radius; touching the ship
 ## collects it. All pickups live in arrays and draw in one `_draw`, like the shot pool.
 ##
 ## A pickup is a piece of loot: {resource: amount} (Economy.loot_pieces), or a part from
 ## Economy.part_drop ({"gun", "mount", "xp"} or {"thruster"}). Placeholder shapes until art
-## lands: Hull a scrap of plate (pentagon, so it isn't taken for a tile of debris), Alloy a steel hexagon, Crystal a cyan shard, Tech a bundle of
-## wires, GC a gold coin, a part a crate.
+## lands: Hull a scrap of plate (pentagon, so it isn't taken for a tile of debris), Alloy a
+## steel hexagon, Crystal a cyan shard, Tech a bundle of wires, GC a gold coin, a part a crate.
 
 signal collected(piece: Dictionary)
 
@@ -19,7 +20,10 @@ var magnet_u := 8.0
 var collect_u := 0.6
 var pull_u_s := 14.0
 var pull_accel_u_s2 := 60.0
-var scatter_u_s := 4.0
+## A pickup is flung at up to scatter_u_s plus scatter_per_blast_u for each U of the blast (the
+## size of what was left of the ship).
+var scatter_u_s := 2.0
+var scatter_per_blast_u := 1.5
 var drift_damp := 1.5
 var life_s := 45.0
 var blink_s := 5.0
@@ -36,7 +40,8 @@ var _piece: Array[Dictionary] = []
 
 
 func configure(table: Dictionary) -> void:
-	for key in ["magnet_u", "collect_u", "pull_u_s", "pull_accel_u_s2", "scatter_u_s", "drift_damp", "life_s", "blink_s"]:
+	for key in ["magnet_u", "collect_u", "pull_u_s", "pull_accel_u_s2", "scatter_u_s", "scatter_per_blast_u", "drift_damp",
+			"life_s", "blink_s"]:
 		if table.has(key):
 			set(key, float(table[key]))
 
@@ -45,11 +50,21 @@ func count() -> int:
 	return _piece.size()
 
 
-## Scatters `pieces` from `at` (world px), each flung at up to scatter_u_s on top of `velocity`.
-func drop(at: Vector2, velocity: Vector2, pieces: Array[Dictionary]) -> void:
+## Scatters `pieces`, each from one of `origins` (world px; the wreck's tiles), flung outward
+## from their middle on top of `velocity`, harder the bigger the blast (`blast_u`, U).
+func drop(origins: PackedVector2Array, velocity: Vector2, pieces: Array[Dictionary], blast_u := 0.0) -> void:
+	if origins.is_empty():
+		return
+	var middle := Vector2.ZERO
+	for p in origins:
+		middle += p
+	middle /= origins.size()
+	var speed := (scatter_u_s + scatter_per_blast_u * blast_u) * PX
 	for piece in pieces:
-		var fling := Vector2.from_angle(randf() * TAU) * randf_range(0.4, 1.0) * scatter_u_s * PX
-		_pos.append(at + fling * 0.1)
+		var at := origins[randi() % origins.size()]
+		var out := (at - middle).normalized() if at.distance_to(middle) > 1.0 else Vector2.from_angle(randf() * TAU)
+		var fling := out.rotated(randf_range(-0.8, 0.8)) * randf_range(0.4, 1.0) * speed
+		_pos.append(at)
 		_vel.append(velocity + fling)
 		_age.append(0.0)
 		_spin.append(randf() * TAU)

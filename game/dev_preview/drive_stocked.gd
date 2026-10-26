@@ -179,8 +179,22 @@ func _step_a_kill_earns_the_guns_xp() -> void:
 		await get_tree().physics_frame
 		if sandbox.pickups.count() == 0:
 			break
+	var first_pass := dropped - sandbox.pickups.count()
+	# A big blast throws loot wide: fly over to whatever is left, as a player would.
+	for sweep in 8:
+		if sandbox.pickups.count() == 0:
+			break
+		var spot: Vector2 = sandbox.pickups._pos[0] + Vector2(0, 3) * ShipMesh.PX_PER_U
+		PhysicsServer2D.body_set_state(sandbox.ship.get_rid(), PhysicsServer2D.BODY_STATE_TRANSFORM, Transform2D(0.0, spot))
+		PhysicsServer2D.body_set_state(sandbox.ship.get_rid(), PhysicsServer2D.BODY_STATE_LINEAR_VELOCITY, Vector2.ZERO)
+		for i in 120:
+			await get_tree().physics_frame
+			if sandbox.pickups.count() == 0:
+				break
 	await _frames(2)
-	_check(sandbox.pickups.count() == 0, "they fly to the ship (%d of %d left)" % [sandbox.pickups.count(), dropped])
+	_check(first_pass > 0 and sandbox.pickups.count() == 0,
+			"they fly to the ship (%d from beside the wreck, the rest by flying over; %d of %d left)"
+			% [first_pass, sandbox.pickups.count(), dropped])
 	var cargo := sandbox.cargo.to_dict()
 	_check(sandbox.cargo.amount(&"gc") > 0 and sandbox.cargo.amount(&"hull") > 0, "the hold has GC and hull (%s)" % [cargo])
 	# The barge has no parts to drop: one of a wasp's guns, as a kill would drop it.
@@ -189,7 +203,7 @@ func _step_a_kill_earns_the_guns_xp() -> void:
 	var gun_pick := wasp.mounts.filter(func(m: Dictionary) -> bool: return Mounting.is_weapon(m) or Mounting.is_thruster(m)) \
 			.find_custom(Mounting.is_weapon)
 	var part := sandbox.economy.part_drop(_hangar.placement, wasp, 0.0, gun_pick, 30)
-	sandbox.pickups.drop(sandbox.ship.global_position + Vector2(3, 0) * ShipMesh.PX_PER_U, Vector2.ZERO, [part])
+	sandbox.pickups.drop(PackedVector2Array([sandbox.ship.global_position + Vector2(3, 0) * ShipMesh.PX_PER_U]), Vector2.ZERO, [part])
 	for i in 120:
 		await get_tree().physics_frame
 		if sandbox.pickups.count() == 0:

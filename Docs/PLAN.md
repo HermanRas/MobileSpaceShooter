@@ -1237,7 +1237,9 @@ laser's 18 U reach.
   banking on landing.
 
 The kill no longer pays straight into the wallet (4.8c did); anything left floating when you
-land is lost.
+land is lost. Loot scatters from the tiles left on the wreck, flung harder the bigger the
+blast, which is sized by what was left of the ship (owner, 2026-10-26). A nearly whole ship
+throws it wide; a stub drops it close.
 
 #### 5.5 Spawner
 ✅ 2026-10-26.
@@ -1343,6 +1345,9 @@ flight.
 
 #### 8.2 HUD
 - [ ] A big timer, the score, the wave number, a live loot tally
+- [ ] Make pickups noticeable (owner, 2026-10-26: the sandbox's "Found a …" note was easy to
+  miss). The cargo counter flashes and counts up as resources come in. A found part gets a
+  banner. Pickups glint or pulse so they stand out from the debris.
 - [ ] Score = kill value × wave multiplier, plus a survival bonus
 - **Done when:** the HUD reads at arm's length on the phone (dev_preview at phone resolution).
 
@@ -1371,6 +1376,11 @@ flight.
 #### 8.7 New-player curve
 - [ ] Starter ship (§4.10): Core, hull tiles and 3 hardpoints carrying 3 pulse thrusters (2 rear, 1 front) and 1 single gatling
 - [ ] Tune so run 1 lasts ~1–2 min and every run banks enough to visibly upgrade
+- [ ] Owner's sandbox playtest, 2026-10-26: a level-1 Starter with 3 gatlings barely survived
+  Level 10; Level 25 took 4 respawns; Boss L15 (the Marauder) was almost an instant kill. In
+  about 14 kills it dropped 2 guns and 1 thruster at the 4% part chance, maybe too often (keep
+  for now). A found L265 gatling was a huge, satisfying upgrade. The Spinner's mines rarely land
+  against a lone player, but that's fine: it's meant to fly with a boss or a group.
 - **Done when:** a fresh profile's first 10 runs each show progress (playtest notes in the PR).
 
 #### 8.8 Alpha release
@@ -1548,6 +1558,8 @@ flight.
 
 #### 15.2 Onboarding
 - [ ] A first-run controls overlay, hangar hints (the lifted ghost, snapping; see 2.2), a WaveTime tips card, and a short Story tutorial in beat 1
+- [ ] Show **Return to hangar** early (owner, 2026-10-26): landing is what banks the cargo and
+  lets you spend it on upgrades.
 - **Done when:** a new player builds and flies with no outside help.
 
 #### 15.3 Store and distribution `[D14]`

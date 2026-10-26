@@ -25,12 +25,13 @@
 		"zoom_step": 1.15
 	},
 	"pickups": {
-		"_doc": "Phase 5.4. A kill's loot (economy.json drops) scatters from the wreck at up to scatter_u_s and drifts to a stop (drift_damp a second). Within magnet_u of the player's hull it flies in at pull_u_s plus the ship's own speed, turning at pull_accel_u_s2, and within collect_u it's in the cargo hold. Uncollected pickups go after life_s, blinking for the last blink_s.",
+		"_doc": "Phase 5.4. A kill's loot (economy.json drops) scatters from the tiles left on the wreck, outward, at up to scatter_u_s plus scatter_per_blast_u per U of the blast (the size of what was left of the ship; owner, 2026-10-26: a big blast throws it wide, a stub drops it close), and drifts to a stop (drift_damp a second). Within magnet_u of the player's hull it flies in at pull_u_s plus the ship's own speed, turning at pull_accel_u_s2, and within collect_u it's in the cargo hold. Uncollected pickups go after life_s, blinking for the last blink_s.",
 		"magnet_u": 8.0,
 		"collect_u": 0.6,
 		"pull_u_s": 14.0,
 		"pull_accel_u_s2": 60.0,
-		"scatter_u_s": 4.0,
+		"scatter_u_s": 2.0,
+		"scatter_per_blast_u": 1.5,
 		"drift_damp": 1.5,
 		"life_s": 45.0,
 		"blink_s": 5.0

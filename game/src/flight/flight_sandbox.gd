@@ -344,7 +344,12 @@ func _drop_loot(body: ShipBody, built: Blueprint) -> void:
 	var part := economy.part_drop(_placement, built, _rng.randf(), _rng.randi(), body.gun_level)
 	if not part.is_empty():
 		pieces.append(part)
-	pickups.drop(body.global_position, body.linear_velocity, pieces)
+	# From the tiles still attached, as hard as the ship blew up: the blast is the size of what
+	# was left of it (Explosion), so a ship shot to a stub drops its loot close by.
+	var origins := PackedVector2Array()
+	for tile in body.blueprint.tiles:
+		origins.append(body.to_global(ShipStats.polygon_centroid(_placement.tile_polygon(tile)) * PX))
+	pickups.drop(origins, body.linear_velocity, pieces, Spawner.extent_u(body.blueprint, _placement))
 
 
 ## A pickup reached the ship: into the cargo hold. A part gets a note.
