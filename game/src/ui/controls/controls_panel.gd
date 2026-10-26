@@ -1,6 +1,7 @@
 class_name ControlsPanel
 extends PanelContainer
-## The control settings (PLAN.md 4.7): scheme, handedness, stick size and opacity. Writes
+## The control settings (PLAN.md 4.7): scheme, handedness, stick size and opacity, and the
+## combat HUD's vibration and screen shake (4.7). Writes
 ## straight to Settings; FlightControls re-lays itself out on the change. Opened from the
 ## flight sandbox now, and part of the Settings menu later (6.4).
 
@@ -46,12 +47,9 @@ func refresh() -> void:
 				Settings.set_value(&"control_scheme", scheme[0]))
 		schemes.add_child(button)
 
-	var handed := CheckButton.new()
-	handed.text = "Left-handed (stick on the right)"
-	handed.button_pressed = Settings.get_value(&"left_handed")
-	handed.custom_minimum_size = Vector2(0, 56)
-	handed.toggled.connect(func(on: bool) -> void: Settings.set_value(&"left_handed", on))
-	column.add_child(handed)
+	_toggle(column, "Left-handed (stick on the right)", &"left_handed")
+	_toggle(column, "Vibrate when hit", &"vibration")
+	_toggle(column, "Screen shake", &"screen_shake")
 
 	_slider(column, "Stick size", &"stick_size", 0.6, 1.6)
 	_slider(column, "Opacity", &"stick_opacity", 0.2, 1.0)
@@ -61,6 +59,15 @@ func refresh() -> void:
 	close.custom_minimum_size = Vector2(160, 56)
 	close.pressed.connect(func() -> void: closed.emit())
 	column.add_child(close)
+
+
+func _toggle(parent: Control, text: String, key: StringName) -> void:
+	var toggle := CheckButton.new()
+	toggle.text = text
+	toggle.button_pressed = Settings.get_value(key)
+	toggle.custom_minimum_size = Vector2(0, 56)
+	toggle.toggled.connect(func(on: bool) -> void: Settings.set_value(key, on))
+	parent.add_child(toggle)
 
 
 func _slider(parent: Control, text: String, key: StringName, low: float, high: float) -> void:

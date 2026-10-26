@@ -17,6 +17,15 @@ var follow_rate := 6.0
 var zoom_rate := 2.0
 
 var _rest_zoom := 1.0
+## Screen shake (4.7): how far the view jolts now, in screen pixels, and how fast it settles.
+var _shake := 0.0
+var _shake_decay := 10.0
+
+
+## Jolts the view by up to `pixels` on screen, settling at `decay` per second.
+func shake(pixels: float, decay: float) -> void:
+	_shake = maxf(_shake, pixels)
+	_shake_decay = decay
 
 
 func configure(table: Dictionary, ship: ShipBody, extent_u: float) -> void:
@@ -31,6 +40,8 @@ func configure(table: Dictionary, ship: ShipBody, extent_u: float) -> void:
 
 
 func _process(delta: float) -> void:
+	_shake = maxf(_shake - _shake * _shake_decay * delta - delta, 0.0)
+	offset = Vector2.from_angle(randf() * TAU) * _shake / zoom.x if _shake > 0.0 else Vector2.ZERO
 	if not is_instance_valid(target):
 		return  # destroyed (4.2): hold still until the next ship is configured
 	var speed_u := target.linear_velocity.length() / PX

@@ -31,6 +31,16 @@
 		"respawn_s": 3.0,
 		"gun_levels": [1, 10, 100, 999]
 	},
+	"combat_hud": {
+		"_doc": "Phase 4.7. A hit on the player flashes the screen (red for hull, blue for shield only) for flash_s, at up to flash_alpha. Screen shake jolts the view by shake_px_per_damage per point of damage, up to shake_max_px, settling at shake_decay per second. A hull hit of at least vibrate_min_damage buzzes the phone for vibrate_ms. Both obey the Controls settings.",
+		"flash_s": 0.3,
+		"flash_alpha": 0.28,
+		"shake_px_per_damage": 0.2,
+		"shake_max_px": 14,
+		"shake_decay": 9,
+		"vibrate_ms": 45,
+		"vibrate_min_damage": 12
+	},
 	"arena": {
 		"_doc": "The flight sandbox's bounds (3.5): a square of half_size_u around the start. Inside warn_margin_u of the edge the HUD warns; past the edge a push of push_back U/s^2 per U of depth steers the ship back. Story mode replaces the push with the world map (4.10).",
 		"half_size_u": 120.0,

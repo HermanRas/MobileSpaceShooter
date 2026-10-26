@@ -16,6 +16,9 @@ extends RefCounted
 ## lead accounts for it.
 
 var layout: GunLayout
+## The manual weapon FIRE fires (a weapon id; PLAN.md 4.7). Every manual gun of that type fires
+## together; the others wait until SWITCH picks them. &"" when the ship has no manual guns.
+var active: StringName = &""
 ## A gun fires once it's within this of its aim (radians).
 var fire_within: float = deg_to_rad(3.0)
 var all_auto := false
@@ -68,6 +71,38 @@ func set_layout(gun_layout: GunLayout) -> void:
 		spins[i] = kept[3]
 		heats[i] = kept[4]
 		overheated[i] = kept[5]
+	var manual := manual_weapons()
+	if not manual.has(active):
+		active = manual[0] if not manual.is_empty() else &""
+
+
+## The manual guns' weapon types, in mount order: what SWITCH chooses between.
+func manual_weapons() -> Array[StringName]:
+	var out: Array[StringName] = []
+	for gun in layout.guns:
+		if not gun.auto and not out.has(gun.weapon):
+			out.append(gun.weapon)
+	return out
+
+
+## How many manual guns of `weapon_id` the ship carries.
+func manual_count(weapon_id: StringName) -> int:
+	return layout.guns.filter(func(g: GunLayout.Gun) -> bool: return not g.auto and g.weapon == weapon_id).size()
+
+
+## Makes `weapon_id` the one FIRE fires; false if the ship has no manual guns of that type.
+func select(weapon_id: StringName) -> bool:
+	if not manual_weapons().has(weapon_id):
+		return false
+	active = weapon_id
+	return true
+
+
+## Steps to the next manual weapon type (the keyboard's SWITCH).
+func cycle() -> void:
+	var manual := manual_weapons()
+	if not manual.is_empty():
+		active = manual[(manual.find(active) + 1) % manual.size()]
 
 
 ## One tick. The ship's position (U), rotation and velocity (U/s) are in world space, and so are
@@ -91,11 +126,12 @@ func step(delta: float, ship_pos: Vector2, ship_rotation: float, ship_vel: Vecto
 		var firing: bool
 		var mine: bool = gun.stats["proximity_u"] > 0.0
 		if mine:
-			firing = fire_held if not (gun.auto or all_auto) else _any_within(pivot, targets, gun.stats["range_u"])
+			firing = _manual_fire(gun, fire_held) if not (gun.auto or all_auto) \
+					else _any_within(pivot, targets, gun.stats["range_u"])
 		elif gun.auto or all_auto:
 			firing = aim[0] >= 0 and absf(angle_difference(angles[i], want)) <= fire_within
 		else:
-			firing = fire_held
+			firing = _manual_fire(gun, fire_held)
 		firing = firing and (mine or gun.clear(angles[i]))
 		if gun.stats["beam"]:
 			firing = _heat(i, gun, firing, delta)
@@ -152,6 +188,10 @@ func _choose(gun: GunLayout.Gun, muzzle: Vector2, ship_rotation: float, ship_vel
 			best_d = rel_pos.length_squared()
 			best = [t, angle, time]
 	return best
+
+
+func _manual_fire(gun: GunLayout.Gun, fire_held: bool) -> bool:
+	return fire_held and gun.weapon == active
 
 
 ## Heats a beam while it fires and cools it while it doesn't; returns whether it may fire.

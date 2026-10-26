@@ -18,6 +18,8 @@ extends RigidBody2D
 signal rebuilt
 ## The core was destroyed; the ship has blown apart and is about to be freed.
 signal destroyed
+## A hit took shield or hull (4.7: the HUD flashes, shakes and buzzes on it).
+signal damaged(result: ShipDamage.Result)
 
 const PX := ShipMesh.PX_PER_U
 ## Ships bump into each other on this layer.
@@ -192,6 +194,8 @@ func _process(delta: float) -> void:
 
 
 func _after_hit(result: ShipDamage.Result) -> void:
+	if result.shield > 0.0 or result.hull > 0.0:
+		damaged.emit(result)
 	if result.hull > 0.0:
 		_mesh_stale = _mesh_stale or _wear_changed()
 	if result.destroyed.is_empty():

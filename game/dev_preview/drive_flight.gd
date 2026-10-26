@@ -53,6 +53,7 @@ func _ready() -> void:
 	await _step_guns()
 	await _step_rockets_and_flak()
 	await _step_specials()
+	await _step_switch_and_hud()
 	await _step_fly_the_starter_with_the_stick()
 	await _step_control_layouts()
 	await _step_camera_and_arena()
@@ -256,6 +257,7 @@ func _step_specials() -> void:
 	_check(knocked_out, "the EMP knocks the block out")
 	_save_shot("drive_specials.png")
 
+	sandbox.weapons.gunnery.select(&"mines")  # the nose laser is the other manual weapon (4.7)
 	Input.action_press(&"fire")
 	await _physics_frames(10)
 	Input.action_release(&"fire")
@@ -278,6 +280,55 @@ func _step_specials() -> void:
 	_check(pool.explosions > blasts, "an enemy beside the mine sets it off")
 	_hangar.on_back()
 	await _frames(3)
+
+
+## Phase 4.7, the "done when": with two manual weapon types aboard, FIRE fires only the active
+## one while the auto turrets keep going; SWITCH pauses, lists them, and a pick swaps what FIRE
+## fires. A hit on our ship flashes the screen and drops the hull bar.
+func _step_switch_and_hud() -> void:
+	var errors: PackedStringArray = []
+	_hangar.load_blueprint(Blueprint.from_dict(Data.json_dir("blueprints")["gunboat"], errors))
+	for i in _hangar.editor.blueprint.mounts.size():
+		if _hangar.editor.blueprint.mounts[i]["part"] == "weapon.gatling_multi":
+			_hangar.editor.set_mount_mode(i, &"manual")
+	await _frames(2)
+	var sandbox: FlightSandbox = _hangar.fly()
+	await _physics_frames(2)
+	var gunnery := sandbox.weapons.gunnery
+	_check(gunnery.manual_weapons().size() == 2 and gunnery.active == &"cannon", "two manual types, the cannon active")
+	var before := gunnery.fired.duplicate()
+	Input.action_press(&"fire")
+	await _physics_frames(60)
+	Input.action_release(&"fire")
+	var after := gunnery.fired
+	_check(after[0] > before[0], "FIRE fires the cannon")
+	_check(after[1] == before[1] and after[2] == before[2], "and not the manual swivels")
+	_check(after[3] > before[3] or after[4] > before[4], "while the auto turrets keep firing")
+
+	sandbox.controls.switch_pressed.emit()
+	await _frames(2)
+	_check(sandbox.picker.visible and get_tree().paused, "SWITCH pauses and lists the weapons")
+	_check(sandbox.picker.find_child("gatling_multi", true, false) != null, "with the multi gatling on it")
+	_save_shot("drive_switch.png")
+	(sandbox.picker.find_child("gatling_multi", true, false) as Button).pressed.emit()
+	await _frames(2)
+	_check(not get_tree().paused and not sandbox.picker.visible, "a pick resumes")
+	_check(gunnery.active == &"gatling_multi", "and makes it what FIRE fires")
+	before = gunnery.fired.duplicate()
+	Input.action_press(&"fire")
+	await _physics_frames(60)
+	Input.action_release(&"fire")
+	_check(gunnery.fired[1] > before[1] and gunnery.fired[0] == before[0], "now FIRE fires the swivels, not the cannon")
+
+	var ship := sandbox.ship
+	ship.take_hit(ship.blueprint.tiles[1].id, 40.0, &"kinetic")
+	await _frames(1)
+	_check(sandbox.hud.flash_left > 0.0 and sandbox.hud.hull_share < 1.0,
+			"a hit flashes and drops the hull bar (%.2f)" % sandbox.hud.hull_share)
+	_save_shot("drive_hud.png")
+	_hangar.on_back()
+	await _frames(3)
+	_check(not get_tree().paused, "back in the hangar, nothing is paused")
 
 
 ## Phase 4.2: shoot off the tile carrying a thruster, and fly on with the rest.

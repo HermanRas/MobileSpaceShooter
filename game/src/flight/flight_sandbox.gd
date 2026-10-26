@@ -15,6 +15,9 @@ extends Node
 ## Guns (4.3): the ship's WeaponController fires into one ProjectilePool. Auto guns pick off the
 ## target on their own; FIRE fires the manual ones (in 1-stick, every gun is auto). The Target
 ## button swaps the practice target; one with guns (the rocket pod, 4.6a) shoots back.
+##
+## Combat HUD (4.7): shield and hull bars, the active manual weapon, and a flash, jolt and buzz
+## when hit. SWITCH pauses and lists the manual weapons (Q on a keyboard cycles them instead).
 
 signal closed
 
@@ -45,6 +48,8 @@ var _overlay := Node2D.new()
 var controls := FlightControls.new()
 var _hud := Label.new()
 var _controls_panel: ControlsPanel
+var hud := CombatHud.new()
+var picker := WeaponPicker.new()
 ## A short message under the HUD (e.g. SWITCH before there are weapons), and when it fades.
 var _note := ""
 var _note_until := 0
@@ -127,6 +132,7 @@ func _spawn_player() -> void:
 	guns.name = "Guns"
 	ship.add_child(guns)
 	guns.attach(weapons)
+	hud.attach(ship, weapons, _camera, _flight.get("combat_hud", {}))
 	ship.rebuilt.connect(_show_status)
 	ship.destroyed.connect(_on_player_destroyed)
 	_camera.configure(_flight.get("camera", {}), ship, _extent_u(_bp, _placement))
@@ -199,7 +205,35 @@ func perf_note() -> String:
 
 
 func close() -> void:
+	get_tree().paused = false
 	closed.emit()
+
+
+func _exit_tree() -> void:
+	if get_tree() != null:
+		get_tree().paused = false  # never leave the game paused behind a closed sandbox
+
+
+## SWITCH: pause and list the manual weapons (4.7).
+func open_switch() -> void:
+	if ship == null or weapons == null:
+		return
+	if weapons.all_auto or weapons.gunnery.manual_weapons().is_empty():
+		_note = "1-stick: every gun fires on its own" if weapons.all_auto else "SWITCH: no manual weapons"
+		_note_until = Time.get_ticks_msec() + 2000
+		return
+	picker.open(weapons.gunnery)
+	picker.visible = true
+	picker.reset_size()
+	picker.position = (picker.get_viewport_rect().size - picker.size) * 0.5
+	get_tree().paused = true
+
+
+func _close_switch(weapon_id: StringName = &"") -> void:
+	if weapon_id != &"" and weapons != null:
+		weapons.gunnery.select(weapon_id)
+	picker.visible = false
+	get_tree().paused = false
 
 
 func _process(_delta: float) -> void:
@@ -236,6 +270,9 @@ func _physics_process(_delta: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed(&"switch_weapon") and weapons != null:
+		weapons.gunnery.cycle()
+		return
 	# Touches only: a mouse click arrives as a touch too (emulate_touch_from_mouse), and taking
 	# both would hit twice.
 	if not (event is InputEventScreenTouch and (event as InputEventScreenTouch).pressed):
@@ -325,10 +362,10 @@ func _build_ui() -> void:
 	add_child(ui)
 	# First, so the labels and buttons added after it sit on top.
 	controls.name = "Controls"
-	controls.switch_pressed.connect(func() -> void:
-		_note = "SWITCH arrives in Phase 4.7"
-		_note_until = Time.get_ticks_msec() + 2000)
+	controls.switch_pressed.connect(open_switch)
 	ui.add_child(controls)
+	hud.name = "CombatHud"
+	ui.add_child(hud)
 	_edge_glow.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_edge_glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	ui.add_child(_edge_glow)
@@ -366,6 +403,11 @@ func _build_ui() -> void:
 	ui.add_child(_target_button)
 	if target != null:
 		_target_button.text = "Target: %s" % target.blueprint.name
+	picker.name = "WeaponPicker"
+	picker.visible = false
+	picker.picked.connect(_close_switch)
+	picker.closed.connect(_close_switch.bind(&""))
+	ui.add_child(picker)
 	_controls_panel = ControlsPanel.new()
 	_controls_panel.visible = false
 	_controls_panel.closed.connect(_open_controls_panel.bind(false))

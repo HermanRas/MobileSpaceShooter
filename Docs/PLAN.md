@@ -1007,9 +1007,26 @@ step never reads its spec dictionary: that kept 600 shots at 1.1 ms on the PC.
 - [ ] Owner, on the phone: skirmisher vs barge and rocket pod; specialist vs shield block
 
 #### 4.7 Combat HUD and weapon switch
-- [ ] Shield/hull bars, hit flash, optional screen shake, vibration on taking damage
-- [ ] SWITCH: pause → a list of manual weapons with icons → pick the active one → resume
-- **Done when:** in 2-stick mode the fire button fires only the active manual weapon, and auto weapons keep firing on their own.
+✅ 2026-10-26.
+- **FIRE and SWITCH:** manual guns group by weapon type. `Gunnery.active` is the one FIRE fires,
+  and every manual gun of that type fires together; auto guns don't change. If the active
+  group's guns are lost, the next group takes over. `WeaponPicker` (`src/ui/controls/`) is
+  SWITCH: it pauses the tree (it runs with process mode ALWAYS), shows a card per manual weapon
+  with icon and count, and a pick resumes. Q on a keyboard cycles without pausing.
+- **HUD:** `CombatHud` (`src/ui/hud/`) shows shield and hull bars (hull is a share of the tiles
+  still attached) and "FIRE: <weapon> ×n". `ShipBody.damaged` drives a screen-edge flash (red
+  for hull, blue for shield), a `FollowCamera.shake()` and `Input.vibrate_handheld`.
+- **Settings and tuning:** vibration and shake are toggles in the Controls panel; the numbers
+  are in `flight.json` → `combat_hud`.
+- **Weapon test ships:** one per weapon (`test_<weapon>`, "<Gun> test"), and the library seeds
+  every `data/blueprints` ship into the phone's Ships list (`BlueprintLibrary.seed_samples`).
+  Each is copied once, and again only when the game changes it; a deleted one stays gone.
+- **Tests:** `tests/model/test_weapon_switch.gd` and `tests/ship/test_sample_seeding.gd`.
+  `drive_flight` checks the done-when, the pause, the pick and the hit flash.
+
+⚠️ The sandbox unpauses in `close()` and `_exit_tree()`, so leaving mid-SWITCH can't strand the
+game paused.
+- [ ] Owner, on the phone: the weapon test ships; SWITCH between manual weapons; hit feedback
 
 #### 4.8 Gun XP and levels `[D8]`
 - [ ] `model/weapon_xp.gd`: the L1–L999 XP curve and the per-level stat scaling, from `data/weapon_xp.json` (move `weapons.json` → `levels.max` there; spread already scales, `WeaponLib.spread_for`)
