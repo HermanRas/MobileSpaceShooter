@@ -1,0 +1,13 @@
+{
+	"format": 1,
+	"_doc": "PLAN.md 6.2, §6.5 (D3): the player's character. A male or female base, recoloured in four regions from these swatches (a profile keeps the chosen colours, not their index, so the palettes can change). The portrait cycles the moods. Until the painted portraits (A.7), PortraitView draws a placeholder bust in the chosen colours.",
+	"bases": ["male", "female"],
+	"moods": ["idle", "happy", "sad", "angry"],
+	"swatches": {
+		"hair": ["#2b1d14", "#5a3a22", "#a0672f", "#d8b25a", "#e8e0d0", "#b8402e", "#3a5fd0", "#7a3aa0"],
+		"eyes": ["#3b6fb0", "#3f8a4f", "#6b4a2a", "#3a3a3a", "#8a5fd0", "#d07a2a"],
+		"outfit": ["#2f4f7f", "#3f6f3f", "#7f2f2f", "#4a4a52", "#c07a20", "#5a2f7f", "#20707a", "#d0d0d8"],
+		"trim": ["#ffd27a", "#ff7a1a", "#7ad0ff", "#ffffff", "#ff4a6a", "#7aff9a", "#c0c0c0", "#202020"]
+	},
+	"name_max": 16
+}

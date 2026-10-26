@@ -3,10 +3,12 @@ extends Node
 ## each screen comes back to the menu. Run with `tools/drive.sh res://dev_preview/drive_menu.tscn`.
 ##
 ## The Router swaps the whole current scene, so the drive loads the menu as a scene of its own
-## and follows the real scene changes. The WaveTime check resets the dev profile's stock, so its
-## save is backed up first and put back after.
+## and follows the real scene changes. Profiles live in a scratch folder with one pilot, so the
+## real pilots are left alone (the WaveTime check resets its stock).
 
 const ScriptErrorSpy := preload("res://dev_preview/script_error_spy.gd")
+
+const SCRATCH := "user://drive_menu_profiles"
 
 var _failures: PackedStringArray = []
 var _spy := ScriptErrorSpy.new()
@@ -14,8 +16,12 @@ var _spy := ScriptErrorSpy.new()
 
 func _ready() -> void:
 	OS.add_logger(_spy)
-	var stock_path := Profiles.profile_dir("dev").path_join(StockStore.FILE)
-	var saved_stock := FileAccess.get_file_as_bytes(stock_path) if FileAccess.file_exists(stock_path) else PackedByteArray()
+	var real_root := Profiles.root
+	_wipe(SCRATCH)
+	Profiles.root = SCRATCH
+	Profiles.reload()
+	Profiles.create("Pilot")
+	var stock_path := Profiles.profile_dir(Profiles.selected_id).path_join(StockStore.FILE)
 	var menu_scene := (load(Router.MAIN_MENU) as PackedScene).instantiate()
 	get_tree().root.add_child.call_deferred(menu_scene)
 	await get_tree().process_frame
@@ -25,7 +31,7 @@ func _ready() -> void:
 	var menu := get_tree().current_scene
 	_check(_button(menu, "Story") != null and _button(menu, "Story").disabled, "Story is there, locked")
 	var card := menu.find_child("ProfileCard", true, false) as ProfileCard
-	_check(card != null and _button(card, "EditProfile").disabled, "the profile card is there; editing waits for 6.2")
+	_check(card != null and not _button(card, "EditProfile").disabled, "the profile card is there, with Pilots")
 	if card != null:
 		var portrait := card.find_child("Portrait", true, false) as Control
 		_check(absf(portrait.size.x - card.size.x * 0.3) < 2.0 and absf(portrait.size.x - portrait.size.y) < 2.0,
@@ -71,10 +77,6 @@ func _ready() -> void:
 		hangar.call("on_back")
 		await _frames(3)
 	Profiles.active_id = ""
-	if not saved_stock.is_empty():
-		var restore := FileAccess.open(stock_path, FileAccess.WRITE)
-		restore.store_buffer(saved_stock)
-		restore.close()
 
 	await _press("Tutorials")
 	var tutorials := get_tree().current_scene
@@ -114,6 +116,9 @@ func _ready() -> void:
 	await _frames(3)
 	_check(_is(get_tree().current_scene, Router.MAIN_MENU), "back comes home")
 
+	Profiles.root = real_root
+	Profiles.reload()
+	_wipe(SCRATCH)
 	OS.remove_logger(_spy)
 	for error in _spy.seen:
 		_failures.append("script error: " + error)
@@ -155,6 +160,16 @@ func _all_text(root: Node) -> String:
 
 func _is(scene: Node, path: String) -> bool:
 	return scene != null and scene.scene_file_path == path
+
+
+func _wipe(path: String) -> void:
+	if not DirAccess.dir_exists_absolute(path):
+		return
+	for sub in DirAccess.get_directories_at(path):
+		_wipe(path.path_join(sub))
+	for file in DirAccess.get_files_at(path):
+		DirAccess.remove_absolute(path.path_join(file))
+	DirAccess.remove_absolute(path)
 
 
 func _frames(count: int) -> void:

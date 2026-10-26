@@ -84,7 +84,7 @@ func _ready() -> void:
 	placement.weapons = WeaponLib.from_table(Data.table(&"weapons"), Data.table(&"weapon_xp"))
 	editor = HangarEditor.create(placement)
 	if not Profiles.active_id.is_empty():
-		_store = StockStore.open(Profiles.profile_dir(Profiles.active_id), Data.table(&"economy").get("dev_profile", {}),
+		_store = StockStore.open(Profiles.profile_dir(Profiles.active_id), Data.table(&"economy").get("new_pilot", {}),
 				Data.json_dir("blueprints"))
 	if _store != null:
 		editor.economy = Economy.from_table(Data.table(&"economy"))

@@ -1,12 +1,12 @@
 extends Control
 ## The main menu (PLAN.md 6.1), in placeholder chrome over a drifting starfield.
 ##
-## - The profile card (owner's layout, 2026-10-26): the pilot, their best WaveTime, kills /
-##   deaths and Story progress. Editing arrives with profiles (6.2); WaveTime uses the dev
-##   profile until then.
+## - The profile card (owner's layout, 2026-10-26): the selected pilot, their best WaveTime,
+##   kills / deaths and Story progress; its Pilots button opens the pilots (6.2).
 ## - Creative: the hangar with everything free (no profile stock).
-## - WaveTime: the hangar building from the profile's stock (4.8); the run loop is Phase 8, so
-##   for now Fly is the test flight. (Debug builds can reset the stock from that hangar.)
+## - WaveTime: the hangar building from the selected pilot's stock (4.8); with no pilot yet, the
+##   character screen makes one first. The run loop is Phase 8, so for now Fly is the test
+##   flight. (Debug builds can reset the stock from that hangar.)
 ## - Story: locked until Phase 9.
 ## - Tutorials (the WaveTime and Story tutorials, and the enemy gallery), Settings and Credits:
 ##   their screens.
@@ -17,8 +17,7 @@ const HANGAR := "res://scenes/hangar/hangar.tscn"
 const TUTORIALS := "res://scenes/menu/tutorials.tscn"
 const SETTINGS := "res://scenes/menu/settings.tscn"
 const CREDITS := "res://scenes/menu/credits.tscn"
-## The profile WaveTime builds from until 6.2 lets the player pick one.
-const DEV_PROFILE := "dev"
+const CHARACTER := "res://scenes/menu/character.tscn"
 ## Heading sizes: the title (H1), the pilot's name on the card (H3, ProfileCard), the modes (H4).
 const TITLE_SIZE := 72
 const MODE_TITLE_SIZE := 32
@@ -49,12 +48,13 @@ func _ready() -> void:
 	card.name = "ProfileCard"
 	column.add_child(card)
 	card.size_to(MODE_SIZE.x * 3 + MODE_GAP * 2)
-	card.show_profile(Profiles.summary(DEV_PROFILE))
+	var pilot := Profiles.selected()
+	card.show_profile(Profiles.summary(Profiles.selected_id), pilot.character if pilot != null else {})
 
 	var modes := _row(column, MODE_GAP)
 	modes.add_child(MenuKit.tile("Creative", "Build anything, free", func() -> void: _enter(""), "Creative",
 			MODE_SIZE, MODE_TITLE_SIZE))
-	modes.add_child(MenuKit.tile("WaveTime", "Build from what you earn", func() -> void: _enter(DEV_PROFILE), "WaveTime",
+	modes.add_child(MenuKit.tile("WaveTime", "Build from what you earn", _wave_time, "WaveTime",
 			MODE_SIZE, MODE_TITLE_SIZE))
 	modes.add_child(MenuKit.tile("Story", "Locked: arrives in Phase 9", Callable(), "Story", MODE_SIZE, MODE_TITLE_SIZE))
 
@@ -63,6 +63,16 @@ func _ready() -> void:
 	var more := _row(column, BUTTON_GAP)
 	more.add_child(MenuKit.button("Settings", func() -> void: Router.goto(SETTINGS), BUTTON_SIZE))
 	more.add_child(MenuKit.button("Credits", func() -> void: Router.goto(CREDITS), BUTTON_SIZE))
+
+
+## WaveTime builds from the selected pilot's stock; with no pilot yet, make one first.
+func _wave_time() -> void:
+	if Profiles.selected() == null:
+		Profiles.editing_id = ""
+		Profiles.edit_return = Router.MAIN_MENU
+		Router.goto(CHARACTER)
+		return
+	_enter(Profiles.selected_id)
 
 
 ## Into the hangar: Creative with no profile, WaveTime building from `profile_id`'s stock.

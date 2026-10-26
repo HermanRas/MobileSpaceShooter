@@ -13,7 +13,7 @@ var inventory: Inventory
 var ship: Blueprint
 
 
-## The stock saved in `profile_dir`, or a new one from `start` (economy.json's `dev_profile`) and
+## The stock saved in `profile_dir`, or a new one from `start` (economy.json's `new_pilot`) and
 ## the sample ships (`data/blueprints`, as id -> parsed JSON).
 static func open(profile_dir: String, start: Dictionary, samples: Dictionary) -> StockStore:
 	var store := StockStore.new()

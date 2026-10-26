@@ -1,7 +1,7 @@
 class_name ProfileCard
 extends PanelContainer
-## The active profile on the main menu (PLAN.md 6.1; owner's layout, 2026-10-26): a wide card,
-## its left 30% a square portrait (the character builder's, 6.2; a helmet until then), the rest
+## The selected pilot on the main menu (PLAN.md 6.1; owner's layout, 2026-10-26): a wide card,
+## its left 30% a square portrait (PortraitView; a helmet when there's no pilot yet), the rest
 ## the pilot's name over two halves: a stopwatch with the best WaveTime and kills / deaths, and
 ## a path with Story progress and jobs done ("S2% / J26"). Icons are drawn here until the icon
 ## sheet (A.4).
@@ -15,7 +15,7 @@ var _name := Label.new()
 var _wave := Label.new()
 var _record := Label.new()
 var _story := Label.new()
-var _portrait := _Portrait.new()
+var _portrait := PortraitView.new()
 var _edit := Button.new()
 
 
@@ -53,8 +53,8 @@ func _ready() -> void:
 	name_pad.add_child(_name)
 	top.add_child(name_pad)
 	_edit.name = "EditProfile"
-	_edit.text = "Edit (6.2)"
-	_edit.disabled = true
+	_edit.text = "Pilots"
+	_edit.pressed.connect(func() -> void: Router.goto("res://scenes/menu/profiles.tscn"))
 	_edit.size_flags_vertical = Control.SIZE_SHRINK_BEGIN
 	_edit.custom_minimum_size = Vector2(130, 44)
 	var edit_pad := MarginContainer.new()
@@ -71,10 +71,11 @@ func _ready() -> void:
 	bottom.add_child(_half(_Icon.new(&"path"), [_story], "StoryStats"))
 
 
-## Fills the card from Profiles.summary().
-func show_profile(info: Dictionary) -> void:
-	_name.text = str(info.get("name", "Pilot"))
-	_wave.text = "Best %s" % _clock(int(info.get("best_wave_s", 0)))
+## Fills the card from Profiles.summary() and the pilot's character ({} for none yet).
+func show_profile(info: Dictionary, character := {}) -> void:
+	_portrait.character = character
+	_name.text = str(info.get("name", "")) if str(info.get("name", "")) != "" else "No pilot yet"
+	_wave.text = "Best %s" % clock(int(info.get("best_wave_s", 0)))
 	_record.text = "K %d / D %d" % [int(info.get("kills", 0)), int(info.get("deaths", 0))]
 	_story.text = "S%d%% / J%d" % [int(info.get("story_pct", 0)), int(info.get("jobs", 0))]
 
@@ -85,7 +86,8 @@ func size_to(width: float) -> void:
 	_portrait.custom_minimum_size = Vector2.ONE * roundf(width * 0.3)
 
 
-static func _clock(seconds: int) -> String:
+## A WaveTime as m:ss (h:mm:ss from an hour), "--:--" for none yet.
+static func clock(seconds: int) -> String:
 	if seconds <= 0:
 		return "--:--"
 	return "%d:%02d:%02d" % [seconds / 3600, seconds / 60 % 60, seconds % 60] if seconds >= 3600 \
@@ -112,28 +114,6 @@ func _half(icon: Control, lines: Array, node_name: String) -> Control:
 		label.add_theme_font_size_override(&"font_size", STAT_SIZE)
 		text.add_child(label)
 	return pad
-
-
-## The pilot's picture: the character builder's portrait in 6.2; a helmet until then.
-class _Portrait extends Control:
-	func _draw() -> void:
-		var side := minf(size.x, size.y)
-		var box := Rect2(Vector2.ONE * 10.0, Vector2.ONE * (side - 20.0))
-		draw_rect(box, Color(0.1, 0.16, 0.26))
-		draw_rect(box, ProfileCard.ACCENT, false, 3.0)
-		var c := box.get_center() + Vector2(0, side * 0.04)
-		var r := side * 0.3
-		draw_rect(Rect2(c + Vector2(-r * 1.1, r * 0.75), Vector2(r * 2.2, r * 0.6)), Color(0.75, 0.78, 0.85))
-		draw_circle(c, r, Color(0.86, 0.88, 0.92))
-		var visor := PackedVector2Array()
-		for k in 17:
-			var a := PI + PI * k / 16.0
-			visor.append(c + Vector2(cos(a) * r * 0.78, sin(a) * r * 0.62 + r * 0.12))
-		visor.append(c + Vector2(r * 0.6, r * 0.38))
-		visor.append(c + Vector2(-r * 0.6, r * 0.38))
-		draw_colored_polygon(visor, Color(0.08, 0.12, 0.22))
-		draw_line(c + Vector2(-r * 0.45, -r * 0.2), c + Vector2(-r * 0.1, -r * 0.42), Color(ProfileCard.FRAME, 0.9), 4.0)
-		draw_line(c + Vector2(r * 0.15, -r * 0.35), c + Vector2(r * 0.45, -r * 0.1), Color(ProfileCard.ACCENT, 0.9), 4.0)
 
 
 ## A stat icon, drawn: `stopwatch` (WaveTime) or `path` (Story).

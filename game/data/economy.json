@@ -19,8 +19,8 @@
 		"part_chance": 0.04,
 		"pieces": 3
 	},
-	"dev_profile": {
-		"_doc": "A new dev profile (until profiles, Phase 6.2): its ship is a data/blueprints id, and its guns become items. The wallet is about 4400 GC's worth: a couple of armor tiles, or most of a cannon.",
+	"new_pilot": {
+		"_doc": "What a new pilot starts with (6.2): its ship is a data/blueprints id, and its guns become items. The wallet is about 4400 GC's worth: a couple of armor tiles, or most of a cannon.",
 		"ship": "starter",
 		"wallet": {"hull": 400, "alloy": 150, "crystal": 100, "tech": 60, "gc": 1500}
 	}

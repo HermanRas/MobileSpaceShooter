@@ -1066,7 +1066,7 @@ game paused.
   appears (tap it, or drop a part on it). A part dragged off the ship onto the palette goes in
   the inventory. Shop swatches show their GC price.
 - **Dev profile:** the main menu's debug **Hangar (stocked)** opens `user://profiles/dev/hangar.json`
-  (`StockStore`), and **Reset stocked hangar** starts it over from `economy.json` → `dev_profile`.
+  (`StockStore`), and a debug **Reset** starts it over from `economy.json` → `new_pilot` (6.1).
   The library is hidden while stocked; buying ships comes with shops (7.3).
 - **Tests:** `tests/model/test_inventory.gd`, and `dev_preview/drive_stocked.tscn` plays it with
   touches.
@@ -1299,10 +1299,29 @@ the save and goes to the menu for a clean load. `drive_menu` presses every butto
 scene of its own.
 
 #### 6.2 Profiles and the character screen `[D2]`
-- [ ] Create, select and delete a profile (with confirmation). Name entry uses `LineEdit`, which brings up the virtual keyboard on Android.
-- [ ] Character picker `[D3]`: male or female base, recolour swatches for hair, eyes, outfit and trim (§6.5), and a preview that cycles the 4 moods
-- [ ] Per-profile folder `user://profiles/<id>/`
-- **Done when:** 3 profiles exist on one phone, each with separate inventories, and switching between them works.
+✅ 2026-10-26.
+- **`ProfileRecord`** (`src/model/`, tested) holds the id, name, character and stats. Names
+  are cleaned (16 characters at most), ids are folder-safe and unique, and bad fields fall back
+  to defaults.
+- **The `Profiles` autoload** lists, creates, selects, saves and deletes pilots, each in
+  `user://profiles/<id>/` (`profile.json` plus the stock's `hangar.json`). `index.json`
+  remembers the last selection. The pre-profiles `dev` stock is adopted as the pilot "Pilot".
+  `selected_id` is the chosen pilot; `active_id` is the stock the hangar builds from.
+- **Screens:**
+  - **Pilots** (`profiles.tscn`): a card each with Select, Edit and Delete, where Delete asks
+    first; and a New pilot card.
+  - **Character** (`character.tscn`): a `LineEdit` name, male or female base, and hair, eyes,
+    outfit and trim swatches from `data/characters.json`, with a preview cycling the 4 moods.
+  - **Main menu:** the card shows the selected pilot, and its Pilots button opens the list.
+    WaveTime with no pilot goes to the character screen first.
+- **`PortraitView`** is a placeholder bust drawn in the chosen colours, with brows and mouth
+  for the mood, until the painted portraits and their recolour shader (A.7) replace it behind
+  the same API. With no pilot it shows a helmet.
+- New pilots start from `economy.json` → `new_pilot`. `drive_profiles` makes 3 pilots, checks
+  each one's stock is separate, switches between them, and deletes one after the confirmation.
+
+⚠️ Drives point `Profiles.root` at a scratch folder and call `reload()`: the real pilots live
+in the same `user://` as the PC build.
 
 #### 6.3 Save service
 ✅ 2026-10-26. The `Save` autoload writes `.tmp`, renames the old file to `.bak`, then renames

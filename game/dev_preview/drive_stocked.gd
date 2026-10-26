@@ -40,7 +40,7 @@ func _ready() -> void:
 
 
 func _step_the_stocked_hangar_opens() -> void:
-	var start: Dictionary = Data.table(&"economy")["dev_profile"]
+	var start: Dictionary = Data.table(&"economy")["new_pilot"]
 	_check(_hangar.stocked(), "an active profile makes the hangar stocked")
 	_check(_hangar.editor.blueprint.id == str(start["ship"]), "with the profile's starting ship")
 	_check(_hangar.editor.stock.amount(&"hull") == int(start["wallet"]["hull"]), "and its starting wallet")
