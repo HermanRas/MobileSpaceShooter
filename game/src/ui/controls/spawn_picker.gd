@@ -50,15 +50,16 @@ func _ready() -> void:
 	scroll.add_child(_sections)
 
 
-## Shows `sections`: [{"title", "cards": [{"kind", "id", "name", "bp", "note" (optional)}]}].
-## An empty section is left out.
+## Shows `sections`: [{"title", "cards": [{"kind", "id", "name", "bp", "note" (optional)}]}], or
+## a section of plain `"buttons"` ([{"kind", "id", "name"}]). An empty section is left out.
 func open(sections: Array[Dictionary], placement: Placement) -> void:
 	for child in _sections.get_children():
 		_sections.remove_child(child)
 		child.queue_free()
 	for section in sections:
-		var cards: Array = section["cards"]
-		if cards.is_empty():
+		var cards: Array = section.get("cards", [])
+		var buttons: Array = section.get("buttons", [])
+		if cards.is_empty() and buttons.is_empty():
 			continue
 		var heading := Label.new()
 		heading.text = section["title"]
@@ -71,6 +72,13 @@ func open(sections: Array[Dictionary], placement: Placement) -> void:
 		_sections.add_child(flow)
 		for card: Dictionary in cards:
 			flow.add_child(_card(card, placement))
+		for entry: Dictionary in buttons:
+			var button := Button.new()
+			button.name = "%s_%s" % [entry["kind"], entry["id"]]
+			button.text = entry["name"]
+			button.custom_minimum_size = Vector2(150, 64)
+			button.pressed.connect(func() -> void: picked.emit(entry["kind"], entry["id"]))
+			flow.add_child(button)
 
 
 func _card(card: Dictionary, placement: Placement) -> Button:

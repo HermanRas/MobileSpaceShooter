@@ -19,7 +19,9 @@ extends Node
 ## (SpawnPicker): practice targets, the enemy roster, the carrier and the player's own ships. A
 ## tap puts an enemy a few tiles ahead, facing the player (a roster ship flies itself, 5.2; the
 ## player's own ships fly as chasers or strafers), or the carrier beside the player, starting its
-## route (an escort, 12.3), which enemies then go for.
+## route (an escort, 12.3), which enemies then go for. Enemies come at the sandbox's encounter
+## level (guns about 10 × it, dealing the level's damage share, 5.3), and the Encounter buttons
+## spawn a whole generated fight (`Encounter.generate`), a Kill HVT one led by a boss.
 ##
 ## Combat HUD (4.7): shield and hull bars, the active manual weapon, and a flash, jolt and buzz
 ## when hit. SWITCH pauses and lists the manual weapons (Q on a keyboard cycles them instead).
@@ -84,6 +86,8 @@ var roster: EnemyRoster
 ## or null.
 var carrier: ShipBody
 var spawner := SpawnPicker.new()
+## The difficulty curve (5.3).
+var levels: Encounter.Rules
 var _spawn_button := Button.new()
 
 
@@ -96,6 +100,7 @@ func open(bp: Blueprint, placement: Placement) -> void:
 	arena = Arena.from_table(_flight.get("arena", {}))
 	damage_table = DamageTable.from_table(Data.table(&"damage_types"))
 	roster = EnemyRoster.from_table(Data.table(&"enemies"), Data.json_dir("enemies"))
+	levels = Encounter.Rules.from_table(Data.table(&"levels"))
 	test_hit = float(_sandbox.get("test_hit", test_hit))
 	_world.name = "World"
 	add_child(_world)
@@ -164,12 +169,16 @@ func _spawn_player() -> void:
 ## player's ship library.
 const SPAWN_ENEMIES := &"enemies"
 const SPAWN_LIBRARY := &"library"
+## The Spawn list's encounter buttons: a generated fight at a level, or a Kill HVT one.
+const SPAWN_ENCOUNTER := &"encounter"
+const SPAWN_HVT := &"hvt"
 
 
 ## Spawns ship `id` from `kind`. The roster's ally (the carrier) joins the player's side beside
 ## them and starts its route, replacing any carrier already flying; anything else is an enemy a
-## few tiles ahead, facing the player. Returns the ship, or null if there's no such ship.
-func spawn(kind: StringName, id: String) -> ShipBody:
+## few tiles ahead, facing the player, at encounter level `level` (the sandbox's when 0) with its
+## guns at `gun_level` (10 × the level when 0). Returns the ship, or null if there's no such ship.
+func spawn(kind: StringName, id: String, level := 0, gun_level := 0) -> ShipBody:
 	var errors: PackedStringArray = []
 	var bp: Blueprint
 	if kind == SPAWN_LIBRARY:
@@ -183,7 +192,18 @@ func spawn(kind: StringName, id: String) -> ShipBody:
 	var entry := roster.entry(StringName(id)) if kind == SPAWN_ENEMIES else null
 	if entry != null and entry.ally:
 		return _spawn_carrier(bp, entry)
-	return _spawn_enemy(bp, entry)
+	var at_level := level if level > 0 else int(_sandbox.get("encounter_level", 1))
+	return _spawn_enemy(bp, entry, at_level, gun_level if gun_level > 0 else clampi(roundi(levels.gun_per_level * at_level), 1, 999))
+
+
+## A generated fight at `level` (5.3): every enemy in it, a few tiles ahead. Returns it.
+func spawn_encounter(level: int, hvt := false) -> Encounter:
+	var fight := Encounter.generate(levels, roster, level, randi(), hvt)
+	for one in fight.spawns:
+		spawn(SPAWN_ENEMIES, String(one.id), level, one.gun_level)
+	_note = "level %d: %d enemies, guns ~L%d" % [level, fight.spawns.size(), roundi(levels.gun_per_level * level)]
+	_note_until = Time.get_ticks_msec() + 3000
+	return fight
 
 
 ## Every enemy, gone.
@@ -210,10 +230,14 @@ static func _alive(a: Array, b: Array = []) -> Array:
 	return out
 
 
-func _spawn_enemy(bp: Blueprint, entry: EnemyRoster.Entry) -> ShipBody:
+func _spawn_enemy(bp: Blueprint, entry: EnemyRoster.Entry, level: int, gun_level: int) -> ShipBody:
 	var enemy := ShipBody.create(bp, _placement)
 	enemy.name = "Enemy"
 	enemy.team = 1
+	enemy.level = level
+	enemy.gun_level = gun_level
+	enemy.gun_damage = float(levels.band_for(level).get("damage", 1.0))
+	enemy.guns = GunLayout.compute(bp, _placement, enemy.gun_level, {}, enemy.gun_damage)
 	var flies := not enemy.envelope.thrusters.is_empty()
 	var facing := deg_to_rad(float(_sandbox.get("spawn_facing_deg" if flies else "target_rotation_deg", 180.0)))
 	_place_ahead(enemy, bp, facing)
@@ -381,6 +405,12 @@ func open_spawner() -> void:
 		var bp := library.load_ship(row["id"])
 		if bp != null and _placement.validate(bp).is_empty():
 			own.append({"kind": SPAWN_LIBRARY, "id": row["id"], "name": bp.name, "bp": bp})
+	var fights: Array[Dictionary] = []
+	for level: Variant in _sandbox.get("encounter_buttons", [1, 10, 25, 50, 75, 100]):
+		fights.append({"kind": SPAWN_ENCOUNTER, "id": str(int(level)), "name": "Level %d" % int(level)})
+	for level: Variant in _sandbox.get("hvt_buttons", [15, 40, 65, 90]):
+		fights.append({"kind": SPAWN_HVT, "id": str(int(level)), "name": "Boss L%d" % int(level)})
+	sections.append({"title": "Encounters (5.3): a generated fight", "buttons": fights})
 	sections.append({"title": "Practice targets", "cards": practice})
 	sections.append({"title": "Enemies", "cards": foes})
 	sections.append({"title": "Escort: the carrier flies beside you", "cards": friends})
@@ -393,7 +423,11 @@ func open_spawner() -> void:
 func _close_spawner(kind: StringName = &"", id: String = "") -> void:
 	spawner.visible = false
 	get_tree().paused = false
-	if not id.is_empty():
+	if id.is_empty():
+		return
+	if kind == SPAWN_ENCOUNTER or kind == SPAWN_HVT:
+		spawn_encounter(int(id), kind == SPAWN_HVT)
+	else:
 		spawn(kind, id)
 
 
@@ -423,7 +457,7 @@ func _on_kill(body: ShipBody, built: Blueprint) -> void:
 			dealt[String(source)] = body.damage_by[source]
 	if dealt.is_empty():
 		return
-	var level := int(_sandbox.get("encounter_level", 1))
+	var level := body.level
 	var loot := economy.kill_loot(_placement, built, level) if economy != null else {}
 	stock.receive(loot)
 	loot_earned = Economy.add(loot_earned, loot)

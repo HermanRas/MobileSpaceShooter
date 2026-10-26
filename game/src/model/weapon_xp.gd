@@ -60,12 +60,13 @@ func damage_factor(level: int) -> float:
 	return 1.0 + damage_per_level * float(clampi(level, 1, max_level) - 1)
 
 
-## A gun's numbers (WeaponLib.weapon()) at `level`: damage and splash damage scaled. Read-only.
-func scaled(stats: Dictionary, level: int) -> Dictionary:
-	if level <= 1 or stats.is_empty():
+## A gun's numbers (WeaponLib.weapon()) at `level`: damage and splash damage scaled, and by
+## `share` too (an encounter's enemy damage share, PLAN.md 5.3). Read-only.
+func scaled(stats: Dictionary, level: int, share := 1.0) -> Dictionary:
+	if (level <= 1 and is_equal_approx(share, 1.0)) or stats.is_empty():
 		return stats
 	var out := stats.duplicate()
-	var factor := damage_factor(level)
+	var factor := damage_factor(level) * share
 	out["damage"] = float(stats["damage"]) * factor
 	out["splash_damage"] = float(stats["splash_damage"]) * factor
 	out.make_read_only()

@@ -71,8 +71,9 @@ var warnings: Array[Dictionary] = []
 
 
 ## Every gun at `level`, except a fitted inventory gun named in `levels` (item id -> level),
-## which is at its own (Phase 4.8b).
-static func compute(bp: Blueprint, placement: Placement, level := 1, levels := {}) -> GunLayout:
+## which is at its own (Phase 4.8b). `damage_share` scales every gun's damage (an encounter's
+## enemies, 5.3).
+static func compute(bp: Blueprint, placement: Placement, level := 1, levels := {}, damage_share := 1.0) -> GunLayout:
 	var layout := GunLayout.new()
 	if placement.weapons == null:
 		return layout
@@ -81,7 +82,7 @@ static func compute(bp: Blueprint, placement: Placement, level := 1, levels := {
 		if gun != null:
 			gun.item = str(bp.mounts[i].get("gun", ""))
 			gun.level = int(levels.get(gun.item, level))
-			gun.stats = placement.weapons.xp.scaled(gun.stats, gun.level)
+			gun.stats = placement.weapons.xp.scaled(gun.stats, gun.level, damage_share)
 			gun.spread = WeaponLib.spread_for(gun.stats, gun.level)
 			layout.guns.append(gun)
 	for gun in layout.guns:

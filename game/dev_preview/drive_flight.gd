@@ -11,6 +11,9 @@ var _spy := ScriptErrorSpy.new()
 
 
 func _ready() -> void:
+	# These checks place targets by the first sandbox's 6 U spawn gap (guns in range, a beam that
+	# reaches); the game spawns them further out (owner, 2026-10-26). Only this run's copy changes.
+	Data.table(&"flight")["sandbox"]["spawn_gap_u"] = 6.0
 	OS.add_logger(_spy)
 	_hangar = (load("res://scenes/hangar/hangar.tscn") as PackedScene).instantiate()
 	add_child(_hangar)
@@ -311,6 +314,31 @@ func _step_enemies_fly_themselves() -> void:
 		_check(sandbox.enemies.size() == before + 1 and sandbox.target.blueprint.id == "wasp", "and the Wasp is spawned")
 		var ahead := (sandbox.target.global_position - sandbox.ship.global_position).rotated(-sandbox.ship.global_rotation)
 		_check(ahead.x > 3.0 * ShipMesh.PX_PER_U, "ahead of us, stepped aside from the barge (%s U)" % (ahead / ShipMesh.PX_PER_U))
+	# Encounters (5.3): a generated fight at a level, and a Kill HVT one led by a boss.
+	sandbox.clear_enemies()
+	sandbox._spawn_button.pressed.emit()
+	await _frames(3)
+	var level_25: Button = card.call("encounter_25")
+	_check(level_25 != null and card.call("hvt_40") != null, "the list has encounter and boss buttons")
+	if level_25 != null:
+		level_25.pressed.emit()
+		await _physics_frames(2)
+		var band: Dictionary = sandbox.levels.band_for(25)
+		var fought := sandbox.enemies
+		_check(fought.size() >= int(band["count"][0]) and fought.size() <= int(band["count"][1]),
+				"Level 25 spawns %d enemies (band %s)" % [fought.size(), band["count"]])
+		var right := true
+		for e in fought:
+			right = right and e.level == 25 and e.gun_level >= 200 and e.gun_level <= 300 and is_equal_approx(e.gun_damage, float(band["damage"]))
+		_check(right, "at level 25, guns about L250, %d%% damage" % roundi(float(band["damage"]) * 100.0))
+		sandbox.clear_enemies()
+		sandbox.open_spawner()
+		await _frames(3)
+		(card.call("hvt_40") as Button).pressed.emit()
+		await _physics_frames(2)
+		_check(sandbox.enemies.any(func(e: ShipBody) -> bool: return "boss" in e.blueprint.tags), "Boss L40 brings a boss")
+		_save_shot("drive_flight_encounter.png")
+		sandbox.clear_enemies()
 	await _check_flies_itself(sandbox, "wasp")
 	# Escort (12.3): the carrier joins our side beside us, flies its route, and the raider goes for it.
 	var carrier := sandbox.spawn(FlightSandbox.SPAWN_ENEMIES, "pike")
@@ -364,7 +392,7 @@ func _check_flies_itself(sandbox: FlightSandbox, id: String) -> void:
 	var moved := enemy.global_position.distance_to(start) / ShipMesh.PX_PER_U
 	_check(sticks > 60 and moved > 2.0 and turned > 0.3,
 			"%s flies itself: %.1f U, turned %.0f°, stick held %d of 240 ticks (%s)" % [id, moved, rad_to_deg(turned), sticks, ai.brain.behaviour])
-	_check(sandbox.arena.contains(enemy.global_position / ShipMesh.PX_PER_U), "%s stays in the arena" % id)
+	_check(sandbox.arena.contains(enemy.global_position / ShipMesh.PX_PER_U), "%s stays in the arena (at %s U, we are at %s U)" % [id, (enemy.global_position / ShipMesh.PX_PER_U).round(), (sandbox.ship.global_position / ShipMesh.PX_PER_U).round() if sandbox.ship != null else Vector2.INF])
 
 
 ## Phase 4.7, the "done when": with two manual weapon types aboard, FIRE fires only the active

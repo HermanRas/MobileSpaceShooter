@@ -1183,10 +1183,33 @@ to physics, since wrecks fade in seconds.
 - [ ] Owner, on the phone: Spawn → fight Wasp (strafe), the bosses and your own ships; spawn the Pike carrier and keep it alive. Bosses hit hard at L1 (the Marauder is about 500 dmg/s against the starter's 1,160 HP); enemy gun levels and the balance come with 5.3
 
 #### 5.3 Level scaling 1–100
-- [ ] `data/levels.json`: a budget curve, tier mix per level band, weapon-level bands, enemy count
-- [ ] `model/encounter.gd`: `generate(level, seed)` → a spawn list. Deterministic.
-- [ ] Enemy guns at about 10 × the encounter level, with a spread (§4.8)
-- **Done when:** a test shows the budget rising monotonically, the same seed giving the same encounter, and levels 1, 25, 50 and 100 all generating.
+✅ 2026-10-26.
+- **Generator:** `Encounter` (`src/model/encounter.gd`) reads `data/levels.json`.
+  `Encounter.generate(rules, roster, level, seed, hvt)` gives the same spawn list for the same
+  seed.
+- **Budget:** counted in enemy tiles (a ship costs its tile count): 8 + 1.6 × level^1.15. That's
+  10 tiles at L1 and about 320 at L100.
+- **Six level bands** set:
+  - the **tier mix**: tier 1 only up to L10, mostly tiers 3–4 by L86;
+  - the **count**: 1–3 enemies at the start, 5–8 at the top;
+  - the **enemy damage share**, from 50% at L1–10 to 100% at L86–100. This keeps early fights
+    from melting a starter ship.
+- **Enemy guns:** 10 × the level, ±20%, within 1–999 (§4.8).
+- **Kill HVT:** an HVT encounter is led by the boss whose levels fit.
+- **Damage share in play:** `GunLayout.compute(…, damage_share)` and `ShipBody.gun_damage`
+  apply it; `ShipBody.level` is what a kill pays XP and loot at.
+- **Sandbox:**
+  - A single spawn comes at `flight.json` → `encounter_level`.
+  - The Spawn list has **Level 1/10/25/50/75/100** and **Boss L15/40/65/90** buttons that
+    spawn a generated fight.
+  - Spawns appear 16 U ahead, twice the first gap (owner, 2026-10-26).
+- **Tests:** `tests/model/test_encounter.gd` checks the rising budget, same seed same fight, and
+  L1/25/50/100 within their band's count and budget. It also checks gun levels, the tier mix,
+  HVT bosses and the damage share. drive_flight presses the encounter and boss buttons.
+
+⚠️ drive_flight keeps the old 6 U spawn gap in memory: its gun checks assume targets inside a
+laser's 18 U reach.
+- [ ] Owner, on the phone: Spawn → Level 1/10/25 with the starter, and a boss fight; is the damage share right?
 
 #### 5.4 Drops and pickups
 - [ ] Material drops derived from composition (§4.6), the part-drop chance (a dropped gun keeps its XP), pickups with a magnet radius

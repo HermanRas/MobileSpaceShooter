@@ -1,0 +1,14 @@
+{
+	"format": 1,
+	"_doc": "PLAN.md 5.3, §4.8. Encounter level 1-100 is the one difficulty axis. An encounter spends a budget of enemy tiles (a ship costs its tile count, so big ships cost more): base + per_level x level^power. The level's band says which tiers come and how often (weights; a tier none of whose ships fit the level is skipped), how many enemies (count [min, max]), and damage: the share of their guns' damage enemies deal, so early fights don't melt a starter ship. Enemy guns are level x gun_level.per_level, give or take gun_level.spread (a share), within 1-999 (§4.8). A Kill HVT encounter (12.2) brings the boss whose levels fit, and it counts toward the budget.",
+	"budget": {"base": 8, "per_level": 1.6, "power": 1.15},
+	"gun_level": {"per_level": 10, "spread": 0.2},
+	"bands": [
+		{"to": 10,  "tiers": {"1": 1.0},                     "count": [1, 3], "damage": 0.5},
+		{"to": 25,  "tiers": {"1": 0.7, "2": 0.3},           "count": [2, 4], "damage": 0.6},
+		{"to": 45,  "tiers": {"1": 0.3, "2": 0.5, "3": 0.2}, "count": [3, 5], "damage": 0.7},
+		{"to": 65,  "tiers": {"2": 0.4, "3": 0.4, "4": 0.2}, "count": [3, 6], "damage": 0.8},
+		{"to": 85,  "tiers": {"3": 0.5, "4": 0.5},           "count": [4, 7], "damage": 0.9},
+		{"to": 100, "tiers": {"3": 0.3, "4": 0.7},           "count": [5, 8], "damage": 1.0}
+	]
+}
