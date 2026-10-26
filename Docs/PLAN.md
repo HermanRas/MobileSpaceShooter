@@ -1348,10 +1348,26 @@ for 0.4 s. Toggles save at once. `drive_menu` checks that the volume applies at 
 and mutes at 0, and that a toggle is saved. The panel fits a 1280-wide PC window.
 
 #### 6.5 Pause and app lifecycle
-- [ ] Pause menu: **Save and return to hangar** in Story (only after 10 s without combat) and **Return to hangar** in the other modes (§4.10, `[D18]`)
-- [ ] The Android back button, handled per scene by `Router`
-- [ ] Auto-pause when the app goes to the background. Save on quit from any hangar.
-- **Done when:** switching away from the app and back mid-fight resumes paused, and the back button never quits by accident.
+✅ 2026-10-26.
+- **`PauseMenu`** (`src/ui/hud/`) has Resume, Settings (the controls panel, which comes back to
+  the menu) and Return to hangar. The flight opens it from its Pause button (in place of
+  Controls; Hangar stays for a quick land), the pause key (Esc, P, Start), the back button, or
+  the app losing focus or going to the background. Story's "Save and return to hangar" (only
+  after 10 s without combat, D18) comes with Story.
+- **The back button**, through `Router` → each scene's `on_back()`:
+  - In flight it closes an open panel first, then pauses or resumes. It never lands straight
+    away.
+  - On the main menu it asks "Quit MSS?" (`ConfirmPanel`, shared with deleting a pilot).
+  - Elsewhere it goes back a screen.
+- **Saving:** a WaveTime hangar saves its stock on `WM_CLOSE_REQUEST` and `APPLICATION_PAUSED`,
+  as well as on every change. A Creative ship is kept only by saving it in Ships (as before).
+- **Orientation** is sensor landscape (project setting 4), so turning the phone over turns the
+  game.
+- `drive_flight` checks the pause button and key, back, focus loss (the ship stands still),
+  Settings and back, and Return to hangar. `drive_menu` checks the quit confirmation.
+
+⚠️ A Control under a CanvasLayer needs `set_anchors_and_offsets_preset`; anchors alone leave it
+at zero size.
 
 ---
 

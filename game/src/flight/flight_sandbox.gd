@@ -88,6 +88,9 @@ var _overlay := Node2D.new()
 var controls := FlightControls.new()
 var _hud := Label.new()
 var _controls_panel: ControlsPanel
+## Pause (6.5): its menu, opened by the Pause button, the pause key, the back button, or the app
+## losing focus.
+var pause_menu := PauseMenu.new()
 var hud := CombatHud.new()
 var picker := WeaponPicker.new()
 ## A short message under the HUD (e.g. SWITCH before there are weapons), and when it fades.
@@ -443,6 +446,44 @@ func close() -> void:
 	closed.emit()
 
 
+## Pauses the flight under the pause menu (6.5).
+func open_pause() -> void:
+	if pause_menu.visible or spawn_list.visible or picker.visible:
+		return
+	_touches.clear()  # a panel over the fingers takes their release
+	controls.stick.reset()
+	controls.fire.reset()
+	pause_menu.visible = true
+	get_tree().paused = true
+
+
+func resume() -> void:
+	pause_menu.visible = false
+	_controls_panel.visible = false
+	get_tree().paused = false
+
+
+## The Android back button (through the hangar): it closes whatever is open, and otherwise
+## pauses or resumes. It never lands straight away; Return to hangar is in the pause menu.
+func on_back() -> void:
+	if _controls_panel.visible:
+		_open_controls_panel(false)
+	elif spawn_list.visible:
+		_close_spawner()
+	elif picker.visible:
+		_close_switch()
+	elif pause_menu.visible:
+		resume()
+	else:
+		open_pause()
+
+
+## Switching away from the app mid-flight pauses it, so coming back finds the game waiting.
+func _notification(what: int) -> void:
+	if what in [NOTIFICATION_APPLICATION_FOCUS_OUT, NOTIFICATION_APPLICATION_PAUSED] and is_inside_tree():
+		open_pause()
+
+
 func _exit_tree() -> void:
 	if get_tree() != null:
 		get_tree().paused = false  # never leave the game paused behind a closed sandbox
@@ -538,6 +579,10 @@ func _physics_process(_delta: float) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed(&"pause"):
+		open_pause()
+		get_viewport().set_input_as_handled()
+		return
 	if event.is_action_pressed(&"switch_weapon") and weapons != null:
 		weapons.gunnery.cycle()
 		return
@@ -694,13 +739,14 @@ func _build_ui() -> void:
 	back.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT, Control.PRESET_MODE_KEEP_SIZE, 16)
 	back.pressed.connect(close)
 	ui.add_child(back)
-	var settings := Button.new()
-	settings.text = "Controls"
-	settings.size = Vector2(132, 56)
-	settings.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT, Control.PRESET_MODE_KEEP_SIZE, 16)
-	settings.position.y += 64
-	settings.pressed.connect(_open_controls_panel.bind(true))
-	ui.add_child(settings)
+	var pause := Button.new()
+	pause.name = "Pause"
+	pause.text = "Pause"
+	pause.size = Vector2(132, 56)
+	pause.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT, Control.PRESET_MODE_KEEP_SIZE, 16)
+	pause.position.y += 64
+	pause.pressed.connect(open_pause)
+	ui.add_child(pause)
 	_level_button.text = "Guns L%d" % gun_level
 	_level_button.size = Vector2(132, 56)
 	_level_button.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT, Control.PRESET_MODE_KEEP_SIZE, 16)
@@ -724,7 +770,13 @@ func _build_ui() -> void:
 	picker.picked.connect(_close_switch)
 	picker.closed.connect(_close_switch.bind(&""))
 	ui.add_child(picker)
+	pause_menu.name = "PauseMenu"
+	pause_menu.resumed.connect(resume)
+	pause_menu.settings_requested.connect(_open_controls_panel.bind(true))
+	pause_menu.hangar_requested.connect(close)
+	ui.add_child(pause_menu)
 	_controls_panel = ControlsPanel.new()
+	_controls_panel.process_mode = Node.PROCESS_MODE_ALWAYS  # opened from the pause menu
 	_controls_panel.visible = false
 	_controls_panel.closed.connect(_open_controls_panel.bind(false))
 	ui.add_child(_controls_panel)
@@ -742,9 +794,12 @@ func _next_gun_level() -> void:
 		weapons.gunnery.set_layout(ship.guns)
 
 
+## The settings, over the pause menu (6.5); Done goes back to it.
 func _open_controls_panel(open: bool) -> void:
 	_touches.clear()  # a panel over the fingers takes their release
 	_controls_panel.visible = open
+	# Opened from the pause menu, it covers it; closing it goes back to it while still paused.
+	pause_menu.visible = not open and get_tree().paused and not spawn_list.visible and not picker.visible
 	if open:
 		_controls_panel.refresh()
 		_controls_panel.reset_size()

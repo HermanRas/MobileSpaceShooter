@@ -11,6 +11,8 @@ extends Control
 ## - Tutorials (the WaveTime and Story tutorials, and the enemy gallery), Settings and Credits:
 ##   their screens.
 ##
+## The back button asks before quitting.
+##
 ## Built in code rather than authored in the editor, so the editor cannot silently reformat it.
 
 const HANGAR := "res://scenes/hangar/hangar.tscn"
@@ -25,6 +27,8 @@ const MODE_SIZE := Vector2(250, 120)
 const MODE_GAP := 16
 const BUTTON_SIZE := Vector2(200, 60)
 const BUTTON_GAP := 12
+
+var _quit := ConfirmPanel.new()
 
 
 func _ready() -> void:
@@ -63,6 +67,16 @@ func _ready() -> void:
 	var more := _row(column, BUTTON_GAP)
 	more.add_child(MenuKit.button("Settings", func() -> void: Router.goto(SETTINGS), BUTTON_SIZE))
 	more.add_child(MenuKit.button("Credits", func() -> void: Router.goto(CREDITS), BUTTON_SIZE))
+	_quit.name = "ConfirmQuit"
+	add_child(_quit)
+
+
+## The Android back button asks before quitting, so it never quits by accident (6.5).
+func on_back() -> void:
+	if _quit.visible:
+		_quit.close()
+	else:
+		_quit.ask("Quit MSS?", "Quit", func() -> void: get_tree().quit(), "QuitConfirm")
 
 
 ## WaveTime builds from the selected pilot's stock; with no pilot yet, make one first.

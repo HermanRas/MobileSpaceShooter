@@ -7,8 +7,7 @@ const CARD := Vector2(280, 340)
 const PORTRAIT := 190.0
 
 var _row := HBoxContainer.new()
-var _confirm := ColorRect.new()
-var _confirm_text := Label.new()
+var _confirm := ConfirmPanel.new()
 var _deleting := ""
 
 
@@ -42,7 +41,7 @@ func _ready() -> void:
 
 func on_back() -> void:
 	if _confirm.visible:
-		_confirm.visible = false
+		_confirm.close()
 		return
 	Router.goto_main_menu()
 
@@ -115,46 +114,15 @@ func _new_pilot() -> void:
 
 func _ask_delete(id: String) -> void:
 	_deleting = id
-	_confirm_text.text = "Delete %s?\nTheir ship, parts and progress are gone for good." % Profiles.record(id).name
-	_confirm.visible = true
+	_confirm.ask("Delete %s?\nTheir ship, parts and progress are gone for good." % Profiles.record(id).name, "Delete",
+			_delete, "DeleteConfirm")
 
 
 func _build_confirm() -> void:
 	_confirm.name = "ConfirmDelete"
-	_confirm.color = Color(0, 0, 0, 0.7)
-	_confirm.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_confirm.visible = false
 	add_child(_confirm)
-	var center := CenterContainer.new()
-	center.set_anchors_preset(Control.PRESET_FULL_RECT)
-	_confirm.add_child(center)
-	var panel := PanelContainer.new()
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.06, 0.07, 0.1)
-	style.border_color = Color(1.0, 0.5, 0.45)
-	style.set_border_width_all(2)
-	style.set_corner_radius_all(10)
-	style.set_content_margin_all(24)
-	panel.add_theme_stylebox_override(&"panel", style)
-	center.add_child(panel)
-	var column := VBoxContainer.new()
-	column.add_theme_constant_override(&"separation", 20)
-	panel.add_child(column)
-	_confirm_text.add_theme_font_size_override(&"font_size", 24)
-	_confirm_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	column.add_child(_confirm_text)
-	var buttons := HBoxContainer.new()
-	buttons.add_theme_constant_override(&"separation", 16)
-	buttons.alignment = BoxContainer.ALIGNMENT_CENTER
-	column.add_child(buttons)
-	buttons.add_child(MenuKit.button("Cancel", func() -> void: _confirm.visible = false))
-	var yes := MenuKit.button("Delete", _delete)
-	yes.name = "DeleteConfirm"
-	yes.add_theme_color_override(&"font_color", Color(1.0, 0.5, 0.45))
-	buttons.add_child(yes)
 
 
 func _delete() -> void:
-	_confirm.visible = false
 	Profiles.delete(_deleting)
 	_refresh()

@@ -49,6 +49,13 @@ func _ready() -> void:
 			and tutorials_button.get_global_rect().end.y <= _button(menu, "Settings").get_global_rect().position.y,
 			"Tutorials is as wide as Settings and Credits together, above them")
 	_save_shot("drive_menu.png")
+	menu.call("on_back")
+	await _frames(2)
+	var quit := menu.find_child("ConfirmQuit", true, false) as Control
+	_check(quit != null and quit.visible and _is(get_tree().current_scene, Router.MAIN_MENU), "back on the menu asks before quitting")
+	menu.call("on_back")
+	await _frames(2)
+	_check(quit != null and not quit.visible, "and back again stays")
 
 	await _press("Creative")
 	var hangar := get_tree().current_scene

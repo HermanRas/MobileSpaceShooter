@@ -217,7 +217,7 @@ func perf_note() -> String:
 
 func on_back() -> void:
 	if _sandbox != null:
-		land()
+		_sandbox.on_back()  # it pauses rather than lands (6.5)
 	elif not _carry.is_empty():
 		_end_carry()
 	else:
@@ -674,6 +674,18 @@ var last_refresh_usec: int = 0
 var last_refresh_parts := {}
 
 
+## The profile's stock and ship to disk (every change saves; so does leaving the app, 6.5).
+func _save_stock() -> void:
+	_store.inventory = editor.stock
+	_store.ship = editor.blueprint
+	_store.save()
+
+
+func _notification(what: int) -> void:
+	if what in [NOTIFICATION_WM_CLOSE_REQUEST, NOTIFICATION_APPLICATION_PAUSED] and stocked():
+		_save_stock()
+
+
 func _on_changed() -> void:
 	var started := Time.get_ticks_usec()
 	var analysis := placement.analyze(editor.blueprint)
@@ -699,9 +711,7 @@ func _on_changed() -> void:
 		_view.set_guns(guns)
 		_stats.show_stats(stats, problems, placement.max_tiles, envelope, guns)
 	if stocked():
-		_store.inventory = editor.stock
-		_store.ship = editor.blueprint
-		_store.save()
+		_save_stock()
 		_palette.show_stock(editor.stock, editor.blueprint)
 		if _wallet != null:
 			_show_wallet()

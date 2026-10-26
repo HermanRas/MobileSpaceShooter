@@ -46,7 +46,7 @@ func _ready() -> void:
 	await _step_ships_collide(sandbox)
 	await _step_damage(sandbox)
 
-	_hangar.on_back()
+	_hangar.land()
 	await _frames(3)
 	_check(_hangar.get_node_or_null(^"FlightSandbox") == null, "back closes the sandbox")
 	_check(JSON.stringify(_hangar.editor.blueprint.to_dict()) == before, "the hangar's ship is untouched")
@@ -63,6 +63,7 @@ func _ready() -> void:
 	await _step_camera_and_arena()
 	await _step_zoom_and_markers()
 	await _step_a_level_30_fight()
+	await _step_pause_and_lifecycle()
 	_finish()
 
 
@@ -133,7 +134,7 @@ func _step_guns() -> void:
 	var target := sandbox.target
 	_check(ship.guns.guns.size() == 5, "it has 5 guns (%d)" % ship.guns.guns.size())
 	if ship.guns.guns.size() != 5 or target == null:
-		_hangar.on_back()
+		_hangar.land()
 		return
 	# Layout order follows the mounts: the fixed nose gun, the swivels, then the turrets.
 	var fired := sandbox.weapons.gunnery.fired
@@ -173,7 +174,7 @@ func _step_guns() -> void:
 	_check(fired[4] > before[4], "the right-wing turret can (%d more)" % (fired[4] - before[4]))
 	_check(fired[3] > before[3], "so can the left-wing one, over the hull (%d more)" % (fired[3] - before[3]))
 	_check(health.call(ship) == ours_before, "and its shots pass over our own tiles")
-	_hangar.on_back()
+	_hangar.land()
 	await _frames(3)
 
 
@@ -221,7 +222,7 @@ func _step_rockets_and_flak() -> void:
 	_check(pod_shots > 0, "the pod fires seekers at us (%d)" % pod_shots)
 	_check(sandbox.pool.downed > 0, "the flak shoots rockets down (%d)" % sandbox.pool.downed)
 	_save_shot("drive_flak.png")
-	_hangar.on_back()
+	_hangar.land()
 	await _frames(3)
 
 
@@ -272,7 +273,7 @@ func _step_specials() -> void:
 			mine = pool._pos[k]
 	_check(mine != Vector2.INF, "FIRE drops a mine behind")
 	if mine == Vector2.INF or sandbox.target == null:
-		_hangar.on_back()
+		_hangar.land()
 		return
 	await _physics_frames(30)  # it drifts to a stop
 	for k in pool.count:
@@ -282,7 +283,7 @@ func _step_specials() -> void:
 	_teleport(sandbox.target, mine + Vector2(0, 0.8 * PX))
 	await _physics_frames(6)
 	_check(pool.explosions > blasts, "an enemy beside the mine sets it off")
-	_hangar.on_back()
+	_hangar.land()
 	await _frames(3)
 
 
@@ -364,7 +365,7 @@ func _step_enemies_fly_themselves() -> void:
 		sandbox.carrier.queue_free()
 	await _check_flies_itself(sandbox, "marauder")
 	_save_shot("drive_flight_ai.png")
-	_hangar.on_back()
+	_hangar.land()
 	await _frames(3)
 
 
@@ -442,7 +443,7 @@ func _step_switch_and_hud() -> void:
 	_check(sandbox.hud.flash_left > 0.0 and sandbox.hud.hull_share < 1.0,
 			"a hit flashes and drops the hull bar (%.2f)" % sandbox.hud.hull_share)
 	_save_shot("drive_hud.png")
-	_hangar.on_back()
+	_hangar.land()
 	await _frames(3)
 	_check(not get_tree().paused, "back in the hangar, nothing is paused")
 
@@ -535,6 +536,76 @@ func _step_camera_and_arena() -> void:
 	_check(depth < 8.0, "past the edge it's pushed back in (10 U out -> %.1f U)" % depth)
 	_hangar.land()
 	await _frames(2)
+
+
+## Phase 6.5: Pause, the pause key and the back button pause and resume; back closes an open
+## panel first; switching away from the app pauses (and the world stands still); Settings opens
+## over the pause menu and comes back to it; Return to hangar lands.
+func _step_pause_and_lifecycle() -> void:
+	var errors: PackedStringArray = []
+	_hangar.load_blueprint(Blueprint.from_dict(Data.json_dir("blueprints")["starter"], errors))
+	await _frames(2)
+	var sandbox: FlightSandbox = _hangar.fly()
+	await _physics_frames(3)
+	var menu := sandbox.pause_menu
+	(sandbox.find_child("Pause", true, false) as Button).pressed.emit()
+	await _frames(2)
+	_check(menu.visible and get_tree().paused, "Pause pauses under the pause menu")
+	_find_button(menu, "Resume").pressed.emit()
+	await _frames(2)
+	_check(not menu.visible and not get_tree().paused, "Resume resumes")
+
+	for presses in 2:
+		var key := InputEventAction.new()
+		key.action = &"pause"
+		key.pressed = true
+		Input.parse_input_event(key)
+		await _frames(2)
+		key = InputEventAction.new()
+		key.action = &"pause"
+		key.pressed = false
+		Input.parse_input_event(key)
+		await _frames(2)
+		_check(get_tree().paused == (presses == 0), "the pause key %s" % ["pauses", "resumes"][presses])
+
+	_hangar.on_back()
+	await _frames(2)
+	_check(menu.visible and get_tree().paused and _hangar._sandbox == sandbox, "back pauses rather than lands")
+	_hangar.on_back()
+	await _frames(2)
+	_check(not get_tree().paused, "and back again resumes")
+	sandbox.open_spawner()
+	await _frames(2)
+	_hangar.on_back()
+	await _frames(2)
+	_check(not sandbox.spawn_list.visible and not menu.visible and not get_tree().paused, "back closes the Spawn list first")
+
+	# Switching away from the app mid-flight: paused, and nothing moves until we come back.
+	sandbox.ship.linear_velocity = Vector2(4, 0) * PX
+	await _physics_frames(2)
+	get_tree().root.propagate_notification(NOTIFICATION_APPLICATION_FOCUS_OUT)
+	await _frames(2)
+	var at := sandbox.ship.global_position
+	await _frames(30)
+	_check(menu.visible and get_tree().paused and sandbox.ship.global_position == at,
+			"losing focus pauses the flight, and the ship stands still")
+	_save_shot("drive_flight_paused.png")
+	_find_button(menu, "Settings").pressed.emit()
+	await _frames(2)
+	_check(sandbox._controls_panel.visible and not menu.visible and get_tree().paused, "Settings opens over it, still paused")
+	_find_button(sandbox._controls_panel, "Done").pressed.emit()
+	await _frames(2)
+	_check(menu.visible and get_tree().paused, "Done goes back to the pause menu")
+	_find_button(menu, "Return to hangar").pressed.emit()
+	await _frames(3)
+	_check(_hangar._sandbox == null and not get_tree().paused, "Return to hangar lands")
+
+
+func _find_button(root: Node, text: String) -> Button:
+	for node in root.find_children("*", "Button", true, false):
+		if (node as Button).text == text:
+			return node
+	return null
 
 
 ## Phase 5.5, the "done when": a level-30 encounter spawns off screen round us (inside the
