@@ -1,6 +1,6 @@
 {
 	"format": 1,
-	"_doc": "Tile types (PLAN.md 4.2). Stats are for a Large tile; hp, shield, mass scale by size_stat_factor, cost by size_cost_factor. Armor is a per-hit reduction and does NOT scale with size. Costs must come out whole at every size.",
+	"_doc": "Tile types (PLAN.md 4.2). Stats are for a Large tile; hp, shield, mass scale by size_stat_factor, cost by size_cost_factor. Armor is a per-hit reduction and does NOT scale with size. Costs must come out whole at every size. Owner, 2026-10-26: prices x10 from the first pass (\"you need to work for your upgrades\"); economy.json says what a unit is worth in GC.",
 	"size_cost_factor": {"S": 0.25, "M": 0.5, "L": 1.0},
 	"size_stat_factor": {"S": 0.25, "M": 0.5, "L": 1.0},
 	"materials": ["hull", "alloy", "crystal", "tech"],
@@ -18,19 +18,19 @@
 		},
 		"hull": {
 			"hp": 100, "armor": 0, "shield_cap": 0, "shield_regen": 0, "mass": 1.0,
-			"cost": {"hull": 12}
+			"cost": {"hull": 120}
 		},
 		"armor": {
 			"hp": 150, "armor": 6, "shield_cap": 0, "shield_regen": 0, "mass": 2.5,
-			"cost": {"hull": 8, "alloy": 12}
+			"cost": {"hull": 80, "alloy": 120}
 		},
 		"shield": {
 			"hp": 40, "armor": 0, "shield_cap": 60, "shield_regen": 4, "mass": 0.8,
-			"cost": {"hull": 8, "crystal": 12}
+			"cost": {"hull": 80, "crystal": 120}
 		},
 		"hardpoint": {
 			"hp": 120, "armor": 4, "shield_cap": 0, "shield_regen": 0, "mass": 1.5,
-			"cost": {"hull": 8, "alloy": 8, "tech": 4},
+			"cost": {"hull": 80, "alloy": 80, "tech": 40},
 			"mounts": true,
 			"_doc": "Thrusters and edge weapons on its edges, a turret on its face."
 		}

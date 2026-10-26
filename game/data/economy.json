@@ -1,10 +1,24 @@
 {
 	"format": 1,
-	"_doc": "PLAN.md 4.6, 4.8a (owner, 2026-10-26). Outside Creative, placing a tile pays its materials and placing a gun or thruster pays its price_gc (weapons.json, thrusters.json). Removing a tile gives its materials back 1:1; removing a part puts it in the inventory, and reinstalling it is free, except that a gun reinstalled on another mount type than it last had pays refit. Sell pays sell_rate of a part's price, rounded down (v2: higher with faction reputation). dev_profile is the stock a new dev profile starts with (until profiles, Phase 6.2): its ship is a data/blueprints id, and its guns become items.",
+	"_doc": "PLAN.md 4.6, 4.8a (owner, 2026-10-26). Outside Creative, placing a tile pays its materials and placing a gun or thruster pays its price_gc (weapons.json, thrusters.json). Removing a tile gives its materials back 1:1; removing a part puts it in the inventory, and reinstalling it is free, except that a gun reinstalled on another mount type than it last had pays refit. Sell pays sell_rate of a part's price, rounded down (v2: higher with faction reputation). Balance pass 2026-10-26 (owner: about 10x too cheap; you need to work for your upgrades): tile costs and part prices x10, a smaller starting wallet, and kills pay.",
 	"sell_rate": 0.75,
-	"refit": {"alloy": 4, "tech": 2},
+	"refit": {"alloy": 40, "tech": 20},
+	"market": {
+		"_doc": "4.8c. GC per unit: buy is what the market charges, sell what it pays. A Large hull tile (120 hull) is 240 GC to buy; an armor tile 760; a hardpoint 1040.",
+		"hull": {"buy": 2, "sell": 1},
+		"alloy": {"buy": 5, "sell": 3},
+		"crystal": {"buy": 6, "sell": 4},
+		"tech": {"buy": 12, "sell": 8}
+	},
+	"drops": {
+		"_doc": "4.8c. What a kill pays, until pickups (Phase 5.4): share of the materials the enemy's tiles cost, plus gc_per_tile GC a tile, both x (1 + per_level x (encounter level - 1)), rounded down. A 20-tile practice barge at level 3 pays about 300 GC's worth.",
+		"share": 0.02,
+		"gc_per_tile": 2,
+		"per_level": 0.25
+	},
 	"dev_profile": {
+		"_doc": "A new dev profile (until profiles, Phase 6.2): its ship is a data/blueprints id, and its guns become items. The wallet is about 4400 GC's worth: a couple of armor tiles, or most of a cannon.",
 		"ship": "starter",
-		"wallet": {"hull": 600, "alloy": 300, "crystal": 200, "tech": 120, "gc": 4000}
+		"wallet": {"hull": 400, "alloy": 150, "crystal": 100, "tech": 60, "gc": 1500}
 	}
 }

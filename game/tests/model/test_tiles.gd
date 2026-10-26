@@ -37,12 +37,12 @@ func test_every_tile_needs_hull_except_the_core() -> void:
 			assert_true(cost.is_empty(), "the core is free")
 		else:
 			assert_true(cost.get(&"hull", 0) > 0, "%s needs hull" % tile_id)
-	assert_eq(lib.tile(&"hardpoint").cost(&"L"), {&"hull": 8, &"alloy": 8, &"tech": 4})
+	assert_eq(lib.tile(&"hardpoint").cost(&"L"), {&"hull": 80, &"alloy": 80, &"tech": 40})
 
 
 func test_small_costs_are_whole() -> void:
-	assert_eq(lib.tile(&"hull").cost(&"S"), {&"hull": 3})
-	assert_eq(lib.tile(&"hardpoint").cost(&"S"), {&"hull": 2, &"alloy": 2, &"tech": 1})
+	assert_eq(lib.tile(&"hull").cost(&"S"), {&"hull": 30})
+	assert_eq(lib.tile(&"hardpoint").cost(&"S"), {&"hull": 20, &"alloy": 20, &"tech": 10})
 
 
 func test_bad_tables_are_rejected() -> void:

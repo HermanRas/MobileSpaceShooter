@@ -66,8 +66,11 @@ var gun_level := 1
 ## The profile's stock when the ship was built from it (PLAN.md 4.8a), or null. Its fitted guns
 ## fly at their own levels, and a kill's XP goes to them.
 var stock: Inventory
-## XP earned this flight, all guns together.
+## Prices and what a kill pays (4.8c), with `stock`.
+var economy: Economy
+## XP earned this flight, all guns together, and what the kills paid.
 var xp_earned := 0
+var loot_earned := {}
 var _level_button := Button.new()
 ## Which of the sandbox's `targets` is parked ahead.
 var target_index := 0
@@ -170,7 +173,7 @@ func _spawn_target() -> void:
 	target.destroyed.connect(func() -> void:
 		target = null
 		_clear_pick()
-		_award_xp(spawned)
+		_on_kill(spawned, bp)
 		_after_respawn_delay(_spawn_target))
 	_world.add_child(target)
 	if not target.guns.guns.is_empty():
@@ -206,9 +209,11 @@ func _on_player_destroyed() -> void:
 		_show_status())
 
 
-## A kill's XP (PLAN.md 4.8b), split between the player's gun items by the damage each dealt to
-## `body`. Guns that level up fly at their new level straight away.
-func _award_xp(body: ShipBody) -> void:
+## A kill the player's guns had a hand in: its XP (PLAN.md 4.8b), split between the gun items by
+## the damage each dealt to `body`, and what it pays (4.8c, from `built`, the ship as it spawned)
+## straight into the wallet until there are pickups (5.4). Guns that level up fly at their new
+## level straight away.
+func _on_kill(body: ShipBody, built: Blueprint) -> void:
 	if stock == null or body.damage == null:
 		return
 	var xp := _placement.weapons.xp
@@ -218,7 +223,11 @@ func _award_xp(body: ShipBody) -> void:
 			dealt[String(source)] = body.damage_by[source]
 	if dealt.is_empty():
 		return
-	var total := xp.kill_xp(body.damage.hp.size(), int(_sandbox.get("encounter_level", 1)))
+	var level := int(_sandbox.get("encounter_level", 1))
+	var loot := economy.kill_loot(_placement, built, level) if economy != null else {}
+	stock.receive(loot)
+	loot_earned = Economy.add(loot_earned, loot)
+	var total := xp.kill_xp(body.damage.hp.size(), level)
 	var ups: PackedStringArray = []
 	var shares := WeaponXp.split(total, dealt)
 	for id: String in shares:
@@ -228,7 +237,10 @@ func _award_xp(body: ShipBody) -> void:
 		if xp.level_for(item.xp) > before:
 			ups.append("%s L%d" % [_placement.weapons.weapon(item.weapon).get("name", item.weapon), xp.level_for(item.xp)])
 	xp_earned += total
-	_note = "+%d XP%s" % [total, "  ·  " + ", ".join(ups) + "!" if not ups.is_empty() else ""]
+	var paid: PackedStringArray = []
+	for resource: StringName in loot:
+		paid.append("+%d %s" % [loot[resource], "GC" if resource == Inventory.GC else String(resource)])
+	_note = "+%d XP  ·  %s%s" % [total, ", ".join(paid), "  ·  " + ", ".join(ups) + "!" if not ups.is_empty() else ""]
 	_note_until = Time.get_ticks_msec() + 2500
 	if not ups.is_empty() and ship != null:
 		ship.gun_levels = _item_levels()

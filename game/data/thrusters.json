@@ -10,9 +10,9 @@
 			"interval_s": 0.5,
 			"mass": 0.4,
 			"levels": [
-				{"thrust": 40, "price_gc": 60},
-				{"thrust": 45, "price_gc": 150},
-				{"thrust": 50, "price_gc": 360}
+				{"thrust": 40, "price_gc": 600},
+				{"thrust": 45, "price_gc": 1500},
+				{"thrust": 50, "price_gc": 3600}
 			]
 		},
 		"jet": {
@@ -20,9 +20,9 @@
 			"behaviour": "steady",
 			"mass": 0.6,
 			"levels": [
-				{"thrust": 70, "price_gc": 120},
-				{"thrust": 80, "price_gc": 300},
-				{"thrust": 90, "price_gc": 720}
+				{"thrust": 70, "price_gc": 1200},
+				{"thrust": 80, "price_gc": 3000},
+				{"thrust": 90, "price_gc": 7200}
 			]
 		},
 		"ion": {
@@ -30,9 +30,9 @@
 			"behaviour": "ramp",
 			"mass": 0.8,
 			"levels": [
-				{"thrust": 120, "start": 30, "ramp_s": 3.0, "price_gc": 240},
-				{"thrust": 140, "start": 30, "ramp_s": 2.5, "price_gc": 600},
-				{"thrust": 160, "start": 30, "ramp_s": 2.0, "price_gc": 1440}
+				{"thrust": 120, "start": 30, "ramp_s": 3.0, "price_gc": 2400},
+				{"thrust": 140, "start": 30, "ramp_s": 2.5, "price_gc": 6000},
+				{"thrust": 160, "start": 30, "ramp_s": 2.0, "price_gc": 14400}
 			]
 		}
 	}

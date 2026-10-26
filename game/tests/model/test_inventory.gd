@@ -3,7 +3,7 @@ extends TestCase
 ## come back 1:1, parts go in and out of the inventory, Sell pays 75% rounded down, and undo
 ## keeps the books straight (PLAN.md 4.6).
 
-const START := {&"hull": 500, &"alloy": 200, &"crystal": 100, &"tech": 100, &"gc": 3000}
+const START := {&"hull": 5000, &"alloy": 2000, &"crystal": 1000, &"tech": 1000, &"gc": 30000}
 
 var placement: Placement
 var editor: HangarEditor
@@ -28,13 +28,13 @@ func test_the_economy_table_loads_clean() -> void:
 
 func test_a_tile_costs_its_materials_and_comes_back_one_for_one() -> void:
 	var ids := editor.place(&"armor", &"square", &"L", Vector2(1, 0), 0)
-	assert_eq(_spent(), {&"hull": 8, &"alloy": 12})
+	assert_eq(_spent(), {&"hull": 80, &"alloy": 120})
 	editor.remove(ids[0])
 	assert_eq(_spent(), {})
 
 
 func test_a_tile_you_cant_afford_is_refused() -> void:
-	editor.stock.wallet[&"alloy"] = 11
+	editor.stock.wallet[&"alloy"] = 119
 	assert_eq(editor.place(&"armor", &"square", &"L", Vector2(1, 0), 0).size(), 0)
 	assert_eq(editor.refusal, "Not enough alloy")
 	assert_eq(editor.blueprint.tiles.size(), 1, "nothing placed")
@@ -81,17 +81,17 @@ func test_sell_pays_three_quarters_rounded_down() -> void:
 	var slot: Dictionary = Mounting.thruster_slots(placement, editor.blueprint, &"S")[0]
 	editor.add_thruster(&"pulse", &"S", 1, slot)
 	var price: int = placement.thrusters.spec(&"pulse", &"S", 1)["price_gc"]
-	assert_eq(price, 15, "pulse L1 is 60 GC Large, a quarter of that Small")
+	assert_eq(price, 150, "pulse L1 is 600 GC Large, a quarter of that Small")
 	var gc := editor.stock.amount(&"gc")
 	assert_true(editor.sell_mount(0))
-	assert_eq(editor.stock.amount(&"gc"), gc + 11, "75% of 15 is 11.25: 11")
+	assert_eq(editor.stock.amount(&"gc"), gc + 112, "75% of 150 is 112.5: 112")
 	assert_eq(editor.stock.thrusters, {}, "sold, not kept")
 	editor.add_weapon(&"cannon", &"turret", &"auto", {"tile": hardpoint, "face": true})
 	var id := str(editor.blueprint.mounts[0]["gun"])
 	editor.remove_mount(0)
 	gc = editor.stock.amount(&"gc")
 	assert_true(editor.sell_gun(id))
-	assert_eq(editor.stock.amount(&"gc"), gc + 315, "a loose 420 GC cannon sells for 315")
+	assert_eq(editor.stock.amount(&"gc"), gc + 3150, "a loose 4200 GC cannon sells for 3150")
 	assert_false(editor.stock.guns.has(id))
 
 
@@ -195,6 +195,41 @@ func test_an_inventory_round_trips_through_json() -> void:
 	assert_eq(errors, PackedStringArray())
 	assert_eq(copy.to_dict(), editor.stock.to_dict())
 	assert_eq(copy.new_gun(&"flak", &"fixed").id, "g2", "new ids carry on after the saved ones")
+
+
+func test_the_market_buys_dear_and_sells_cheap() -> void:
+	var market := editor.economy.market
+	assert_eq(market.keys().size(), 4, "all four materials trade (PLAN.md 4.6)")
+	for material: StringName in market:
+		assert_true(market[material]["buy"] > market[material]["sell"], "%s: buying costs more than selling earns" % material)
+	assert_true(editor.trade(&"alloy", 10))
+	assert_eq(_spent(), {&"alloy": -10, &"gc": market[&"alloy"]["buy"] * 10})
+	assert_true(editor.trade(&"alloy", -10))
+	assert_eq(_spent(), {&"gc": (market[&"alloy"]["buy"] - market[&"alloy"]["sell"]) * 10}, "a round trip loses the spread")
+	editor.undo()
+	editor.undo()
+	assert_eq(_spent(), {}, "trades are undo steps")
+
+
+func test_the_market_wont_trade_what_you_dont_have() -> void:
+	editor.stock.wallet[&"gc"] = 1
+	assert_false(editor.trade(&"tech", 1))
+	assert_eq(editor.refusal, "Not enough GC")
+	assert_false(editor.trade(&"hull", -START[&"hull"] - 1))
+	assert_eq(editor.refusal, "Not enough hull")
+	assert_false(editor.can_undo(), "a refused trade isn't a step")
+
+
+func test_a_kill_pays_a_share_of_what_the_enemy_is_built_of() -> void:
+	var errors: PackedStringArray = []
+	var barge := Blueprint.from_dict(Data.json_dir("enemies")["target_barge"], errors)
+	var built := Economy.tiles_cost(placement, barge)
+	var loot := editor.economy.kill_loot(placement, barge, 1)
+	assert_true(loot.has(&"crystal") and not loot.has(&"tech"), "a barge with shields and no hardpoints drops crystal, not tech")
+	assert_eq(loot[&"hull"], floori(built[&"hull"] * editor.economy.drop_share), "a share of its hull")
+	assert_true(loot[&"gc"] > 0, "and some GC")
+	var tougher := editor.economy.kill_loot(placement, barge, 10)
+	assert_true(tougher[&"hull"] > loot[&"hull"] and tougher[&"gc"] > loot[&"gc"], "a higher encounter level pays more")
 
 
 func test_creative_builds_for_free() -> void:

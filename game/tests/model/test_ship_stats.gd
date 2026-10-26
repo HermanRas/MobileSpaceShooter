@@ -33,7 +33,7 @@ func test_core_plus_hull_to_the_right() -> void:
 	assert_almost_eq(stats.center_of_mass.y, 0.0, EPS)
 	# Core: 2/6 + 2 (1/3)²; hull: 1/6 + 1 (2/3)². Total 21/18.
 	assert_almost_eq(stats.inertia, 21.0 / 18.0, EPS)
-	assert_eq(stats.cost, {&"hull": 12})
+	assert_eq(stats.cost, {&"hull": 120})
 	# HP-weighted armor: (5 * 300 + 0 * 100) / 400
 	assert_almost_eq(stats.armor_avg, 3.75, EPS)
 
@@ -45,7 +45,7 @@ func test_mixed_sizes_and_materials() -> void:
 			[&"armor", &"rect", &"S", Vector2(-0.625, 0)]]), placement)
 	assert_almost_eq(stats.shield_cap, 30.0)
 	assert_almost_eq(stats.shield_regen, 2.0)
-	assert_eq(stats.cost, {&"hull": 10, &"crystal": 6, &"alloy": 7, &"tech": 2})
+	assert_eq(stats.cost, {&"hull": 100, &"crystal": 60, &"alloy": 70, &"tech": 20})
 	assert_almost_eq(stats.mass, 2.0 + 0.4 + 0.75 + 0.625)
 
 

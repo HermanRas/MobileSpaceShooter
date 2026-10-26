@@ -6,6 +6,8 @@ extends "res://dev_preview/drive_hangar.gd"
 
 const PROFILE := "drive_stocked"
 
+var _note_seen := ""
+
 
 func _ready() -> void:
 	OS.add_logger(_spy)
@@ -21,6 +23,7 @@ func _ready() -> void:
 	await _step_building_pays_and_a_short_wallet_refuses()
 	await _step_the_stock_survives_a_reload()
 	await _step_a_kill_earns_the_guns_xp()
+	await _step_the_market_trades()
 
 	Profiles.active_id = ""
 	_wipe()
@@ -61,7 +64,8 @@ func _step_a_gun_goes_off_into_the_inventory_and_back() -> void:
 	var id := str(_hangar.editor.blueprint.mounts[index]["gun"])
 	_check(not _tool("Sell").disabled, "Sell turns on")
 	var part_line: String = _hangar._stats._part.text
-	_check("L1" in part_line and "sells for 60 GC" in part_line, "the panel shows its level and sale price (%s)" % part_line)
+	var sale := floori(int(_hangar.placement.weapons.weapon(&"gatling_single")["price_gc"]) * 0.75)
+	_check("L1" in part_line and "sells for %d GC" % sale in part_line, "the panel shows its level and sale price (%s)" % part_line)
 	await _drag(0, _screen_of_u(Vector2(1.0, 0.0)), _palette_tab("Hull").get_global_rect().get_center() + Vector2(0, -60))
 	_check(_hangar.editor.blueprint.mounts.filter(Mounting.is_weapon).is_empty(), "dragged onto the palette, it comes off")
 	_check(_hangar.editor.stock.loose_guns(_hangar.editor.blueprint).size() == 1, "into the inventory")
@@ -154,15 +158,54 @@ func _step_a_kill_earns_the_guns_xp() -> void:
 	await _frames(3)
 	var item: Inventory.GunItem = _hangar.editor.stock.guns[id]
 	_check(sandbox.xp_earned > 0 and item.xp == sandbox.xp_earned, "the kill's XP all goes to it (%d)" % item.xp)
-	_check("+%d XP" % sandbox.xp_earned in sandbox._hud.text, "the HUD says so (%s)" % sandbox._hud.text)
+	_note_seen = sandbox._hud.text
+	_check("+%d XP" % sandbox.xp_earned in _note_seen, "the HUD says so (%s)" % _note_seen)
+	var loot: Dictionary = sandbox.loot_earned.duplicate()
 	_hangar.land()
 	await _frames(2)
 	var saved := Save.read_json(Profiles.profile_dir(PROFILE).path_join(StockStore.FILE))
 	var guns: Array = saved.get("inventory", {}).get("guns", [])
 	_check(guns.any(func(g: Dictionary) -> bool: return g["id"] == id and int(g["xp"]) == item.xp), "and it's saved on landing")
-	_hangar.editor.undo()
+	_check(not _hangar.editor.can_undo(), "nothing before the flight can be undone")
+	_check(int(loot.get(&"gc", 0)) > 0 and int(loot.get(&"hull", 0)) > 0, "the kill paid GC and hull (%s)" % [loot])
+	_check("+%d GC" % int(loot.get(&"gc", 0)) in _note_seen, "the HUD said so (%s)" % _note_seen)
+	_check(int(saved.get("inventory", {}).get("wallet", {}).get("gc", 0)) == _hangar.editor.stock.amount(&"gc"),
+			"and the pay is saved")
+
+
+## 4.8c: the wallet opens the market; buying costs GC at the buy price, selling earns the sell
+## price, and an unaffordable lot is greyed out.
+func _step_the_market_trades() -> void:
+	var stock: Inventory = _hangar.editor.stock
+	var prices: Dictionary = _hangar.editor.economy.market[&"alloy"]
+	await _tap(0, _hangar._wallet.get_global_rect().get_center())
+	_check(_hangar._market.visible, "tapping the wallet opens the market")
+	await _frames(2)
+	_save_shot("drive_stocked_market.png")
+	var gc := stock.amount(&"gc")
+	var alloy := stock.amount(&"alloy")
+	await _tap(0, _market_button("buy_alloy_10").get_global_rect().get_center())
+	stock = _hangar.editor.stock
+	_check(stock.amount(&"alloy") == alloy + 10 and stock.amount(&"gc") == gc - int(prices["buy"]) * 10,
+			"Buy 10 alloy costs %d GC" % (int(prices["buy"]) * 10))
+	await _tap(0, _market_button("sell_alloy_10").get_global_rect().get_center())
+	stock = _hangar.editor.stock
+	_check(stock.amount(&"alloy") == alloy and stock.amount(&"gc") == gc - (int(prices["buy"]) - int(prices["sell"])) * 10,
+			"Sell 10 earns the sell price")
+	stock.wallet[&"gc"] = 0
+	_hangar._on_changed()
 	await _frames(1)
-	_check(_hangar.editor.stock.guns[id].xp == item.xp, "undo doesn't take XP back")
+	_check(_market_button("buy_tech_10").disabled, "with no GC, Buy is greyed out")
+	await _tap(0, _hangar._market.find_children("*", "Button", true, false).filter(
+			func(b: Button) -> bool: return b.text == "Done")[0].get_global_rect().get_center())
+	_check(not _hangar._market.visible, "Done closes it")
+
+
+func _market_button(button_name: String) -> Button:
+	for button in _hangar._market.find_children(button_name, "Button", true, false):
+		if not button.is_queued_for_deletion():
+			return button
+	return null
 
 
 func _tool(text: String) -> Button:

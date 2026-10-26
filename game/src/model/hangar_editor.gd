@@ -174,6 +174,24 @@ func sell_mount(index: int) -> bool:
 	return stock != null and _remove_mount(index, true)
 
 
+## Buys (`amount` > 0) or sells (< 0) a material at the market (PLAN.md 4.6, 4.8c), as an undo
+## step. False, with `refusal` saying why, when the wallet can't cover it.
+func trade(material: StringName, amount: int) -> bool:
+	refusal = ""
+	var deal := economy.trade(material, amount) if stock != null and economy != null else []
+	if deal.is_empty():
+		return false
+	var short := stock.short_of(deal[0])
+	if short != &"":
+		refusal = "Not enough %s" % ("GC" if short == Inventory.GC else String(short))
+		return false
+	_checkpoint()
+	stock.pay(deal[0])
+	stock.receive(deal[1])
+	changed.emit()
+	return true
+
+
 ## Sells a loose gun from the inventory.
 func sell_gun(item: String) -> bool:
 	if stock == null or not stock.guns.has(item) or Inventory.fitted_ids(blueprint).has(item):
@@ -339,6 +357,12 @@ func blueprint_without(tile_ids: PackedInt32Array) -> Blueprint:
 	copy.tiles = copy.tiles.filter(func(t: Blueprint.Tile) -> bool: return not tile_ids.has(t.id))
 	copy.mounts.assign(copy.mounts.filter(func(m: Dictionary) -> bool: return not tile_ids.has(int(m.get("tile", -1)))))
 	return copy
+
+
+## Forgets undo and redo: after a flight, whose XP and pay no undo may take back.
+func clear_history() -> void:
+	_undo.clear()
+	_redo.clear()
 
 
 func can_undo() -> bool:

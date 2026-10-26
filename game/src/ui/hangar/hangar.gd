@@ -13,7 +13,8 @@ extends Node
 ## Stocked (PLAN.md 4.8a): with an active profile, the hangar builds that profile's ship from its
 ## stock, and every edit is paid for (HangarEditor). Delete becomes Remove, Sell sells the
 ## selected part (or a part dropped on it), a part dragged off the ship onto the palette goes in
-## the inventory, and the Inventory tab holds what's loose. Without a profile it's Creative.
+## the inventory, and the Inventory tab holds what's loose. Tapping the wallet opens the market
+## (4.8c). Without a profile it's Creative.
 
 const PX := ShipMesh.PX_PER_U
 const GHOST_LIFT_PX := 90.0
@@ -47,7 +48,8 @@ var _sandbox: FlightSandbox
 ## The profile's hangar while stocked, or null in Creative.
 var _store: StockStore
 var _sell_button: Button
-var _wallet: Label
+var _wallet: Button
+var _market: MarketPanel
 var _notice: Label
 var _notice_left := 0.0
 
@@ -169,6 +171,7 @@ func fly() -> FlightSandbox:
 	_sandbox = FlightSandbox.new()
 	_sandbox.name = "FlightSandbox"
 	_sandbox.stock = editor.stock
+	_sandbox.economy = editor.economy
 	add_child(_sandbox)
 	_sandbox.open(copy, placement)
 	_sandbox.closed.connect(land)
@@ -184,7 +187,8 @@ func land() -> void:
 	_set_hangar_active(true)
 	_camera.make_current()
 	if stocked():
-		_on_changed()  # saves the XP the flight earned, and shows it
+		editor.clear_history()  # nothing before the flight may undo what it earned
+		_on_changed()  # saves the XP and pay the flight earned, and shows them
 
 
 func _set_hangar_active(on: bool) -> void:
@@ -695,6 +699,8 @@ func _on_changed() -> void:
 		_palette.show_stock(editor.stock, editor.blueprint)
 		if _wallet != null:
 			_show_wallet()
+		if _market != null and _market.visible:
+			_market.show_market(editor.stock, editor.economy)
 		if not editor.refusal.is_empty():
 			_show_notice(editor.refusal)
 			editor.refusal = ""
@@ -741,7 +747,14 @@ func _show_wallet() -> void:
 	for material in Inventory.MATERIALS:
 		parts.append("%s %d" % [String(material).capitalize(), editor.stock.amount(material)])
 	parts.append("%d GC" % editor.stock.amount(Inventory.GC))
-	_wallet.text = "  ·  ".join(parts)
+	_wallet.text = "  ·  ".join(parts) + "    Market ▸"
+
+
+func _open_market(open: bool) -> void:
+	_market.visible = open
+	if open:
+		_end_carry()
+		_market.show_market(editor.stock, editor.economy)
 
 
 func _show_notice(text: String) -> void:
@@ -875,13 +888,15 @@ func _build_ui() -> void:
 	# The stocked hangar builds the profile's own ship; buying library ships comes with shops (7.3).
 	_tool_button(tools, "Ships", _open_library.bind(true)).visible = not stocked()
 
-	_wallet = Label.new()
+	_wallet = Button.new()
+	_wallet.flat = true
 	_wallet.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
 	_wallet.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	_wallet.position.y = 12
+	_wallet.position.y = 4
 	_wallet.add_theme_font_size_override(&"font_size", 18)
 	_wallet.add_theme_color_override(&"font_color", Color(1, 0.85, 0.5))
 	_wallet.visible = stocked()
+	_wallet.pressed.connect(_open_market.bind(true))
 	root.add_child(_wallet)
 	_notice = Label.new()
 	_notice.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
@@ -893,6 +908,13 @@ func _build_ui() -> void:
 	root.add_child(_notice)
 	if stocked():
 		_show_wallet()
+		_market = MarketPanel.new()
+		_market.visible = false
+		_market.closed.connect(_open_market.bind(false))
+		_market.trade_requested.connect(func(material: StringName, amount: int) -> void:
+			if not editor.trade(material, amount):
+				_show_notice(editor.refusal))
+		root.add_child(_market)
 	_fly_button = _tool_button(tools, "Fly", func() -> void: fly())
 	_thumbs = ThumbnailRenderer.new()
 	add_child(_thumbs)

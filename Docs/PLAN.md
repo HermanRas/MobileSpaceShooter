@@ -157,10 +157,14 @@ costs are multiples of 4, so a Small tile still costs whole units; the loader en
 | Type | HP | Armor | Shield | Mass | Cost `[D5]` | Special |
 |---|---|---|---|---|---|---|
 | **Core** `[D7]` | 300 | 5 | – | 2.0 | free, one per ship | Death when destroyed. Its facing is the ship's **forward** (the arrow in the hangar). It has no turning force of its own. |
-| **Hull** | 100 | 0 | – | 1.0 | 12 Hull | Cheapest HP |
-| **Armor** | 150 | 6 | – | 2.5 | 8 Hull + 12 Alloy | Flat damage reduction per hit on this tile |
-| **Shield** | 40 | 0 | +60 cap, +4/s regen | 0.8 | 8 Hull + 12 Crystal | Adds to the **ship-wide shield pool** |
-| **Hardpoint** | 120 | 4 | – | 1.5 | 8 Hull + 8 Alloy + 4 Tech | Armor with mounts: thrusters/edge weapons on its edges, a turret on its face |
+| **Hull** | 100 | 0 | – | 1.0 | 120 Hull | Cheapest HP |
+| **Armor** | 150 | 6 | – | 2.5 | 80 Hull + 120 Alloy | Flat damage reduction per hit on this tile |
+| **Shield** | 40 | 0 | +60 cap, +4/s regen | 0.8 | 80 Hull + 120 Crystal | Adds to the **ship-wide shield pool** |
+| **Hardpoint** | 120 | 4 | – | 1.5 | 80 Hull + 80 Alloy + 40 Tech | Armor with mounts: thrusters/edge weapons on its edges, a turret on its face |
+
+Costs are ×10 the first pass (owner, 2026-10-26: "about 10× too cheap, you need to work for
+your upgrades"), and so are gun and thruster prices. At market prices (§4.6) a Large hull tile
+is worth 240 GC, an armor tile 760, a hardpoint 1040, and the starter ship about 6,000 GC.
 
 Each tile type has a texture (§6.2), and colour is painted per tile in the hangar.
 
@@ -296,7 +300,8 @@ gone, shown as ghost outlines, until a hangar restores them.
 | **Galactic Credits (GC)** | Buying materials, parts and ships | Selling materials, jobs, story rewards |
 
 - **The market** buys and sells all four materials for GC. Buying costs more than selling earns
-  (the spread is in data). There's a market in every Story station shop and in the WaveTime hangar.
+  (the spread is in data). Starting prices, GC a unit, buy / sell: Hull 2 / 1, Alloy 5 / 3,
+  Crystal 6 / 4, Tech 12 / 8. There's a market in every Story station shop and in the WaveTime hangar.
 - **Drops are derived from the enemy's own blueprint composition** × a level factor, so nobody
   writes a drop table by hand and "hunt the shield ships to get crystal" works without extra rules.
 - **Part drop:** a small chance (start at 4%) to drop one of the enemy's mounted guns or
@@ -1084,6 +1089,25 @@ paid for without extra code.
 flight must not take it back.
 - [ ] Owner, on the phone: kill practice targets with a stocked ship and see the guns level
 
+#### 4.8c Market, kill pay and the price pass (owner, 2026-10-26)
+✅ 2026-10-26.
+- **Market:** tapping the stocked hangar's wallet opens `MarketPanel`
+  (`src/ui/hangar/market_panel.gd`). It buys and sells each material in lots of 10 and 100 at
+  `economy.json` → `market`. Each trade is an undo step (`HangarEditor.trade`).
+- **Kills pay:** `Economy.kill_loot` pays a share of the materials the enemy's tiles cost, plus
+  GC per tile, both rising with encounter level (`economy.json` → `drops`). The sandbox banks it
+  straight into the wallet until there are pickups (5.4). A 20-tile barge at level 3 pays about
+  300 GC's worth.
+- **Prices:** tile costs and part prices are ×10 the first pass (§4.2). The dev profile now
+  starts with about 4,400 GC's worth: a couple of armor tiles, or most of a cannon.
+- **Tests:** market and loot tests are in `test_inventory.gd`; drive_stocked trades through the
+  panel and checks a kill's pay is saved.
+
+⚠️ Landing in the stocked hangar clears undo: an undo from before the flight would take back
+what it earned. An old dev profile on a device keeps its old wallet until **Reset stocked
+hangar**.
+- [ ] Owner, on the phone: does building feel earned now? Prices, market spread and kill pay are all in `economy.json`
+
 ---
 
 ### Phase 5: Enemies and encounters
@@ -1208,7 +1232,7 @@ flight must not take it back.
 
 #### 8.6 Shops `[D5]`
 - [ ] A ship shop: library blueprints priced at their computed cost
-- [ ] A market: buy and sell materials for GC, and buy L1 guns and thrusters (§4.6)
+- [ ] A market: buy and sell materials for GC (the hangar's `MarketPanel`, 4.8c), and buy L1 guns and thrusters (§4.6)
 - **Done when:** a blueprint can be bought, then flown in the next run.
 
 #### 8.7 New-player curve

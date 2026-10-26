@@ -26,7 +26,7 @@
 			"length_u": 0.5,
 			"turret_radius_u": 0.25,
 			"mass": 0.3,
-			"price_gc": 80
+			"price_gc": 800
 		},
 		"gatling_multi": {
 			"family": "Guns",
@@ -46,7 +46,7 @@
 			"length_u": 0.6,
 			"turret_radius_u": 0.3,
 			"mass": 0.7,
-			"price_gc": 320
+			"price_gc": 3200
 		},
 		"cannon": {
 			"family": "Guns",
@@ -63,7 +63,7 @@
 			"length_u": 0.85,
 			"turret_radius_u": 0.32,
 			"mass": 1.4,
-			"price_gc": 420
+			"price_gc": 4200
 		},
 		"flak": {
 			"family": "Guns",
@@ -85,7 +85,7 @@
 			"length_u": 0.55,
 			"turret_radius_u": 0.3,
 			"mass": 0.8,
-			"price_gc": 260
+			"price_gc": 2600
 		},
 		"rocket_ff_he": {
 			"family": "Rockets",
@@ -105,7 +105,7 @@
 			"length_u": 0.6,
 			"turret_radius_u": 0.32,
 			"mass": 1.0,
-			"price_gc": 300
+			"price_gc": 3000
 		},
 		"rocket_ff_ap": {
 			"family": "Rockets",
@@ -125,7 +125,7 @@
 			"length_u": 0.6,
 			"turret_radius_u": 0.32,
 			"mass": 1.0,
-			"price_gc": 320
+			"price_gc": 3200
 		},
 		"rocket_homing_he": {
 			"family": "Rockets",
@@ -146,7 +146,7 @@
 			"length_u": 0.6,
 			"turret_radius_u": 0.32,
 			"mass": 1.1,
-			"price_gc": 450
+			"price_gc": 4500
 		},
 		"rocket_homing_ap": {
 			"family": "Rockets",
@@ -167,7 +167,7 @@
 			"length_u": 0.6,
 			"turret_radius_u": 0.32,
 			"mass": 1.1,
-			"price_gc": 480
+			"price_gc": 4800
 		},
 		"laser": {
 			"family": "Special",
@@ -188,7 +188,7 @@
 			"length_u": 0.6,
 			"turret_radius_u": 0.28,
 			"mass": 0.9,
-			"price_gc": 520
+			"price_gc": 5200
 		},
 		"emp": {
 			"family": "Special",
@@ -209,7 +209,7 @@
 			"length_u": 0.5,
 			"turret_radius_u": 0.3,
 			"mass": 0.9,
-			"price_gc": 500
+			"price_gc": 5000
 		},
 		"mines": {
 			"family": "Special",
@@ -233,7 +233,7 @@
 			"length_u": 0.35,
 			"turret_radius_u": 0.3,
 			"mass": 0.8,
-			"price_gc": 380
+			"price_gc": 3800
 		}
 	}
 }
