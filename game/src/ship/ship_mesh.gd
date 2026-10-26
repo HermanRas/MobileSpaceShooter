@@ -46,7 +46,7 @@ static func build(tiles: Array, placement: Placement, bp: Blueprint = null, wear
 			var type_id := ThrusterLib.type_of_part(str(mount.get("part", "")))
 			var mount_frame := Mounting.frame(placement, bp, mount) if on_ship.has(int(mount.get("tile", -1))) else {}
 			if type_id != &"" and not mount_frame.is_empty():
-				_add_fan(vertices, colors, uvs, Mounting.nozzle(placement, mount_frame), thruster_cell,
+				_add_fan(vertices, colors, uvs, Mounting.nozzle(mount_frame), thruster_cell,
 						Color.from_string(str(tints.get(String(type_id), "#888888")), Color.GRAY))
 	var mesh := ArrayMesh.new()
 	if vertices.is_empty():

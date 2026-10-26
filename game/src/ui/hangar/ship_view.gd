@@ -1,8 +1,9 @@
 class_name ShipView
 extends Node2D
-## Draws the hangar: the grid and build area, the ship mesh, the ghost tile or thruster, and
-## overlays (selection, tiles with problems, free ports or thruster slots while carrying, and
-## the thrust rose at the centre of mass).
+## Draws the hangar: the grid and build area, the ship mesh, the guns, the ghost tile or part,
+## and overlays (selection, tiles with problems, free ports or part slots while carrying, the
+## thrust rose at the centre of mass, and the selected gun's arc: green where it can shoot, red
+## where its own hull is in the way).
 ##
 ## Everything is in world pixels (ShipMesh.PX_PER_U per U). Overlay line widths are divided by
 ## the camera zoom so they stay the same thickness on screen at any zoom.
@@ -20,6 +21,10 @@ const ROSE := Color(1.0, 0.75, 0.3, 0.75)
 const TURN := Color(0.6, 0.85, 1.0, 0.75)
 ## The rose's longest spoke, in U.
 const ROSE_REACH_U := 1.6
+## How far the selected gun's arc is drawn, in U, and its colours.
+const ARC_REACH_U := 3.0
+const ARC_OPEN := Color(0.3, 1.0, 0.45, 0.16)
+const ARC_BLOCKED := Color(1.0, 0.3, 0.3, 0.7)
 
 var placement: Placement
 var area_u: float = 16.0
@@ -40,6 +45,8 @@ var _pulse := 0.0
 var _selected_mount := -1
 var _slot_marks := PackedVector2Array()
 var _envelope: ThrustEnvelope
+var _guns: GunLayout
+var _gun_look: Dictionary
 var _center_of_mass := Vector2.ZERO
 
 
@@ -52,6 +59,7 @@ func _ready() -> void:
 	add_child(_ghost)
 	add_child(_overlay)
 	_overlay.draw.connect(_draw_overlay)
+	_gun_look = Assets.meta(GunView.LOOK_ID)
 
 
 func show_blueprint(bp: Blueprint, analysis: Placement.Analysis) -> void:
@@ -82,11 +90,17 @@ func set_envelope(envelope: ThrustEnvelope, center_of_mass: Vector2) -> void:
 	_overlay.queue_redraw()
 
 
-## A carried thruster: its nozzle outline (in U; empty hides it), whether it has a slot, and
+## Where the guns are, drawn at rest with their mode, plus the selected one's arc. Null hides them.
+func set_guns(guns: GunLayout) -> void:
+	_guns = guns
+	_overlay.queue_redraw()
+
+
+## A carried thruster or gun: its outline (in U; empty hides it), whether it has a slot, and
 ## the centres of every free slot to show while carrying.
-func set_thruster_ghost(nozzle: PackedVector2Array, ok: bool, slot_centers: PackedVector2Array) -> void:
+func set_part_ghost(outline: PackedVector2Array, ok: bool, slot_centers: PackedVector2Array) -> void:
 	_ghost.mesh = null
-	_ghost_polygon = nozzle
+	_ghost_polygon = outline
 	_ghost_ok = ok
 	_slot_marks = slot_centers
 	_show_ports = false
@@ -146,10 +160,11 @@ func _draw_overlay() -> void:
 		if _ghost.mesh == null:
 			_overlay.draw_colored_polygon(_to_px(_ghost_polygon), Color(GHOST_OK if _ghost_ok else GHOST_BAD, 0.45))
 		_overlay.draw_polyline(_closed(_to_px(_ghost_polygon)), GHOST_OK if _ghost_ok else GHOST_BAD, _px(2.0), true)
+	_draw_guns()
 	if _selected_mount >= 0 and _selected_mount < _blueprint.mounts.size():
-		var mount_frame := Mounting.frame(placement, _blueprint, _blueprint.mounts[_selected_mount])
-		if not mount_frame.is_empty():
-			_overlay.draw_polyline(_closed(_to_px(Mounting.nozzle(placement, mount_frame))), SELECTED, _px(3.0), true)
+		var outline := Mounting.outline(placement, _blueprint, _blueprint.mounts[_selected_mount])
+		if not outline.is_empty():
+			_overlay.draw_polyline(_closed(_to_px(outline)), SELECTED, _px(3.0), true)
 	_draw_envelope()
 	# The forward arrow, from the core.
 	for tile in _blueprint.tiles:
@@ -159,6 +174,39 @@ func _draw_overlay() -> void:
 			_overlay.draw_line(from, tip, Color(0.3, 0.9, 0.4, 0.8), _px(3.0), true)
 			var s := _px(9.0)
 			_overlay.draw_colored_polygon(PackedVector2Array([tip + Vector2(s, 0), tip + Vector2(-s * 0.6, -s * 0.8), tip + Vector2(-s * 0.6, s * 0.8)]), Color(0.3, 0.9, 0.4, 0.8))
+
+
+## Every gun at rest with a dot for its mode, and the selected gun's arc as a fan of thin
+## slices: filled green where a shot would clear the hull, and only a red rim where it wouldn't,
+## so the fan doesn't drown the ship.
+func _draw_guns() -> void:
+	if _guns == null:
+		return
+	var manual := Color.from_string(str(_gun_look.get("manual_mark", "#ffb040")), Color.ORANGE)
+	var auto := Color.from_string(str(_gun_look.get("auto_mark", "#5ad0ff")), Color.SKY_BLUE)
+	for gun in _guns.guns:
+		if gun.mount == _selected_mount:
+			_draw_arc_fan(gun)
+		GunView.draw_gun(_overlay, gun, gun.facing, _gun_look)
+		_overlay.draw_circle(gun.pivot * PX, _px(4.0), auto if gun.auto else manual)
+
+
+func _draw_arc_fan(gun: GunLayout.Gun) -> void:
+	var center := gun.pivot * PX
+	var reach := ARC_REACH_U * PX
+	if gun.arc <= 0.0:
+		var color := ARC_OPEN if gun.clear(gun.facing) else ARC_BLOCKED
+		_overlay.draw_line(center, center + Vector2.from_angle(gun.facing) * reach, Color(color, 0.8), _px(3.0), true)
+		return
+	var slices := maxi(ceili(gun.arc * 2.0 / deg_to_rad(3.0)), 2)
+	for i in slices:
+		var a := gun.facing - gun.arc + gun.arc * 2.0 * i / slices
+		var b := gun.facing - gun.arc + gun.arc * 2.0 * (i + 1) / slices
+		if gun.clear((a + b) * 0.5):
+			_overlay.draw_colored_polygon(PackedVector2Array([center, center + Vector2.from_angle(a) * reach,
+					center + Vector2.from_angle(b) * reach]), ARC_OPEN)
+		else:
+			_overlay.draw_arc(center, reach, a, b, 3, ARC_BLOCKED, _px(4.0), true)
 
 
 ## Spokes for the rose (scaled to its strongest direction) and an arc each way for turning,

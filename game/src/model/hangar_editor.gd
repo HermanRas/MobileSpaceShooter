@@ -105,22 +105,36 @@ func remove(tile_id: int) -> bool:
 ## mirror mode is on and the image's slot is free). Returns the new mount indices, or an empty
 ## array if the slot isn't free.
 func add_thruster(type_id: StringName, size: StringName, level: int, slot: Dictionary) -> PackedInt32Array:
-	var mount := {"tile": int(slot["tile"]), "edge": int(slot["edge"]), "port": int(slot["port"]),
-			"part": ThrusterLib.part_id(type_id), "size": String(size), "level": level}
-	if not _slot_free(mount):
-		return PackedInt32Array()
+	return _add_mount(Mounting.moved_to({"part": ThrusterLib.part_id(type_id), "size": String(size), "level": level}, slot))
+
+
+## Mounts a gun in a slot from `Mounting.weapon_slots()`, the same way. A mode its mount type
+## doesn't allow is replaced by one it does (a turret is always auto).
+func add_weapon(weapon_id: StringName, mount_type: StringName, mode: StringName, slot: Dictionary) -> PackedInt32Array:
+	var resolved := placement.weapons.mode_for(mount_type, mode) if placement.weapons != null else mode
+	return _add_mount(Mounting.moved_to({"part": WeaponLib.part_id(weapon_id), "mount": String(mount_type),
+			"mode": String(resolved)}, slot))
+
+
+## Switches a gun (and its mirror image) between manual and auto. False if it's not a gun, or its
+## mount doesn't allow that mode.
+func set_mount_mode(index: int, mode: StringName) -> bool:
+	if index < 0 or index >= blueprint.mounts.size() or not Mounting.is_weapon(blueprint.mounts[index]):
+		return false
+	var mount := blueprint.mounts[index]
+	var type := StringName(mount.get("mount", ""))
+	if placement.weapons == null or placement.weapons.mode_for(type, mode) != mode or StringName(mount.get("mode", "")) == mode:
+		return false
 	_checkpoint()
-	blueprint.mounts.append(mount)
-	var added := PackedInt32Array([blueprint.mounts.size() - 1])
-	var host := blueprint.tile_by_id(mount["tile"])
-	var twin_id := _existing_twin_id(host)
+	var host := blueprint.tile_by_id(int(mount["tile"]))
+	var twin_id := _existing_twin_id(host) if host != null else -1
 	if twin_id >= 0:
-		var image := Mounting.mirrored(placement, blueprint, mount, twin_id, axis_y())
-		if not image.is_empty() and _slot_free(image):
-			blueprint.mounts.append(image)
-			added.append(blueprint.mounts.size() - 1)
+		var at := mount_index(Mounting.mirrored(placement, blueprint, mount, twin_id, axis_y()))
+		if at >= 0 and blueprint.mounts[at]["part"] == mount["part"]:
+			blueprint.mounts[at]["mode"] = String(mode)
+	mount["mode"] = String(mode)
 	changed.emit()
-	return added
+	return true
 
 
 ## Removes a mount (and its mirror image).
@@ -135,7 +149,7 @@ func remove_mount(index: int) -> bool:
 	if twin_id >= 0:
 		var image := Mounting.mirrored(placement, blueprint, mount, twin_id, axis_y())
 		var at := mount_index(image)
-		if at >= 0:
+		if at >= 0 and at != index:
 			doomed.append(blueprint.mounts[at])
 	for gone in doomed:
 		blueprint.mounts.erase(gone)
@@ -150,8 +164,7 @@ func move_mount(index: int, slot: Dictionary) -> bool:
 	var mount := blueprint.mounts[index]
 	var before := blueprint.to_dict()
 	remove_mount(index)
-	var added := add_thruster(ThrusterLib.type_of_part(str(mount["part"])), StringName(mount["size"]),
-			int(mount["level"]), slot)
+	var added := _add_mount(Mounting.moved_to(mount, slot))
 	if added.is_empty():
 		_undo.pop_back()
 		_restore(before)
@@ -160,21 +173,38 @@ func move_mount(index: int, slot: Dictionary) -> bool:
 	return true
 
 
-## Index of the mount on that tile, edge and port, or -1.
+## Index of the mount in that place ({"tile", "edge", "port"} or {"tile", "face"}), or -1.
 func mount_index(where: Dictionary) -> int:
-	if where.is_empty():
-		return -1
 	for i in blueprint.mounts.size():
-		var m := blueprint.mounts[i]
-		if int(m["tile"]) == int(where["tile"]) and int(m["edge"]) == int(where["edge"]) and int(m["port"]) == int(where["port"]):
+		if Mounting.same_place(blueprint.mounts[i], where):
 			return i
 	return -1
 
 
+func _add_mount(mount: Dictionary) -> PackedInt32Array:
+	if not _slot_free(mount):
+		return PackedInt32Array()
+	_checkpoint()
+	blueprint.mounts.append(mount)
+	var added := PackedInt32Array([blueprint.mounts.size() - 1])
+	var twin_id := _existing_twin_id(blueprint.tile_by_id(mount["tile"]))
+	if twin_id >= 0:
+		var image := Mounting.mirrored(placement, blueprint, mount, twin_id, axis_y())
+		if not image.is_empty() and _slot_free(image):
+			blueprint.mounts.append(image)
+			added.append(blueprint.mounts.size() - 1)
+	changed.emit()
+	return added
+
+
 func _slot_free(mount: Dictionary) -> bool:
-	return Mounting.thruster_slots(placement, blueprint, StringName(mount["size"])).any(
-			func(s: Dictionary) -> bool:
-				return s["tile"] == mount["tile"] and s["edge"] == mount["edge"] and s["port"] == mount["port"])
+	var slots: Array[Dictionary]
+	if Mounting.is_weapon(mount):
+		slots = Mounting.weapon_slots(placement, blueprint, WeaponLib.type_of_part(str(mount["part"])),
+				StringName(mount.get("mount", "")))
+	else:
+		slots = Mounting.thruster_slots(placement, blueprint, StringName(mount["size"]))
+	return slots.any(func(s: Dictionary) -> bool: return Mounting.same_place(s, mount))
 
 
 func _drop_mounts_of(tile_id: int) -> void:

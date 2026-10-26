@@ -247,7 +247,16 @@ Alloy + Tech cost. It keeps its XP `[D8]`.
   the further out you go, and so do the guns you need.
 - Creative can set any gun to any level, and earns no XP.
 
-Auto weapons pick the nearest target in their arc and lead it.
+Auto weapons pick the nearest target in their arc and lead it. Rules set in 4.3:
+
+- **Side-mounted guns (fixed, swivel) can't fire through their own ship; top-mounted ones
+  (turrets) fire over it** (owner, 2026-10-26). `over_hull` per mount type in `weapons.json`.
+  The hangar shows a gun's clear arc (green) and blocked directions (red).
+- A **manual swivel** still tracks a target in its arc, but fires only on FIRE. A manual fixed
+  gun fires straight ahead while FIRE is held.
+- An **auto fixed gun** fires when a target's lead point is within `fire_within_deg` (3°) of
+  straight ahead, so the pilot aims it with the ship.
+- **Shots carry the ship's velocity**, and the lead allows for it.
 
 ### 4.5 Damage model
 
@@ -820,7 +829,6 @@ rebuilds from Settings each time it opens. FIRE and SWITCH are placeholders unti
 that left-handed moves the stick. ⚠️ **Godot's Button only hears the first finger** (the one
 emulated as a mouse), so on-screen game buttons are `TouchButton`, which reads
 `InputEventScreenTouch` per finger.
-- [ ] Owner, on the phone: both schemes fly, and stick + FIRE work together
 
 #### 3.5 Camera and space
 ✅ 2026-10-25; the owner confirmed speed feels fast and the edge is clear on the phone.
@@ -837,7 +845,6 @@ emulated as a mouse), so on-screen game buttons are `TouchButton`, which reads
 Tuning is in `flight.json` (`camera`, `arena`). `drive_flight` checks the lead, the zoom-out,
 the warning and the push back. ⚠️ Teleport a RigidBody2D through `PhysicsServer2D.body_set_state`:
 setting `global_position` on an awake body is overwritten by the next physics step.
-- [ ] Owner, on the phone: flying fast feels fast, and the edge is clearly signalled
 
 #### 3.6 Thruster VFX
 ✅ 2026-10-25. `ThrusterFx` (`src/ship/thruster_fx.gd`), one per thruster, fed by
@@ -902,13 +909,27 @@ for `test_hit` until guns arrive, and destroyed ships respawn. `drive_flight` ch
 (`emulate_touch_from_mouse`), and taking both hit twice.
 
 #### 4.3 Weapon framework
-- [ ] `data/weapons.json` (§4.4), with mount types fixed, swivel and turret
-- [ ] Hangar mounting: edge weapons on hardpoint edges, turrets on faces, a manual/auto toggle (turrets locked to auto)
-- [ ] Auto fire control: target the nearest in arc, lead prediction, line-of-fire check against own tiles
-- **Done when:** a ship with one weapon of each mount type fires correctly at a dummy target.
+✅ 2026-10-26. `data/weapons.json` → `WeaponLib` (mount types fixed / swivel ±22.5° / turret 360°
+auto-only, and the single gatling). `Mounting` takes guns: an edge gun covers `edge_u` of a
+hardpoint edge and its barrel blocks `length_u` like a thruster; a turret sits on a hardpoint's
+**face** (`{"tile", "face": true, …}`), one per tile, if a circle of `turret_radius_u` fits
+(so not on an S tile). `GunLayout` (`model/gun_layout.gd`) gives each gun its pivot, facing, arc
+and, for side-mounted guns, **blocked directions**: each other tile's angular span seen from
+the pivot, merged (turrets fire over the hull).
+`Gunnery` (`model/gunnery.gd`) picks, leads, turns and fires per tick (§4.4 rules), keeping aim
+by gun key when tiles are lost. Flight: `WeaponController` and `GunView` on the ship, with shots
+in the 4.4 pool. **Hulls sit on a physics layer per team** (`ShipBody.TEAM_LAYER << team`), so a
+shot's ray never sees its own side and needs no exclusion list. Hangar: a **Weapons** tab (gun,
+mount type, mode); drag onto slot markers; a selected gun shows **Mode** in place of
+Rotate/Duplicate, and its arc fan. Samples: the starter now carries its nose turret; `gunboat`
+has one gun of each mount type. Tested in `tests/model/test_weapons.gd` (23 tests). `drive_flight`
+flies the gunboat: auto guns hit the barge alone, the manual nose gun waits for FIRE, no shot
+touches our ship, and with the target abeam the swivels stop while both turrets fire. ⚠️ Lead from the
+**muzzle**, not the pivot: half a unit of barrel was enough to miss.
+- [ ] Owner, on the phone: mount guns in the hangar, fly the gunboat, FIRE
 
 #### 4.4 Projectile pool
-- [ ] `combat/projectile_pool.gd`: struct-of-arrays, `MultiMeshInstance2D` draw, `intersect_ray` hits per tick
+- [x] `combat/projectile_pool.gd`: struct-of-arrays, `MultiMeshInstance2D` draw, `intersect_ray` hits per tick (pulled into 4.3; 1024 slots, counts `dropped`)
 - [ ] Stress scene: 600 projectiles, measured on the reference phone
 - **Done when:** 600 projectiles hold 60 fps on the phone (or the budget gets revised in §5.5 with the measured number).
 

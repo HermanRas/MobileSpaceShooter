@@ -50,6 +50,7 @@ func _ready() -> void:
 	_check(_hangar.editor.can_undo(), "the undo history survived the flight")
 	_check(_hangar._world.visible and _hangar._ui.visible, "the hangar is visible again")
 
+	await _step_guns()
 	await _step_fly_the_starter_with_the_stick()
 	await _step_control_layouts()
 	await _step_camera_and_arena()
@@ -103,6 +104,61 @@ func _step_damage(sandbox: FlightSandbox) -> void:
 	_save_shot("drive_explosion.png")
 	await get_tree().create_timer(float(sandbox._sandbox.get("respawn_s", 3.0)) + 0.3).timeout
 	_check(sandbox.target != null and sandbox.target.blueprint.tiles.size() == tiles_before, "a fresh target comes back")
+
+
+## Phase 4.3, the "done when": the gunboat carries one gun of each mount type. Its auto guns (two
+## swivels, two turrets) open up on the practice target by themselves, the manual nose gun waits
+## for FIRE, no shot touches our own ship, and a target abeam is only for the turrets, which fire
+## over the hull.
+func _step_guns() -> void:
+	var errors: PackedStringArray = []
+	_hangar.load_blueprint(Blueprint.from_dict(Data.json_dir("blueprints")["gunboat"], errors))
+	await _frames(2)
+	var sandbox: FlightSandbox = _hangar.fly()
+	_check(sandbox != null, "the gunboat can fly")
+	if sandbox == null:
+		return
+	await _physics_frames(2)
+	var ship := sandbox.ship
+	var target := sandbox.target
+	_check(ship.guns.guns.size() == 5, "it has 5 guns (%d)" % ship.guns.guns.size())
+	if ship.guns.guns.size() != 5 or target == null:
+		_hangar.on_back()
+		return
+	# Layout order follows the mounts: the fixed nose gun, the swivels, then the turrets.
+	var fired := sandbox.weapons.gunnery.fired
+	var health := func(body: ShipBody) -> float:
+		var total := body.damage.shield
+		for tile_id: int in body.damage.hp:
+			total += body.damage.hp[tile_id]
+		return total
+	var target_before: float = health.call(target)
+	var ours_before: float = health.call(ship)
+	await _physics_frames(60)
+	_check(fired[0] == 0, "the manual nose gun holds fire without FIRE")
+	_check(fired[1] > 0 and fired[2] > 0, "both swivels fire on their own (%d, %d)" % [fired[1], fired[2]])
+	_check(fired[3] > 0 and fired[4] > 0, "both turrets fire on their own (%d, %d)" % [fired[3], fired[4]])
+	_check(sandbox.pool.count > 0, "shots are in flight (%d)" % sandbox.pool.count)
+	_check(is_instance_valid(target) and health.call(target) < target_before, "and they hurt the target")
+	_save_shot("drive_guns.png")
+	Input.action_press(&"fire")
+	await _physics_frames(30)
+	Input.action_release(&"fire")
+	_check(fired[0] >= 3, "FIRE fires the manual nose gun (%d)" % fired[0])
+	_check(health.call(ship) == ours_before, "not one shot touched our own ship")
+
+	# Turn so the target is off the right wing: the swivels can't reach it; both turrets can, the
+	# left one over the hull.
+	_teleport(ship, ship.position, -PI / 2)
+	await _physics_frames(2)
+	var before := fired.duplicate()
+	await _physics_frames(45)
+	_check(fired[1] == before[1] and fired[2] == before[2], "the swivels can't reach a target abeam")
+	_check(fired[4] > before[4], "the right-wing turret can (%d more)" % (fired[4] - before[4]))
+	_check(fired[3] > before[3], "so can the left-wing one, over the hull (%d more)" % (fired[3] - before[3]))
+	_check(health.call(ship) == ours_before, "and its shots pass over our own tiles")
+	_hangar.on_back()
+	await _frames(3)
 
 
 ## Phase 4.2: shoot off the tile carrying a thruster, and fly on with the rest.
@@ -294,8 +350,8 @@ func _step_fly_the_starter_with_the_stick() -> void:
 
 ## Moves a rigid body through the physics server; setting global_position on an awake body is
 ## overwritten by the next physics step.
-func _teleport(body: RigidBody2D, at: Vector2) -> void:
-	PhysicsServer2D.body_set_state(body.get_rid(), PhysicsServer2D.BODY_STATE_TRANSFORM, Transform2D(0.0, at))
+func _teleport(body: RigidBody2D, at: Vector2, rotation := 0.0) -> void:
+	PhysicsServer2D.body_set_state(body.get_rid(), PhysicsServer2D.BODY_STATE_TRANSFORM, Transform2D(rotation, at))
 	PhysicsServer2D.body_set_state(body.get_rid(), PhysicsServer2D.BODY_STATE_LINEAR_VELOCITY, Vector2.ZERO)
 	PhysicsServer2D.body_set_state(body.get_rid(), PhysicsServer2D.BODY_STATE_ANGULAR_VELOCITY, 0.0)
 

@@ -4,7 +4,7 @@
 	"name": "Starter",
 	"author": "mss",
 	"tags": ["starter", "pinned"],
-	"_doc": "PLAN.md 4.10. Forward is +x. Hardpoints at rear-left, rear-right and front carry the 3 Large pulse thrusters (square edge 3 is the rear, edge 1 the front); the front one also takes the single gatling in Phase 4.",
+	"_doc": "PLAN.md 4.10. Forward is +x. Hardpoints at rear-left, rear-right and front carry the 3 Large pulse thrusters (square edge 3 is the rear, edge 1 the front); the front one also carries the gatling turret on its face (Phase 4.3).",
 	"tiles": [
 		{"id": 0, "type": "core", "shape": "square", "size": "L", "pos": [0, 0], "rot": 0, "paint": "#d8d8d8"},
 		{"id": 1, "type": "hull", "shape": "square", "size": "L", "pos": [-1, 0], "rot": 0, "paint": "#8c96a0"},
@@ -19,6 +19,7 @@
 	"mounts": [
 		{"tile": 4, "edge": 3, "port": 0, "part": "thruster.pulse", "size": "L", "level": 1},
 		{"tile": 5, "edge": 3, "port": 0, "part": "thruster.pulse", "size": "L", "level": 1},
-		{"tile": 6, "edge": 1, "port": 0, "part": "thruster.pulse", "size": "L", "level": 1}
+		{"tile": 6, "edge": 1, "port": 0, "part": "thruster.pulse", "size": "L", "level": 1},
+		{"tile": 6, "face": true, "part": "weapon.gatling_single", "mount": "turret", "mode": "auto"}
 	]
 }

@@ -27,6 +27,7 @@ func _ready() -> void:
 	await _step_move_selected()
 	await _step_paint()
 	await _step_thrusters()
+	await _step_weapons()
 	await _step_stats_match_and_refresh_fast()
 	await _step_library()
 	await _step_pinch_zooms()
@@ -140,13 +141,13 @@ func _step_thrusters() -> void:
 	_hangar.load_blueprint(Blueprint.from_dict(Data.json_dir("blueprints")["starter"], errors))
 	await _frames(2)
 	var mounts: Array[Dictionary] = _hangar.editor.blueprint.mounts
-	_check(mounts.size() == 3, "the starter carries 3 thrusters")
+	_check(mounts.filter(Mounting.is_thruster).size() == 3, "the starter carries 3 thrusters")
 	# The front pulse thruster's nozzle sits just in front of the front hardpoint (1, 0).
 	await _tap(0, _screen_of_u(Vector2(1.7, 0)))
 	_check(_hangar._selected_mount == 2, "a tap on a thruster selects it (got %d)" % _hangar._selected_mount)
 	_hangar._delete_selected()
 	await _frames(2)
-	_check(_hangar.editor.blueprint.mounts.size() == 2, "delete removes it")
+	_check(_hangar.editor.blueprint.mounts.filter(Mounting.is_thruster).size() == 2, "delete removes it")
 	_check(_warnings_shown().has("can't brake"), "the panel warns it can't brake (%s)" % ", ".join(_warnings_shown()))
 
 	var tab := _palette_tab("Thrusters")
@@ -157,13 +158,62 @@ func _step_thrusters() -> void:
 	var start := jet.get_global_rect().get_center()
 	await _drag(0, start, _screen_of_u(Vector2(1.7, 0)) + Vector2(0, _hangar.GHOST_LIFT_PX))
 	var after: Array[Dictionary] = _hangar.editor.blueprint.mounts
-	_check(after.size() == 3 and after[2]["part"] == "thruster.jet" and int(after[2]["tile"]) == 6,
+	_check(after.size() == mounts.size() and after.back()["part"] == "thruster.jet" and int(after.back()["tile"]) == 6,
 			"dragging a Jet onto the front edge mounts it there")
 	_check(not _warnings_shown().has("can't brake"), "and the warning clears")
 	await _frames(2)
 	_save_shot("drive_hangar_thrusters.png")
 	_palette_tab("Hull").button_pressed = true
 	await _frames(1)
+
+
+## Phase 4.3: drag guns on from the Weapons tab, flip one to manual, and see the turret is locked
+## to auto.
+func _step_weapons() -> void:
+	var errors: PackedStringArray = []
+	_hangar.load_blueprint(Blueprint.from_dict(Data.json_dir("blueprints")["starter"], errors))
+	await _frames(2)
+	var before: int = _hangar.editor.blueprint.mounts.size()
+	_palette_tab("Weapons").button_pressed = true
+	await _frames(2)
+	_palette_tab("Swivel").button_pressed = true
+	await _frames(2)
+	var gatling := _swatch("gatling_single")
+	_check(gatling != null, "the Weapons tab shows the gatling")
+	if gatling == null:
+		return
+	# The rear-left hardpoint (-1, -1) has a free top edge.
+	await _drag(0, gatling.get_global_rect().get_center(), _screen_of_u(Vector2(-1, -1.6)) + Vector2(0, _hangar.GHOST_LIFT_PX))
+	var mounts: Array[Dictionary] = _hangar.editor.blueprint.mounts
+	_check(mounts.size() == before + 1 and mounts.back()["mount"] == "swivel" and int(mounts.back()["tile"]) == 4,
+			"dragging a swivel gatling onto the top edge mounts it there")
+	_check(_hangar._selected_mount == mounts.size() - 1, "and selects it")
+	_check(not _hangar._mode_button.disabled and _hangar._mode_button.text == "Mode: Auto", "its mode can be switched")
+	_hangar._mode_button.pressed.emit()
+	await _frames(2)
+	_check(_hangar.editor.blueprint.mounts.back()["mode"] == "manual", "Mode makes it manual")
+	_check(_rows_text("guns").begins_with("2 (1 manual)"), "the panel counts the guns (%s)" % _rows_text("guns"))
+
+	await _tap(0, _screen_of_u(Vector2(1.0, 0.0)))
+	_check(_hangar._selected_mount >= 0 and Mounting.is_face(_hangar.editor.blueprint.mounts[_hangar._selected_mount]),
+			"a tap on the nose turret selects it")
+	_check(_hangar._mode_button.disabled, "a turret has no manual mode")
+
+	_palette_tab("Turret").button_pressed = true
+	await _frames(2)
+	await _drag(0, _swatch("gatling_single").get_global_rect().get_center(),
+			_screen_of_u(Vector2(-1, 1)) + Vector2(0, _hangar.GHOST_LIFT_PX))
+	mounts = _hangar.editor.blueprint.mounts
+	_check(mounts.back().get("face", false) and int(mounts.back()["tile"]) == 5 and mounts.back()["mode"] == "auto",
+			"a turret drops onto the rear-right hardpoint's face")
+	await _frames(2)
+	_save_shot("drive_hangar_weapons.png")
+	_palette_tab("Hull").button_pressed = true
+	await _frames(1)
+
+
+func _rows_text(key: StringName) -> String:
+	return (_hangar._stats._rows[key][0] as Label).text
 
 
 func _warnings_shown() -> PackedStringArray:
@@ -176,7 +226,7 @@ func _warnings_shown() -> PackedStringArray:
 
 func _palette_tab(text: String) -> Button:
 	for button in _hangar._palette.find_children("*", "Button", true, false):
-		if (button as Button).text == text:
+		if (button as Button).text == text and not button.is_queued_for_deletion():
 			return button
 	return null
 

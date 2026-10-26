@@ -43,6 +43,8 @@ var shapes: ShapeLib
 var tiles: TileLib
 ## Optional: with it, mounted thrusters are checked against their data and add mass (3.2).
 var thrusters: ThrusterLib
+## Optional: the same for guns (4.3).
+var weapons: WeaponLib
 var max_tiles: int
 var area_u: float
 

@@ -34,6 +34,9 @@ var _undo_button: Button
 var _redo_button: Button
 var _status: Label
 var _fly_button: Button
+var _mode_button: Button
+var _rotate_button: Button
+var _duplicate_button: Button
 var _sandbox: FlightSandbox
 
 var _selected: int = -1
@@ -50,8 +53,8 @@ var _gesture: StringName = &""  # &"tap", &"pan", &"pinch"
 var _press_screen := Vector2.ZERO
 var _press_tile: int = -1
 var _press_mount: int = -1
-## While carrying a thruster: the slot it would go in ({} for none).
-var _thruster_slot: Dictionary = {}
+## While carrying a thruster or gun: the slot it would go in ({} for none).
+var _mount_slot: Dictionary = {}
 
 
 func _ready() -> void:
@@ -59,6 +62,7 @@ func _ready() -> void:
 	placement = Placement.create(ShapeLib.from_table(Data.table(&"shapes")),
 			TileLib.from_table(tiles_table), tiles_table)
 	placement.thrusters = ThrusterLib.from_table(Data.table(&"thrusters"))
+	placement.weapons = WeaponLib.from_table(Data.table(&"weapons"))
 	editor = HangarEditor.create(placement)
 	editor.changed.connect(_on_changed)
 
@@ -268,30 +272,44 @@ func _start_carry_new(type: StringName, shape: StringName, size: StringName) -> 
 
 
 func _start_carry_thruster(type_id: StringName, size: StringName, level: int) -> void:
+	_start_carry_part({"part": ThrusterLib.part_id(type_id), "size": String(size), "level": level})
+
+
+func _start_carry_weapon(weapon_id: StringName, mount_type: StringName, mode: StringName) -> void:
+	_start_carry_part({"part": WeaponLib.part_id(weapon_id), "mount": String(mount_type), "mode": String(mode)})
+
+
+## Carrying a new thruster or gun (`part`: its mount without a place) toward a free slot.
+func _start_carry_part(part: Dictionary) -> void:
 	_select(-1)
-	_carry = {"thruster": type_id, "size": size, "level": level, "moving_mount": -1, "finger": 0,
-			"slots": Mounting.thruster_slots(placement, editor.blueprint, size), "target": editor.blueprint}
+	_carry = {"part": part, "moving_mount": -1, "finger": 0, "slots": _slots_for(part, editor.blueprint),
+			"target": editor.blueprint}
 	_carry_screen = _touch_position_or_mouse(0)
 	_carry_dirty = true
 
 
 func _start_move_mount(index: int, finger: int, screen: Vector2) -> void:
 	var mount := editor.blueprint.mounts[index]
-	# Slots as if this thruster (and its mirror twin) weren't there.
+	# Slots as if this part (and its mirror twin) weren't there.
 	var errors: PackedStringArray = []
 	var without := Blueprint.from_dict(editor.blueprint.to_dict(), errors)
 	without.mounts.remove_at(index)
 	var twin_id := editor.twin_of(int(mount["tile"]))
 	if twin_id >= 0:
 		var image := Mounting.mirrored(placement, editor.blueprint, mount, twin_id, editor.axis_y())
-		without.mounts.assign(without.mounts.filter(func(m: Dictionary) -> bool:
-			return image.is_empty() or not (int(m["tile"]) == int(image["tile"])
-					and int(m["edge"]) == int(image["edge"]) and int(m["port"]) == int(image["port"]))))
-	_carry = {"thruster": ThrusterLib.type_of_part(str(mount["part"])), "size": StringName(mount["size"]),
-			"level": int(mount["level"]), "moving_mount": index, "finger": finger,
-			"slots": Mounting.thruster_slots(placement, without, StringName(mount["size"])), "target": without}
+		without.mounts.assign(without.mounts.filter(func(m: Dictionary) -> bool: return not Mounting.same_place(m, image)))
+	var part := mount.duplicate()
+	for key in ["tile", "face", "edge", "port"]:
+		part.erase(key)
+	_carry = {"part": part, "moving_mount": index, "finger": finger, "slots": _slots_for(part, without), "target": without}
 	_carry_screen = screen
 	_carry_dirty = true
+
+
+func _slots_for(part: Dictionary, bp: Blueprint) -> Array[Dictionary]:
+	if Mounting.is_weapon(part):
+		return Mounting.weapon_slots(placement, bp, WeaponLib.type_of_part(str(part["part"])), StringName(part["mount"]))
+	return Mounting.thruster_slots(placement, bp, StringName(part["size"]))
 
 
 func _start_move(tile_id: int, finger: int, screen: Vector2) -> void:
@@ -312,8 +330,8 @@ func _process(_delta: float) -> void:
 func _update_ghost() -> void:
 	if _carry.is_empty():
 		return
-	if _carry.has("thruster"):
-		_update_thruster_ghost()
+	if _carry.has("part"):
+		_update_part_ghost()
 		return
 	var point_u := _camera.screen_to_world(_carry_screen + Vector2(0, -GHOST_LIFT_PX)) / PX
 	var target := editor.blueprint
@@ -337,32 +355,41 @@ func _update_ghost() -> void:
 	_stats.show_delta(placement.tiles.tile(ghost.type) if _snap != null and _carry["moving"] < 0 else null, ghost.size)
 
 
-## A carried thruster snaps to the free slot whose centre is nearest the (lifted) finger.
-func _update_thruster_ghost() -> void:
+## A carried thruster or gun snaps to the free slot whose centre is nearest the (lifted) finger.
+func _update_part_ghost() -> void:
 	var point_u := _camera.screen_to_world(_carry_screen + Vector2(0, -GHOST_LIFT_PX)) / PX
 	var target: Blueprint = _carry["target"]
+	var part: Dictionary = _carry["part"]
 	var centers := PackedVector2Array()
 	var best_d := INF
-	var best_frame := {}
-	_thruster_slot = {}
+	_mount_slot = {}
 	for slot: Dictionary in _carry["slots"]:
-		var mount := slot.duplicate()
-		mount["size"] = String(_carry["size"])
-		var mount_frame := Mounting.frame(placement, target, mount)
-		centers.append(mount_frame["center"])
-		var d := (mount_frame["center"] as Vector2).distance_to(point_u)
+		var at := Mounting.anchor(placement, target, Mounting.moved_to(part, slot))
+		centers.append(at)
+		var d := at.distance_to(point_u)
 		if d < best_d and d <= SNAP_REACH_U:
 			best_d = d
-			_thruster_slot = slot
-			best_frame = mount_frame
-	var nozzle: PackedVector2Array
-	if not best_frame.is_empty():
-		nozzle = Mounting.nozzle(placement, best_frame)
+			_mount_slot = slot
+	var ghost: PackedVector2Array
+	if not _mount_slot.is_empty():
+		ghost = Mounting.outline(placement, target, Mounting.moved_to(part, _mount_slot))
 	else:
-		var half := placement.shapes.edge_u(_carry["size"]) * 0.5
-		nozzle = Mounting.nozzle(placement, {"a": point_u + Vector2(-half, 0), "b": point_u + Vector2(half, 0),
-				"normal": Vector2.DOWN, "length": half * 2.0})
-	_view.set_thruster_ghost(nozzle, not _thruster_slot.is_empty(), centers)
+		ghost = _loose_outline(part, point_u)
+	_view.set_part_ghost(ghost, not _mount_slot.is_empty(), centers)
+
+
+## A carried part's outline off the ship, at `point_u`, edge side up.
+func _loose_outline(part: Dictionary, point_u: Vector2) -> PackedVector2Array:
+	if Mounting.is_thruster(part):
+		var half := placement.shapes.edge_u(StringName(part["size"])) * 0.5
+		return Mounting.nozzle({"a": point_u + Vector2(-half, 0), "b": point_u + Vector2(half, 0),
+				"normal": Vector2.DOWN, "depth": half * 2.0 * placement.thrusters.depth_factor})
+	var gun := placement.weapons.weapon(WeaponLib.type_of_part(str(part["part"])))
+	if placement.weapons.mount_type(StringName(part["mount"]))["face"]:
+		return Mounting.circle(point_u, gun["turret_radius_u"])
+	var half_gun: float = gun["edge_u"] * 0.5
+	return Mounting.footprint({"a": point_u + Vector2(-half_gun, 0), "b": point_u + Vector2(half_gun, 0),
+			"normal": Vector2.DOWN, "depth": gun["length_u"]})
 
 
 ## The snap whose tile centre is nearest the finger, preferring the player's chosen rotation
@@ -423,12 +450,20 @@ func _cycle_carry_rotation() -> void:
 
 
 func _commit_carry() -> void:
-	if _carry.has("thruster"):
-		if not _thruster_slot.is_empty():
-			var done := editor.move_mount(_carry["moving_mount"], _thruster_slot) if _carry["moving_mount"] >= 0 \
-					else not editor.add_thruster(_carry["thruster"], _carry["size"], _carry["level"], _thruster_slot).is_empty()
+	if _carry.has("part"):
+		if not _mount_slot.is_empty():
+			var part: Dictionary = _carry["part"]
+			var done: bool
+			if _carry["moving_mount"] >= 0:
+				done = editor.move_mount(_carry["moving_mount"], _mount_slot)
+			elif Mounting.is_weapon(part):
+				done = not editor.add_weapon(WeaponLib.type_of_part(str(part["part"])), StringName(part["mount"]),
+						StringName(part["mode"]), _mount_slot).is_empty()
+			else:
+				done = not editor.add_thruster(ThrusterLib.type_of_part(str(part["part"])), StringName(part["size"]),
+						int(part["level"]), _mount_slot).is_empty()
 			if done:
-				_select_mount(editor.mount_index(_thruster_slot))
+				_select_mount(editor.mount_index(_mount_slot))
 		_end_carry()
 		return
 	if _snap != null:
@@ -446,14 +481,14 @@ func _commit_carry() -> void:
 func _end_carry() -> void:
 	_carry = {}
 	_snap = null
-	_thruster_slot = {}
+	_mount_slot = {}
 	_view.set_ghost(null, false)
 	_stats.show_delta(null, &"")
 
 
 # ── toolbar actions ───────────────────────────────────────────────────────────
 
-## A tap selects the thruster or tile under the finger, or paints the tile while the paint
+## A tap selects the part (thruster or gun) or tile under the finger, or paints the tile while the paint
 ## panel is open.
 func _on_tap(screen: Vector2) -> void:
 	var tile_id := _tile_at(screen)
@@ -478,6 +513,7 @@ func _select_mount(index: int) -> void:
 	_select(-1)
 	_selected_mount = index
 	_view.set_selected_mount(index)
+	_refresh_buttons()
 
 
 func _select(tile_id: int) -> void:
@@ -575,8 +611,10 @@ func _on_changed() -> void:
 		_fly_button.disabled = not problems.is_empty()
 		var stats := ShipStats.compute(editor.blueprint, placement)
 		var envelope := ThrustEnvelope.compute(editor.blueprint, placement, stats)
+		var guns := GunLayout.compute(editor.blueprint, placement)
 		_view.set_envelope(envelope, stats.center_of_mass)
-		_stats.show_stats(stats, problems, placement.max_tiles, envelope)
+		_view.set_guns(guns)
+		_stats.show_stats(stats, problems, placement.max_tiles, envelope, guns)
 	last_refresh_usec = Time.get_ticks_usec() - started
 	last_refresh_parts = {"analyze": analyzed - started, "view": drawn - analyzed,
 			"stats": started + last_refresh_usec - drawn}
@@ -587,19 +625,34 @@ func _refresh_buttons() -> void:
 		return
 	_undo_button.disabled = not editor.can_undo()
 	_redo_button.disabled = not editor.can_redo()
+	var mount := editor.blueprint.mounts[_selected_mount] if _selected_mount >= 0 \
+			and _selected_mount < editor.blueprint.mounts.size() else {}
+	var gun := Mounting.is_weapon(mount)
+	_rotate_button.visible = not gun
+	_duplicate_button.visible = not gun
+	_mode_button.visible = gun
+	_mode_button.text = "Mode: Manual" if gun and mount.get("mode") == "manual" else "Mode: Auto"
+	_mode_button.disabled = not gun or placement.weapons.mount_type(StringName(mount.get("mount", ""))) \
+			.get("modes", []).size() < 2
 
 
-## The mount whose nozzle is under the finger (with some slack, as a Small one is tiny), or -1.
+## Flips the selected gun between manual and auto (turrets are always auto).
+func _toggle_selected_mode() -> void:
+	if _selected_mount < 0 or _selected_mount >= editor.blueprint.mounts.size():
+		return
+	var mode := StringName(editor.blueprint.mounts[_selected_mount].get("mode", ""))
+	editor.set_mount_mode(_selected_mount, &"auto" if mode == &"manual" else &"manual")
+
+
+## The part whose outline is under the finger (with some slack, as a Small one is tiny), or -1.
 func _mount_at(screen: Vector2) -> int:
 	var point_u := _camera.screen_to_world(screen) / PX
 	var slack_u := TAP_SLOP_PX / PX / _camera.zoom.x
 	for i in range(editor.blueprint.mounts.size() - 1, -1, -1):
-		var mount_frame := Mounting.frame(placement, editor.blueprint, editor.blueprint.mounts[i])
-		if mount_frame.is_empty():
+		var shape := Mounting.outline(placement, editor.blueprint, editor.blueprint.mounts[i])
+		if shape.is_empty():
 			continue
-		var nozzle := Mounting.nozzle(placement, mount_frame)
-		if Geometry2D.is_point_in_polygon(point_u, nozzle) \
-				or ShipStats.polygon_centroid(nozzle).distance_to(point_u) <= slack_u:
+		if Geometry2D.is_point_in_polygon(point_u, shape) or ShipStats.polygon_centroid(shape).distance_to(point_u) <= slack_u:
 			return i
 	return -1
 
@@ -634,6 +687,8 @@ func _build_ui() -> void:
 	_palette.drag_started.connect(_start_carry_new)
 	_palette.thrusters = placement.thrusters
 	_palette.thruster_drag_started.connect(_start_carry_thruster)
+	_palette.weapons = placement.weapons
+	_palette.weapon_drag_started.connect(_start_carry_weapon)
 	root.add_child(_palette)
 
 	var tools := VBoxContainer.new()
@@ -643,8 +698,11 @@ func _build_ui() -> void:
 	root.add_child(tools)
 	_undo_button = _tool_button(tools, "Undo", func() -> void: editor.undo())
 	_redo_button = _tool_button(tools, "Redo", func() -> void: editor.redo())
-	_tool_button(tools, "Rotate", _rotate_selected)
-	_tool_button(tools, "Duplicate", _duplicate_selected)
+	_rotate_button = _tool_button(tools, "Rotate", _rotate_selected)
+	_duplicate_button = _tool_button(tools, "Duplicate", _duplicate_selected)
+	# Shown in place of Rotate and Duplicate while a gun is selected; the column is full.
+	_mode_button = _tool_button(tools, "Mode: Auto", _toggle_selected_mode)
+	_mode_button.visible = false
 	_tool_button(tools, "Delete", _delete_selected)
 	_mirror_button = _tool_button(tools, "Mirror", func() -> void: pass)
 	_mirror_button.toggle_mode = true
@@ -716,6 +774,8 @@ func _tool_button(parent: Control, text: String, action: Callable) -> Button:
 ##   --ghost=<shape>,<size>,<x>,<y>   show a carried ghost at that screen point
 ##   --mirror=1
 ##   --paint=1             open the paint panel
+##   --tab=<name>          open a palette tab (e.g. weapons)
+##   --mount=<index>       select a mount
 func preview_setup(args: Dictionary) -> void:
 	if args.get("paint", "0") == "1":
 		_paint.visible = true
@@ -730,6 +790,12 @@ func preview_setup(args: Dictionary) -> void:
 		_mirror_button.button_pressed = true
 	if args.has("select"):
 		_select(int(args["select"]))
+	if args.has("mount"):
+		_select_mount(int(args["mount"]))
+	if args.has("tab"):
+		for button in _palette.find_children("*", "Button", true, false):
+			if (button as Button).text.to_lower() == String(args["tab"]).to_lower():
+				(button as Button).button_pressed = true
 	if args.has("ghost"):
 		var parts: PackedStringArray = (args["ghost"] as String).split(",")
 		_carry = {"type": _palette.type, "shape": StringName(parts[0]), "size": StringName(parts[1]),

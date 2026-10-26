@@ -15,6 +15,21 @@
 			"jet": ["#ffe9a0", "#ff8a30", "#e83010", "#801000"],
 			"ion": ["#ffffff", "#9fe8ff", "#3a8bff", "#1030c0"]
 		},
+		"vis.weapons": {
+			"_doc": "Guns (PLAN.md 4.4), drawn in code until their art lands; no files. A turret is a round base with a barrel, an edge gun a mounting block with one. Sizes in U. The hangar marks each gun's mode with a dot: manual or auto.",
+			"base": "#59616b",
+			"barrel": "#2a2e34",
+			"rim": "#9aa3ad",
+			"barrel_width_u": 0.12,
+			"block_depth_u": 0.14,
+			"manual_mark": "#ffb040",
+			"auto_mark": "#5ad0ff"
+		},
+		"vis.fx.projectiles": {
+			"_doc": "Shots in flight (Phase 4.3), drawn as additive tracer streaks in one MultiMesh; no files. Per weapon id, else default. length_u and width_u are the streak's size.",
+			"default": {"color": "#ffd27a", "length_u": 0.5, "width_u": 0.07},
+			"gatling_single": {"color": "#ffd890", "length_u": 0.55, "width_u": 0.07}
+		},
 		"vis.fx.explosion": {
 			"_doc": "A ship's death (PLAN.md 4.2), drawn in code; no files. A white flash, an expanding ring and a burst of sparks (fireballs), sized by the ship: spark_size is [min, max] as a share of the ship's length. Colours run hot -> cooling.",
 			"duration_s": 0.9,

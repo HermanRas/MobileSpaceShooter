@@ -1,0 +1,31 @@
+{
+	"format": 1,
+	"_doc": "PLAN.md 4.4, Phase 4.3. Guns and the mounts they sit on. Distances in U, angles in degrees, time in seconds. An edge gun covers edge_u of a hardpoint edge (edge_u / port_pitch ports) and its barrel sticks out length_u, which is also the space it blocks. A turret sits on a hardpoint's face, which must hold a circle of turret_radius_u. over_hull: the gun sits on top of the ship and fires over its own tiles (owner, 2026-10-26: top-mounted guns can, side-mounted can't). rate is shots per second; a shot flies at speed_u U/s on top of the ship's own velocity and goes range_u. spread_deg is the random scatter either side of the aim. Levels (L1-L999) arrive in 4.8; these are L1.",
+	"mounts": {
+		"fixed": {"name": "Fixed", "on": "edge", "arc_deg": 0, "turn_deg_s": 0, "over_hull": false, "modes": ["manual", "auto"]},
+		"swivel": {"name": "Swivel", "on": "edge", "arc_deg": 22.5, "turn_deg_s": 240, "over_hull": false, "modes": ["manual", "auto"]},
+		"turret": {"name": "Turret", "on": "face", "arc_deg": 180, "turn_deg_s": 180, "over_hull": true, "modes": ["auto"]}
+	},
+	"aim": {
+		"_doc": "A gun fires once its barrel is within fire_within_deg of its aim. A fixed gun on auto fires when a target's lead point is that close to straight ahead.",
+		"fire_within_deg": 3.0
+	},
+	"weapons": {
+		"gatling_single": {
+			"name": "Gatling",
+			"damage_type": "kinetic",
+			"mounts": ["fixed", "swivel", "turret"],
+			"damage": 8,
+			"rate": 8,
+			"speed_u": 40,
+			"range_u": 24,
+			"spread_deg": 1.5,
+			"pierce": 0,
+			"edge_u": 0.5,
+			"length_u": 0.5,
+			"turret_radius_u": 0.25,
+			"mass": 0.3,
+			"price_gc": 80
+		}
+	}
+}

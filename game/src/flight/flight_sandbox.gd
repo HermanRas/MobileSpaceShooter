@@ -8,9 +8,12 @@ extends Node
 ## Settings; WASD/arrows/gamepad too). A FollowCamera and a parallax Starfield (3.5); the Arena
 ## warns near its edge and pushes the ship back in past it.
 ##
-## Damage (4.2): a practice target is parked ahead, and tapping any ship's tile hits it (a
-## physics query, as a bullet will) and highlights it. Ships lose tiles, break apart and blow up;
-## a destroyed ship comes back after a few seconds.
+## Damage (4.2): a practice target is parked ahead. Ships lose tiles, break apart and blow up;
+## a destroyed ship comes back after a few seconds. Tapping a tile highlights it (and hits it for
+## `test_hit`, if data sets one).
+##
+## Guns (4.3): the ship's WeaponController fires into one ProjectilePool. Auto guns pick off the
+## target on their own; FIRE fires the manual ones (in 1-stick, every gun is auto).
 
 signal closed
 
@@ -18,6 +21,9 @@ const PX := ShipMesh.PX_PER_U
 
 var ship: ShipBody
 var pilot: FlightController
+var weapons: WeaponController
+## Every shot in flight.
+var pool := ProjectilePool.new()
 ## How long building the ship body took, for the debug Perf log.
 var last_spawn_usec: int = 0
 
@@ -67,6 +73,9 @@ func open(bp: Blueprint, placement: Placement) -> void:
 	_overlay.z_index = 2
 	_world.add_child(_overlay)
 	_world.add_child(_camera)
+	pool.name = "Shots"
+	pool.z_index = 2
+	_world.add_child(pool)
 	_spawn_player()
 	_camera.make_current()
 	_spawn_target()
@@ -91,6 +100,14 @@ func _spawn_player() -> void:
 	exhaust.name = "Exhaust"
 	ship.add_child(exhaust)
 	exhaust.attach(ship, pilot)
+	weapons = WeaponController.new()
+	weapons.name = "Weapons"
+	ship.add_child(weapons)
+	weapons.attach(ship, pool, _placement.weapons, func() -> Array: return [target] if target != null else [])
+	var guns := GunView.new()
+	guns.name = "Guns"
+	ship.add_child(guns)
+	guns.attach(weapons)
 	ship.rebuilt.connect(_show_status)
 	ship.destroyed.connect(_on_player_destroyed)
 	_camera.configure(_flight.get("camera", {}), ship, _extent_u(_bp, _placement))
@@ -105,6 +122,7 @@ func _spawn_target() -> void:
 		return
 	target = ShipBody.create(bp, _placement)
 	target.name = "Target"
+	target.team = 1
 	var at: Array = _sandbox.get("target_at_u", [10, 0])
 	target.position = Vector2(float(at[0]), float(at[1])) * PX
 	target.rotation = deg_to_rad(float(_sandbox.get("target_rotation_deg", 0.0)))
@@ -122,6 +140,7 @@ func _spawn_target() -> void:
 func _on_player_destroyed() -> void:
 	ship = null
 	pilot = null
+	weapons = null
 	_clear_pick()
 	_note = "destroyed"
 	_note_until = Time.get_ticks_msec() + int(float(_sandbox.get("respawn_s", 3.0)) * 1000.0)
@@ -147,6 +166,8 @@ func _process(_delta: float) -> void:
 		_hud.text = _note
 		return
 	pilot.stick = controls.stick_value()
+	weapons.fire_held = controls.is_firing()
+	weapons.all_auto = Settings.get_value(&"control_scheme") != "2-stick"
 	if _picked >= 0:
 		_overlay.queue_redraw()  # the highlight follows its ship
 	var warning := arena.warning(ship.global_position / PX)
@@ -159,7 +180,7 @@ func _process(_delta: float) -> void:
 	if pilot.braking and ship.linear_velocity.length() > 1.0:
 		parts.append("braking")
 	if controls.is_firing():
-		parts.append("FIRE (weapons arrive in Phase 4)")
+		parts.append("FIRE" if weapons.all_auto or ship.guns.manual_count() > 0 else "FIRE: no manual guns")
 	if warning > 0.0:
 		parts.append("leaving the area" if arena.contains(ship.global_position / PX) else "outside the area: turning you back")
 	if Time.get_ticks_msec() < _note_until:
@@ -249,8 +270,10 @@ func _show_status() -> void:
 	if ship == null:
 		_status.text = "respawning…"
 		return
-	var text := "%s  ·  mass %.1f  ·  %d tiles" % [ship.blueprint.name, ship.mass, ship.get_shape_owners().size()]
-	text += "  ·  " + (_last_hit if _last_hit != "" else "tap a ship to shoot it")
+	var text := "%s  ·  mass %.1f  ·  %d tiles  ·  %d guns" % [ship.blueprint.name, ship.mass,
+			ship.get_shape_owners().size(), ship.guns.guns.size()]
+	if _last_hit != "":
+		text += "  ·  " + _last_hit
 	_status.text = text
 
 
@@ -260,7 +283,7 @@ func _build_ui() -> void:
 	# First, so the labels and buttons added after it sit on top.
 	controls.name = "Controls"
 	controls.switch_pressed.connect(func() -> void:
-		_note = "SWITCH: no manual weapons yet"
+		_note = "SWITCH arrives in Phase 4.7"
 		_note_until = Time.get_ticks_msec() + 2000)
 	ui.add_child(controls)
 	_edge_glow.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)

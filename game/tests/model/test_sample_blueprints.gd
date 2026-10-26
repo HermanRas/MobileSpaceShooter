@@ -5,6 +5,8 @@ func test_every_shipped_blueprint_is_valid() -> void:
 	var tiles_table := Data.table(&"tiles")
 	var placement := Placement.create(ShapeLib.from_table(Data.table(&"shapes")),
 			TileLib.from_table(tiles_table), tiles_table)
+	placement.thrusters = ThrusterLib.from_table(Data.table(&"thrusters"))
+	placement.weapons = WeaponLib.from_table(Data.table(&"weapons"))
 	var files := Data.json_dir("blueprints")
 	assert_true(files.has("starter"), "the starter ship ships")
 	for file_name: String in files:

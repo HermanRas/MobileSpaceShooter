@@ -28,7 +28,7 @@ func _ready() -> void:
 	grid.columns = 3
 	column.add_child(grid)
 	for entry: Array in [["tiles", "Tiles"], ["hp", "HP"], ["armor", "Armor"], ["shield", "Shield"],
-			["mass", "Mass"], ["accel", "Accel"], ["cost", "Cost"]]:
+			["mass", "Mass"], ["accel", "Accel"], ["guns", "Guns"], ["cost", "Cost"]]:
 		var name_label := _label(entry[1], DIM)
 		var value := _label("", Color.WHITE)
 		var delta := _label("", GOOD)
@@ -41,7 +41,7 @@ func _ready() -> void:
 
 
 func show_stats(stats: ShipStats, problems: Array[Placement.Problem], max_tiles: int,
-		envelope: ThrustEnvelope = null) -> void:
+		envelope: ThrustEnvelope = null, guns: GunLayout = null) -> void:
 	_set_row(&"tiles", "%d / %d" % [stats.tile_count, max_tiles])
 	_set_row(&"hp", "%d" % stats.hp)
 	_set_row(&"armor", "%.1f" % stats.armor_avg)
@@ -52,6 +52,10 @@ func show_stats(stats: ShipStats, problems: Array[Placement.Problem], max_tiles:
 	else:
 		_set_row(&"accel", "%.1f U/s² forward, %.1f back" % [envelope.accel(ThrustEnvelope.FORWARD),
 				envelope.accel(ThrustEnvelope.BACK)])
+	if guns == null or guns.guns.is_empty():
+		_set_row(&"guns", "none")
+	else:
+		_set_row(&"guns", "%d (%d manual), %d dmg/s" % [guns.guns.size(), guns.manual_count(), roundi(guns.dps())])
 	_set_row(&"cost", format_cost(stats.cost))
 	for child in _problems.get_children():
 		child.queue_free()
@@ -59,9 +63,13 @@ func show_stats(stats: ShipStats, problems: Array[Placement.Problem], max_tiles:
 		_problems.add_child(_label(problems[i].message, BAD))
 	if problems.size() > MAX_PROBLEMS:
 		_problems.add_child(_label("…and %d more" % (problems.size() - MAX_PROBLEMS), BAD))
+	var warnings: Array[Dictionary] = []
 	if envelope != null:
-		for warning in envelope.warnings:
-			_problems.add_child(_label("• " + str(warning["text"]), WARN))
+		warnings.append_array(envelope.warnings)
+	if guns != null:
+		warnings.append_array(guns.warnings)
+	for warning in warnings:
+		_problems.add_child(_label("• " + str(warning["text"]), WARN))
 
 
 ## Shows what one tile of `def` at `size` would add, or clears the preview when `def` is null.

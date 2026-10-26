@@ -19,6 +19,8 @@ var inertia: float = 0.0
 var cost: Dictionary = {}
 ## Thrusters that resolved (known part, size, level, and a place on the ship).
 var thruster_count: int = 0
+## Guns that resolved the same way.
+var weapon_count: int = 0
 
 
 ## Tiles with unknown types or shapes are skipped; run `Placement.validate()` first.
@@ -48,19 +50,24 @@ static func compute(bp: Blueprint, placement: Placement) -> ShipStats:
 		parts.append([tile_mass, centroid, own_inertia])
 		stats.center_of_mass += centroid * tile_mass
 
-	# Thrusters weigh something too, as a point mass where they're mounted (3.2).
-	if placement.thrusters != null:
-		for mount in bp.mounts:
-			var spec := placement.thrusters.spec(ThrusterLib.type_of_part(str(mount.get("part", ""))),
-					StringName(mount.get("size", "")), int(mount.get("level", 0)))
-			var mount_frame := Mounting.frame(placement, bp, mount)
-			if spec.is_empty() or mount_frame.is_empty():
-				continue
-			var thruster_mass: float = spec["mass"]
+	# Thrusters (3.2) and guns (4.3) weigh something too, as a point mass where they're mounted.
+	for mount in bp.mounts:
+		var part_mass := 0.0
+		if Mounting.is_thruster(mount) and placement.thrusters != null:
+			part_mass = placement.thrusters.spec(ThrusterLib.type_of_part(str(mount["part"])),
+					StringName(mount.get("size", "")), int(mount.get("level", 0))).get("mass", 0.0)
+		elif Mounting.is_weapon(mount) and placement.weapons != null:
+			part_mass = placement.weapons.weapon(WeaponLib.type_of_part(str(mount["part"]))).get("mass", 0.0)
+		var at := Mounting.anchor(placement, bp, mount)
+		if part_mass <= 0.0 or at == Vector2.INF:
+			continue
+		if Mounting.is_thruster(mount):
 			stats.thruster_count += 1
-			stats.mass += thruster_mass
-			parts.append([thruster_mass, mount_frame["center"], 0.0])
-			stats.center_of_mass += mount_frame["center"] * thruster_mass
+		else:
+			stats.weapon_count += 1
+		stats.mass += part_mass
+		parts.append([part_mass, at, 0.0])
+		stats.center_of_mass += at * part_mass
 
 	if stats.mass > 0.0:
 		stats.center_of_mass /= stats.mass

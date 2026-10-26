@@ -20,14 +20,28 @@ signal rebuilt
 signal destroyed
 
 const PX := ShipMesh.PX_PER_U
+## Ships bump into each other on this layer.
+const SHIP_LAYER := 1
 ## Wrecks sit on a physics layer of their own and collide with nothing.
 const WRECK_LAYER := 1 << 2
+## Each team's hulls are also on a layer of their own, TEAM_LAYER << team, so a shot's ray only
+## looks for the other side (Phase 4.3).
+const TEAM_LAYER := 1 << 3
+const TEAMS := 4
 
 var blueprint: Blueprint
 var placement: Placement
 var stats: ShipStats
 ## What the thrusters can do (3.2); the FlightController flies with it.
 var envelope: ThrustEnvelope
+## Where the guns are and where they can shoot (4.3); the WeaponController fires them.
+var guns: GunLayout
+## Which side it's on (0 is the player's). Shots only hit the other teams.
+var team := 0:
+	set(value):
+		team = clampi(value, 0, TEAMS - 1)
+		if not is_wreck():
+			collision_layer = SHIP_LAYER | (TEAM_LAYER << team)
 ## Its fight state, once `enable_damage()` has run. Wrecks keep the ship's, for the wear.
 var damage: ShipDamage
 ## Seconds left before a wreck is gone, or < 0 for a ship.
@@ -52,6 +66,7 @@ static func create(bp: Blueprint, placement_rules: Placement) -> ShipBody:
 
 
 func _init() -> void:
+	team = 0
 	gravity_scale = 0.0
 	can_sleep = false
 	center_of_mass_mode = RigidBody2D.CENTER_OF_MASS_MODE_CUSTOM
@@ -87,9 +102,19 @@ func build(bp: Blueprint, placement_rules: Placement) -> void:
 
 	stats = ShipStats.compute(bp, placement)
 	envelope = ThrustEnvelope.compute(bp, placement, stats)
+	guns = GunLayout.compute(bp, placement)
 	mass = maxf(stats.mass, 0.001)
 	center_of_mass = stats.center_of_mass * PX
 	inertia = maxf(stats.inertia * PX * PX, 0.001)
+
+
+## The physics mask a shot from `team` looks for: every other team's hulls.
+static func enemy_mask(from_team: int) -> int:
+	var mask := 0
+	for other in TEAMS:
+		if other != from_team:
+			mask |= TEAM_LAYER << other
+	return mask
 
 
 ## The id of the tile a collision reported as `body_shape_index`, or -1.
@@ -114,7 +139,7 @@ func enable_damage(table: DamageTable) -> void:
 
 ## `raw` damage of `type_id` striking `tile_id` (from `tile_at_shape`).
 func take_hit(tile_id: int, raw: float, type_id: StringName, pierce := 0.0) -> ShipDamage.Result:
-	if damage == null or is_wreck():
+	if damage == null or damage.dead or is_wreck():
 		return ShipDamage.Result.new()
 	var result := damage.hit(tile_id, raw, type_id, pierce)
 	_after_hit(result)
@@ -123,7 +148,7 @@ func take_hit(tile_id: int, raw: float, type_id: StringName, pierce := 0.0) -> S
 
 ## An explosion at `world_point` reaching `radius_u`.
 func take_splash(world_point: Vector2, radius_u: float, raw: float, type_id: StringName) -> ShipDamage.Result:
-	if damage == null or is_wreck():
+	if damage == null or damage.dead or is_wreck():
 		return ShipDamage.Result.new()
 	var result := damage.splash(to_local(world_point) / PX, radius_u, raw, type_id)
 	_after_hit(result)

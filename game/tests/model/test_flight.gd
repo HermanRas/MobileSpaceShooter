@@ -54,7 +54,8 @@ func test_top_speed_is_push_over_mass_and_damping() -> void:
 	# A jet's steady force makes this clean: v_max = F / (m × linear_damp).
 	var bp := _blueprint("starter")
 	for mount in bp.mounts:
-		mount["part"] = "thruster.jet"
+		if Mounting.is_thruster(mount):
+			mount["part"] = "thruster.jet"
 	var sim := _sim_for(bp)
 	sim.run(Vector2.RIGHT, 30.0)
 	var expected := sim.model.envelope.rose[ThrustEnvelope.FORWARD] / (sim.model.envelope.mass * sim.model.linear_damp)
@@ -122,7 +123,8 @@ func test_lopsided_pulls_to_the_right() -> void:
 func test_ion_ramps_while_on_and_cools_when_off() -> void:
 	var bp := _blueprint("starter")
 	for mount in bp.mounts:
-		mount["part"] = "thruster.ion"
+		if Mounting.is_thruster(mount):
+			mount["part"] = "thruster.ion"
 	var sim := _sim_for(bp)
 	sim.run(Vector2.RIGHT, 1.0)
 	var rear := _thruster_index(sim, func(t: Dictionary) -> bool: return t["push"].x > 0.5)
