@@ -1223,8 +1223,12 @@ laser's 18 U reach.
 - **Done when:** killing an all-shield enemy drops mostly Crystal (a test), and pickups fly to the ship.
 
 #### 5.5 Spawner
-- [ ] Spawn off-screen around the player. (Edge marks exist for the carrier, 3.5; enemy marks
-  wait for v2 radar tech, owner 2026-10-26.)
+- [ ] Spawn off-screen around the player
+- [x] Edge marks for enemies (owner, 2026-10-26): an enemy that has been on screen gets a solid,
+  fixed-size dot at the screen's edge while it's off screen and within `sight_range_u` (60 U,
+  `flight.json` `edge_markers`); beyond that it's forgotten until seen again. Being hit doesn't
+  spot the shooter (shots don't carry their ship). Built in `FlightSandbox._marks()`; the
+  carrier's arrow is in 3.5.
 - [ ] An API shared by Creative test, WaveTime and Story tiles
 - **Done when:** a level-30 encounter spawns, fights and can be cleared in the sandbox.
 
@@ -1574,9 +1578,10 @@ and A.2/A.3 parts.
   together (a wedge of chasers, strafers screening a sniper, escorts round a boss). Hooks for v1:
   the AI pilot (5.2) takes its goal from outside (a target, a point, a ship to guard), so a group
   leader can hand out slots; the encounter generator (5.3) spawns ships in clusters.
-- **Radar tech** (owner, 2026-10-26): a ship part or upgrade that gives enemies the edge marks
-  the carrier already has (`EdgeMarkers`: an arrow that shrinks with distance, a dot just
-  before it comes into view). **Long-range radar** is an end-game upgrade adding a **ping**
+- **Radar tech** (owner, 2026-10-26): a ship part or upgrade that marks enemies beyond sight
+  range and ones never seen, the way the carrier is marked (`EdgeMarkers`: an arrow that shrinks
+  with distance, a dot just before it comes into view). Without radar, only enemies you've
+  seen get a fixed dot, within sight range (5.5). **Long-range radar** is an end-game upgrade adding a **ping**
   menu that reports each enemy's level and distance. Hook for v1: `EdgeMarkers.point_at()`
   takes any list of positions and colours.
 - More player bases, and a layered customiser (hairstyles, outfits) on top of v1's recolouring

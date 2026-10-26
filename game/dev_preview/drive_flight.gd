@@ -595,9 +595,37 @@ func _step_zoom_and_markers() -> void:
 			and sandbox.markers.size_share(sandbox.markers.dot_within_u) == 1.0,
 			"far off it's a smaller arrow (%.0f U out: %.2f), full size near the view" % [far, sandbox.markers.size_share(far)])
 	_save_shot("drive_flight_markers.png")
+
+	# 5.5: an enemy you've seen gets a fixed-size dot off screen, until it's beyond sight range.
+	var enemy := sandbox.spawn(FlightSandbox.SPAWN_ENEMIES, "target_barge")
+	await _frames(2)
+	var home := sandbox.ship.global_position
+	var sight := sandbox.markers.sight_range_u
+	_teleport(enemy, home + Vector2(-sight * 0.5, 0) * PX)
+	await _physics_frames(2)
+	await _frames(2)
+	var dotted := _enemy_dot(sandbox)
+	_teleport(enemy, home + Vector2(-sight * 1.5, 0) * PX)
+	await _physics_frames(2)
+	await _frames(2)
+	var beyond := _enemy_dot(sandbox)
+	_teleport(enemy, home + Vector2(-sight * 0.5, 0) * PX)
+	await _physics_frames(2)
+	await _frames(2)
+	_check(dotted and not beyond and not _enemy_dot(sandbox),
+			"a seen enemy gets a dot off screen (%s), lost beyond sight range (%s) until seen again (%s)"
+			% [dotted, beyond, _enemy_dot(sandbox)])
 	_hangar.land()
 	await _frames(2)
 	Settings.set_value(&"view_zoom", saved)
+
+
+## Whether the edge markers show an enemy's dot.
+func _enemy_dot(sandbox: FlightSandbox) -> bool:
+	for mark: Array in sandbox.markers._marks:
+		if mark[1] == FlightSandbox.ENEMY_MARK and mark[3] and EdgeMarkers.edge_point(mark[0], sandbox.markers.size) != null:
+			return true
+	return false
 
 
 ## Whether the edge markers show a carrier arrow.

@@ -31,6 +31,8 @@ signal closed
 const PX := ShipMesh.PX_PER_U
 ## The edge mark for the carrier you escort (enemies get marks with radar tech, v2).
 const CARRIER_MARK := Color(0.4, 1.0, 0.5, 0.95)
+## The edge dot for an enemy you've seen (5.5).
+const ENEMY_MARK := Color(1.0, 0.35, 0.3, 0.95)
 
 var ship: ShipBody
 var pilot: FlightController
@@ -52,8 +54,11 @@ var test_hit := 60.0
 var _camera := FollowCamera.new()
 var _arena_view := _ArenaView.new()
 var _edge_glow := _EdgeGlow.new()
-## A mark at the screen's edge for the carrier when it's off screen.
+## Marks at the screen's edge: the carrier off screen, and enemies you've seen.
 var markers := EdgeMarkers.new()
+## Enemies seen on screen and still within sight range (owner, 2026-10-26), as instance ids;
+## further off they're forgotten until seen again. Radar tech (v2) will mark the rest.
+var _seen := {}
 ## Fingers down on open space (not the stick or a button), index -> screen position: two of
 ## them pinch the zoom.
 var _touches := {}
@@ -566,7 +571,24 @@ func _process(_delta: float) -> void:
 	if Time.get_ticks_msec() < _note_until:
 		parts.append(_note)
 	_hud.text = "  ·  ".join(parts)
-	markers.point_at(_camera, [[carrier.global_position, CARRIER_MARK]] if is_instance_valid(carrier) else [])
+	markers.point_at(_camera, _marks())
+
+
+## The edge marks: the carrier's arrow, and a dot for each enemy seen and still in sight range.
+func _marks() -> Array:
+	var marks: Array = []
+	var seen := {}
+	for enemy: ShipBody in _live_enemies():
+		var id := enemy.get_instance_id()
+		if enemy.global_position.distance_to(ship.global_position) > markers.sight_range_u * PX:
+			continue
+		if _seen.has(id) or markers.on_screen(_camera, enemy.global_position):
+			seen[id] = true
+			marks.append([enemy.global_position, ENEMY_MARK, true])
+	_seen = seen
+	if is_instance_valid(carrier):
+		marks.append([carrier.global_position, CARRIER_MARK])
+	return marks
 
 
 static func _hull_share(body: ShipBody) -> float:
