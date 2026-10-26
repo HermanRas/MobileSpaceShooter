@@ -16,3 +16,4 @@ Rows may name a folder (ending in `/`) when every file in it shares one source.
 |---|---|---|---|---|
 | `placeholders/` | project | Herman Ras | MIT | Stand-in art, replaced by the art track |
 | `branding/` | generated | Herman Ras | see GeminiCopyRight.md | Icon and splash, built from `art_src/icons/` and `art_src/backgrounds/` by `tools/make_branding.py`. Gemini (owner confirmed). The splash is temporary: it has X-wing-like fighters and gets regenerated from in-game ships (PLAN.md 15.3) |
+| `tiles/` | generated | Herman Ras | see GeminiCopyRight.md | Tile materials, the core and damage overlays (A.1), cut and packed by `tools/slice_sheets.py` from the Gemini masters `art_src/tiles/tiles_materials.jpeg` and `tiles_cores_shields.jpeg` |

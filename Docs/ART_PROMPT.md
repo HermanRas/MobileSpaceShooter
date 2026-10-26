@@ -142,8 +142,8 @@ band for the colour the player picked and keeps the shading. Each hue is far fro
 
 | # | Section | Folder | Cells | Status |
 |---|---|---|---|---|
-| A.1 | `tiles_materials` | `art_src/tiles/` | 15 | **generated 2026-10-26**: used for hull, armour and hardpoint |
-| A.1b | `tiles_cores_shields` | `art_src/tiles/` | 12 | **prompt ready** |
+| A.1 | `tiles_materials` | `art_src/tiles/` | 15 | ✅ in the game 2026-10-26: hull, armour, hardpoint |
+| A.1b | `tiles_cores_shields` | `art_src/tiles/` | 12 | ✅ in the game 2026-10-26: core, shields, damage |
 | A.2 | `parts_thrusters` | `art_src/parts/` | 9 | to write |
 | A.3 | `parts_weapons_*` | `art_src/parts/` | 2–3 sheets | to write |
 | A.4 | `icons_*` | `art_src/icons/` | 2 sheets | to write |
@@ -333,6 +333,17 @@ Remember: no text, no colour, every canopy points right, and row 4 is empty.
   described.
 - **Row 3's** overlays are multiplied over a tile as its HP falls, after the shader's darkening:
   light marks at 75% HP, heavy ones at 25%.
+
+### Review, 2026-10-26: what came back
+
+Exactly what was asked, row by row, so asking one kind per row worked.
+- **Cores:** all four came back the same design. It's a good one, so one core is used for every
+  variant; it's keyed off the black and composited over `hull_a`.
+- **Shields:** three of the four are used. Cell 2 has a frame round it, so it can't tile.
+- **Damage:** all four are used, one per wear step.
+
+Cut and packed by `tools/slice_sheets.py` (cells and kinds in `art_src/sheets.json`). See it
+with `tools/preview.sh res://dev_preview/art_tiles.tscn 1800x700 --ship=gunboat --zoom=2.2`.
 
 ---
 

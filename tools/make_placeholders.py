@@ -2,11 +2,13 @@
 
     tools/run.sh python3 -I tools/make_placeholders.py
 
-Writes game/assets/placeholders/tile_atlas.png: one 128 px cell per tile type, left to right
-in CELLS order. Each cell is seamless. Channels follow the ship shader's contract:
+Writes game/assets/placeholders/tile_atlas.png in the layout tools/slice_sheets.py gives the real
+atlas: a column per tile type in CELLS order, VARIANTS identical rows, each cell padded (wrapped)
+by CELL / 16 on every side. Each cell is seamless. Channels follow the ship shader's contract:
     R = greyscale detail (multiplied with the paint colour)
     G = trim mask (drawn untinted, e.g. the shield's emitter lines)
     B = unused, A = 255
+And game/assets/placeholders/tile_damage.png: four damage overlays, darker speckle per step.
 """
 from __future__ import annotations
 
@@ -18,7 +20,10 @@ from PIL import Image
 CELL = 128
 # Append new cells at the end: the noise generator is seeded, so earlier cells stay identical.
 CELLS = ["core", "hull", "armor", "shield", "hardpoint", "thruster"]
+VARIANTS = 3
+PAD = CELL // 16
 OUT = Path(__file__).resolve().parent.parent / "game" / "assets" / "placeholders" / "tile_atlas.png"
+DAMAGE_OUT = OUT.with_name("tile_damage.png")
 
 yy, xx = np.mgrid[0:CELL, 0:CELL].astype(np.float32)
 rng = np.random.default_rng(7)
@@ -101,16 +106,27 @@ def thruster() -> tuple[np.ndarray, np.ndarray]:
 def main() -> None:
     makers = {"core": core, "hull": hull, "armor": armor, "shield": shield, "hardpoint": hardpoint,
               "thruster": thruster}
-    atlas = np.zeros((CELL, CELL * len(CELLS), 4), dtype=np.uint8)
+    stride = CELL + 2 * PAD
+    atlas = np.zeros((stride * VARIANTS, stride * len(CELLS), 4), dtype=np.uint8)
     for i, name in enumerate(CELLS):
         detail, trim = makers[name]()
-        cell = atlas[:, i * CELL:(i + 1) * CELL]
-        cell[..., 0] = np.clip(detail, 0, 1) * 255
-        cell[..., 1] = np.clip(trim, 0, 1) * 255
-        cell[..., 3] = 255
+        for row in range(VARIANTS):
+            cell = atlas[row * stride:(row + 1) * stride, i * stride:(i + 1) * stride]
+            cell[..., 0] = np.pad(np.clip(detail, 0, 1) * 255, PAD, mode="wrap")
+            cell[..., 1] = np.pad(np.clip(trim, 0, 1) * 255, PAD, mode="wrap")
+            cell[..., 3] = 255
     OUT.parent.mkdir(parents=True, exist_ok=True)
     Image.fromarray(atlas, "RGBA").save(OUT)
     print(f"wrote {OUT.relative_to(OUT.parents[3])} ({atlas.shape[1]}x{atlas.shape[0]}, cells: {', '.join(CELLS)})")
+
+    damage = np.zeros((stride, stride * 4, 4), dtype=np.uint8)
+    damage[..., 3] = 255
+    for step in range(4):
+        speckle = periodic_noise(16, 1.0) + periodic_noise(32, 0.6)
+        marks = np.clip((speckle - (0.45 - step * 0.12)) * 4, 0, 1) * (0.5 + step * 0.12)
+        damage[:, step * stride:(step + 1) * stride, 0] = np.pad((1 - marks) * 255, PAD, mode="wrap")
+    Image.fromarray(damage, "RGBA").save(DAMAGE_OUT)
+    print(f"wrote {DAMAGE_OUT.relative_to(DAMAGE_OUT.parents[3])}")
 
 
 if __name__ == "__main__":

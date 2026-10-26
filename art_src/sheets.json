@@ -1,0 +1,61 @@
+{
+	"format": 1,
+	"_doc": "What tools/slice_sheets.py cuts from each Gemini master in art_src/, and how it packs the cells into the game's atlases (PLAN.md 6.3, ART_PROMPT.md). Cells are numbered in reading order from 1; a cell not listed is skipped. Kinds: material (a seamless greyscale texture: cut inside the gutters, edges evened out so it tiles), overlay (greyscale, cut inside the gutters, not tiled), keyed (artwork on a flat background, flood-filled from the cell border and composited over `base`).",
+	"sheets": {
+		"tiles_materials": {
+			"file": "tiles/tiles_materials.jpeg",
+			"grid": [4, 4],
+			"_doc": "Generated 2026-10-26. Gemini drew 15 generic panels instead of the list; picked by look (ART_PROMPT.md review).",
+			"cells": {
+				"1": ["hull_a", "material"],
+				"2": ["hull_b", "material"],
+				"4": ["hardpoint_a", "material"],
+				"5": ["armor_a", "material"],
+				"6": ["ribs", "material"],
+				"7": ["shield_cells", "material"],
+				"9": ["armor_b", "material"],
+				"10": ["hardpoint_b", "material"],
+				"11": ["hull_c", "material"],
+				"12": ["hardpoint_c", "material"],
+				"14": ["armor_c", "material"]
+			}
+		},
+		"tiles_cores_shields": {
+			"file": "tiles/tiles_cores_shields.jpeg",
+			"grid": [4, 4],
+			"_doc": "Generated 2026-10-26. Row 1's four cores came back identical, so one is used. Row 2 cell 2 has a frame round it, so it isn't seamless and is skipped.",
+			"cells": {
+				"1": ["core_a", "keyed", {"base": "hull_a", "fill": 0.98}],
+				"5": ["shield_hex", "material"],
+				"7": ["shield_diamond", "material"],
+				"8": ["shield_circuit", "material"],
+				"9": ["damage_1", "overlay"],
+				"10": ["damage_2", "overlay"],
+				"11": ["damage_3", "overlay"],
+				"12": ["damage_4", "overlay"]
+			}
+		}
+	},
+	"atlases": {
+		"tile_atlas": {
+			"out": "game/assets/tiles/tile_atlas.png",
+			"cell_px": 256,
+			"trim": true,
+			"_doc": "The ship shader's materials: a column per tile type (visuals.json vis.tiles.material_atlas `cells`), a row per variant. R = detail, G = untinted trim (the art's near-white). The thruster column borrows the ribbed panel until A.2.",
+			"rows": [
+				["core_a", "hull_a", "armor_a", "shield_hex", "hardpoint_a", "ribs"],
+				["core_a", "hull_b", "armor_b", "shield_diamond", "hardpoint_b", "ribs"],
+				["core_a", "hull_c", "armor_c", "shield_circuit", "hardpoint_c", "ribs"]
+			]
+		},
+		"tile_damage": {
+			"out": "game/assets/tiles/tile_damage.png",
+			"cell_px": 256,
+			"trim": false,
+			"_doc": "Damage overlays multiplied over a tile, one per wear step 1-4 (R = the overlay, white = no change).",
+			"rows": [
+				["damage_1", "damage_2", "damage_3", "damage_4"]
+			]
+		}
+	}
+}

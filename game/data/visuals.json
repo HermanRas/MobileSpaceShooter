@@ -3,10 +3,17 @@
 	"_doc": "The asset seam: the ONLY place a visual ID maps to a file. Each entry is {\"path\": real art, \"placeholder\": stand-in}, plus any fields the consumer needs. See PLAN.md 5.3.",
 	"visuals": {
 		"vis.tiles.material_atlas": {
+			"path": "res://assets/tiles/tile_atlas.png",
 			"placeholder": "res://assets/placeholders/tile_atlas.png",
 			"cells": ["core", "hull", "armor", "shield", "hardpoint", "thruster"],
+			"variants": 3,
 			"thruster_tints": {"pulse": "#d9822b", "jet": "#c0392b", "ion": "#3a7bd5"},
-			"_doc": "One seamless cell per tile type, plus thruster nozzles tinted by type. R = detail, G = untinted trim (PLAN.md 6.2). Real art: A.1."
+			"_doc": "A column per tile type (in `cells` order), a row per variant, each cell padded by 1/18 of its stride; thruster nozzles are tinted by type. R = detail, G = untinted trim (PLAN.md 6.2). Built by tools/slice_sheets.py from art_src/sheets.json (A.1)."
+		},
+		"vis.tiles.damage": {
+			"path": "res://assets/tiles/tile_damage.png",
+			"placeholder": "res://assets/placeholders/tile_damage.png",
+			"_doc": "Four damage overlays in a row, one per wear step, padded like the material atlas; R is multiplied over the tile (white = untouched). Built by tools/slice_sheets.py (A.1)."
 		},
 		"vis.fx.thrusters": {
 			"_doc": "Thruster exhaust (PLAN.md 3.6), drawn in code with particles; no files. level_scale multiplies the size per level (L1-3). Colours run hot core -> fading edge.",

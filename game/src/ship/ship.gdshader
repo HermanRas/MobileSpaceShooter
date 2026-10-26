@@ -3,18 +3,28 @@
 // Per-vertex data, packed into the two channels a 2D mesh has:
 //   COLOR.rgb  paint colour
 //   COLOR.a    distance to this triangle's outer edge, in U (0 on the edge)
-//   UV.x       atlas cell * 1000 + LOCAL_OFFSET + ship-local x in U
-//   UV.y       wear step * 1000 + LOCAL_OFFSET + ship-local y in U (wear 0..WEAR_STEPS, 4.2)
+//   UV.x       atlas column * PACK + LOCAL_OFFSET + x
+//   UV.y       (wear step * variants + variant) * PACK + LOCAL_OFFSET + y
+// x, y are ship-local in U, so one seamless material covers every shape and size; for the core
+// they're tile-local instead (-0.5..0.5 across the tile's box), so its design is drawn once.
 // LOCAL_OFFSET keeps the packed value positive, so floor() recovers the right cell for tiles
-// left of the origin. It matches ShipMesh.LOCAL_OFFSET.
-// The material is sampled in ship space, so one seamless texture covers every shape and size.
+// left of the origin. PACK and LOCAL_OFFSET match ShipMesh.
+//
+// The atlas (tools/slice_sheets.py) has a column per tile type and a row per variant, each cell
+// padded by 1/18 of its stride so mipmaps never read a neighbour. `damage` is a row of overlays,
+// one per wear step, multiplied over the tile (white = untouched).
 shader_type canvas_item;
 
-const float LOCAL_OFFSET = 100.5;
+const float PACK = 100.0;
+const float LOCAL_OFFSET = 50.5;
 const float WEAR_STEPS = 4.0;
 
-uniform sampler2D atlas : filter_linear, repeat_disable;
-uniform float cells = 5.0;
+uniform sampler2D atlas : filter_linear_mipmap, repeat_disable;
+uniform sampler2D damage : filter_linear_mipmap, repeat_disable;
+uniform float columns = 6.0;
+uniform float variants = 3.0;
+uniform float pad_frac = 0.0555556;
+uniform float core_column = 0.0;
 uniform float u_per_repeat = 1.0;
 uniform float outline_u = 0.03;
 uniform float bevel_u = 0.09;
@@ -23,45 +33,28 @@ uniform vec3 outline_color : source_color = vec3(0.04, 0.04, 0.06);
 // 0 = normal; the hangar ghost uses a tint and transparency.
 uniform vec4 tint : source_color = vec4(1.0, 1.0, 1.0, 0.0);
 uniform float opacity = 1.0;
-uniform vec3 scorch_color : source_color = vec3(0.08, 0.05, 0.04);
 uniform vec3 ember_color : source_color = vec3(1.0, 0.4, 0.08);
 
-vec2 hash2(vec2 p) {
-	p = vec2(dot(p, vec2(127.1, 311.7)), dot(p, vec2(269.5, 183.3)));
-	return fract(sin(p) * 43758.5453);
-}
-
-// Distance to the nearest Voronoi border (F2 - F1), and a random value for the nearest cell.
-vec2 cracks(vec2 p) {
-	vec2 cell = floor(p);
-	float f1 = 8.0;
-	float f2 = 8.0;
-	float id = 0.0;
-	for (int y = -1; y <= 1; y++) {
-		for (int x = -1; x <= 1; x++) {
-			vec2 c = cell + vec2(float(x), float(y));
-			vec2 h = hash2(c);
-			float d = length(c + h - p);
-			if (d < f1) {
-				f2 = f1;
-				f1 = d;
-				id = h.x;
-			} else if (d < f2) {
-				f2 = d;
-			}
-		}
-	}
-	return vec2(f2 - f1, id);
+// A cell's texel for `t` (0..1 inside the cell), with the gradient of the unwrapped coordinate,
+// so the mip level doesn't jump where fract() wraps.
+vec4 cell_texel(sampler2D tex, vec2 cell, vec2 grid, vec2 t, vec2 dx, vec2 dy) {
+	float inner = 1.0 - 2.0 * pad_frac;
+	vec2 uv = (cell + pad_frac + t * inner) / grid;
+	return textureGrad(tex, uv, dx * inner / grid, dy * inner / grid);
 }
 
 void fragment() {
-	float cell = floor(UV.x / 1000.0);
-	float wear_step = floor(UV.y / 1000.0);
-	// Keep the half-repeat shift (only the whole part was added to stay positive).
-	vec2 local = vec2(UV.x - cell * 1000.0, UV.y - wear_step * 1000.0) - vec2(LOCAL_OFFSET - 0.5);
-	// Inset slightly so linear filtering never reads the neighbouring cell.
-	vec2 t = mix(vec2(0.004), vec2(0.996), fract(local / u_per_repeat));
-	vec4 s = texture(atlas, vec2((cell + t.x) / cells, t.y));
+	float column = floor(UV.x / PACK);
+	float code = floor(UV.y / PACK);
+	float wear_step = floor(code / variants + 0.001);
+	float variant = code - wear_step * variants;
+	vec2 local = vec2(UV.x - column * PACK, UV.y - code * PACK) - vec2(LOCAL_OFFSET - 0.5);
+	bool core = abs(column - core_column) < 0.5;
+	vec2 at = core ? local : local / u_per_repeat;
+	vec2 t = core ? clamp(at, 0.0, 1.0) : fract(at);
+	vec2 dx = dFdx(at);
+	vec2 dy = dFdy(at);
+	vec4 s = cell_texel(atlas, vec2(column, variant), vec2(columns, variants), t, dx, dy);
 
 	vec3 col = COLOR.rgb * (0.45 + 0.75 * s.r);
 	col = mix(col, trim_color * (0.6 + 0.4 * s.r), s.g);
@@ -70,15 +63,13 @@ void fragment() {
 	col *= mix(1.3, 1.0, smoothstep(0.0, bevel_u, d));
 	col = mix(outline_color, col, smoothstep(outline_u * 0.6, outline_u, d));
 	if (wear_step > 0.0) {
-		// Damage: blotchy scorching, then cracks that spread and, near the end, glow.
+		// Damage: the painted overlay for this step, shifted per variant so neighbours differ,
+		// and near the end the deepest marks smoulder.
 		float wear = wear_step / WEAR_STEPS;
-		vec2 blot = cracks(local * 1.7 + 13.0);
-		col *= 1.0 - wear * (0.25 + 0.35 * blot.y);
-		vec2 crack = cracks(local * 2.6);
-		float shown = step(crack.y, wear * 1.1);  // more of the network appears as wear grows
-		float line = 1.0 - smoothstep(0.015 + 0.03 * wear, 0.03 + 0.05 * wear, crack.x);
-		col = mix(col, scorch_color, line * shown * 0.9);
-		col += ember_color * line * shown * smoothstep(0.5, 1.0, wear) * 0.7;
+		vec2 dt = fract(t + variant * vec2(0.37, 0.61));
+		float mark = cell_texel(damage, vec2(wear_step - 1.0, 0.0), vec2(WEAR_STEPS, 1.0), dt, dx, dy).r;
+		col *= (1.0 - 0.12 * wear) * mix(1.0, mark, 0.95);
+		col += ember_color * smoothstep(0.3, 0.08, mark) * smoothstep(0.5, 1.0, wear) * 0.6;
 	}
 	col = mix(col, tint.rgb, tint.a);
 	COLOR = vec4(col, opacity);
