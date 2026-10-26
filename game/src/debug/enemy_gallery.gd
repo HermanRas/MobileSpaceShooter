@@ -86,7 +86,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func on_back() -> void:
-	Router.goto_main_menu()
+	Router.goto("res://scenes/menu/tutorials.tscn")  # it's opened from Tutorials (6.1)
 
 
 ## `tools/preview.sh` hook: --row=<0-3> centres that tier's row.

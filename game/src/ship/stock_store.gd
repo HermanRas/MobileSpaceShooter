@@ -42,3 +42,10 @@ static func open(profile_dir: String, start: Dictionary, samples: Dictionary) ->
 
 func save() -> Error:
 	return Save.write_json(path, {"format": FORMAT, "inventory": inventory.to_dict(), "ship": ship.to_dict()})
+
+
+## Deletes the saved stock (and its backup): the next open() starts the profile over.
+func erase() -> void:
+	for file in [path, path + Save.BAK_SUFFIX]:
+		if FileAccess.file_exists(file):
+			DirAccess.remove_absolute(file)

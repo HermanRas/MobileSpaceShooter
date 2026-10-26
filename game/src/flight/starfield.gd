@@ -2,11 +2,13 @@ class_name Starfield
 extends CanvasLayer
 ## The flight background (Phase 3.5): a full-screen rect with starfield.gdshader, behind the
 ## world, fed the camera's position and zoom each frame so its layers scroll at their own
-## parallax rates.
+## parallax rates. Without a camera (the menus, 6.1) it scrolls to `scroll` instead.
 
 const SHADER := preload("res://src/flight/starfield.gdshader")
 
 var camera: Camera2D
+## Where the view is, in world px, when there's no camera.
+var scroll := Vector2.ZERO
 
 var _rect := ColorRect.new()
 var _material := ShaderMaterial.new()
@@ -22,8 +24,6 @@ func _ready() -> void:
 
 
 func _process(_delta: float) -> void:
-	if camera == null:
-		return
-	_material.set_shader_parameter(&"camera_position", camera.get_screen_center_position())
-	_material.set_shader_parameter(&"camera_zoom", camera.zoom.x)
+	_material.set_shader_parameter(&"camera_position", camera.get_screen_center_position() if camera != null else scroll)
+	_material.set_shader_parameter(&"camera_zoom", camera.zoom.x if camera != null else 1.0)
 	_material.set_shader_parameter(&"screen_size", _rect.size)

@@ -1278,8 +1278,25 @@ flight.
 ### Phase 6: The front door (profiles and menus)
 
 #### 6.1 Main menu
-- [ ] Buttons for Creative, WaveTime, Story (locked until Phase 9 lands), Settings, Credits and Profile, in placeholder chrome
-- **Done when:** every button routes somewhere or is visibly disabled.
+✅ 2026-10-26. `scenes/menu/` → `src/ui/menus/`, in placeholder chrome (`MenuKit`) over a
+drifting Starfield (`MenuBackdrop`). Top to bottom:
+- **Title**, then the **profile card** (`ProfileCard`, owner's layout). The card is as wide as
+  the mode tiles. Its left 30% is a square portrait (a helmet until the character builder,
+  6.2). On the right: the pilot's name over the best WaveTime with kills / deaths, and Story
+  % / jobs. It reads `Profiles.summary()` from `profile.json`; editing waits for 6.2.
+- **Creative** opens the free hangar. **WaveTime** opens the stocked hangar on the `dev`
+  profile until 6.2. **Story** is locked.
+- **Tutorials** (as wide as two buttons) has the WaveTime and Story tutorials, locked until
+  15.2, and the enemy gallery, whose back returns to Tutorials.
+- **Settings** holds the Controls panel (6.4 fills it out). **Credits** reads
+  `data/credits.json`, then Godot's licence and its third-party notices from the engine.
+
+The debug-only shortcuts left the menu. The shot stress test needs a special build. Resetting
+the WaveTime stock is a two-tap **Reset** beside Undo in a debug WaveTime hangar, which wipes
+the save and goes to the menu for a clean load. `drive_menu` presses every button.
+
+⚠️ A drive can't live in a scene that `Router` replaces: `drive_menu` loads the menu as a
+scene of its own.
 
 #### 6.2 Profiles and the character screen `[D2]`
 - [ ] Create, select and delete a profile (with confirmation). Name entry uses `LineEdit`, which brings up the virtual keyboard on Android.

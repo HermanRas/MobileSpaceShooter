@@ -1,0 +1,12 @@
+{
+	"format": 1,
+	"_doc": "PLAN.md 6.1: the Credits screen, section by section. Every asset's source is in assets/LICENCES.md; this is the readable summary. Godot's licence and third-party notices are added by the screen from the engine itself.",
+	"sections": [
+		{"title": "MSS: Mobile Space Shooter", "lines": ["Made by Herman Ras"]},
+		{"title": "Art", "lines": [
+			"Placeholder art: made for this project (MIT)",
+			"Icon and splash: Herman Ras, with Google Gemini"
+		]},
+		{"title": "Engine", "lines": ["Godot Engine 4.7, godotengine.org (MIT licence, below)"]}
+	]
+}

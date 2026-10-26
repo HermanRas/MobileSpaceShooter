@@ -21,6 +21,8 @@ const GHOST_LIFT_PX := 90.0
 const SNAP_REACH_U := 1.0
 const TAP_SLOP_PX := 14.0
 const VARIANT_SPREAD_U := 0.75
+## How long the debug Reset stays armed for its confirming second tap, in seconds.
+const RESET_ARM_S := 3.0
 const NOTICE_S := 2.5
 
 var editor: HangarEditor
@@ -49,6 +51,9 @@ var _sandbox: FlightSandbox
 var _store: StockStore
 var _sell_button: Button
 var _wallet: Button
+## Debug, stocked only: wipes the profile's stock (a second tap within RESET_ARM_S confirms).
+var _reset_button: Button
+var _reset_armed_until := 0
 var _market: MarketPanel
 var _notice: Label
 var _notice_left := 0.0
@@ -917,6 +922,16 @@ func _build_ui() -> void:
 				_show_notice(editor.refusal))
 		root.add_child(_market)
 	_fly_button = _tool_button(tools, "Fly", func() -> void: fly())
+	if stocked() and OS.is_debug_build():
+		# Debug: start the profile over (owner, 2026-10-26). Two taps, then a clean load from the
+		# menu. Beside Undo rather than in the column, which is full down to the palette.
+		var corner := Control.new()
+		corner.set_anchors_preset(Control.PRESET_TOP_RIGHT)
+		corner.position = Vector2(-16 - 132 - 12 - 132, 16)
+		root.add_child(corner)
+		_reset_button = _tool_button(corner, "Reset", _reset_stock)
+		_reset_button.name = "ResetStock"
+		_reset_button.add_theme_color_override(&"font_color", Color(1.0, 0.5, 0.45))
 	_thumbs = ThumbnailRenderer.new()
 	add_child(_thumbs)
 	_library_panel = LibraryPanel.new()
@@ -937,6 +952,21 @@ func _build_ui() -> void:
 		load_from_library(id)
 		_open_library(false))
 	root.add_child(_library_panel)
+
+
+## The first tap arms it; a second within RESET_ARM_S deletes the profile's saved stock and goes
+## to the main menu, so the next WaveTime starts over from a clean load.
+func _reset_stock() -> void:
+	if Time.get_ticks_msec() > _reset_armed_until:
+		_reset_armed_until = Time.get_ticks_msec() + int(RESET_ARM_S * 1000.0)
+		_reset_button.text = "Tap again"
+		get_tree().create_timer(RESET_ARM_S).timeout.connect(func() -> void:
+			if is_instance_valid(_reset_button):
+				_reset_button.text = "Reset")
+		return
+	_store.erase()
+	_store = null  # nothing more is saved on the way out
+	Router.goto_main_menu()
 
 
 func _tool_button(parent: Control, text: String, action: Callable) -> Button:
