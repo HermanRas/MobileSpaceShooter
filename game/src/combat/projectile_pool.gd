@@ -136,6 +136,13 @@ func clear() -> void:
 	_view.multimesh.visible_instance_count = 0
 
 
+## Every shot `team` has in flight, gone (its ships were cleared away, not killed).
+func clear_team(team: int) -> void:
+	for i in range(count - 1, -1, -1):
+		if _team[i] == team:
+			_remove(i)
+
+
 func _physics_process(delta: float) -> void:
 	var started := Time.get_ticks_usec()
 	var space := get_world_2d().direct_space_state
@@ -258,7 +265,8 @@ func _remove(i: int) -> void:
 	_spec[i] = _spec[count]
 	_flags[i] = _flags[count]
 	_look[i] = _look[count]
-	_target[i] = _target[count]
+	# Its homing target may have been freed since; a typed array won't take a freed object.
+	_target[i] = _target[count] if is_instance_valid(_target[count]) else null
 	_target[count] = null
 
 

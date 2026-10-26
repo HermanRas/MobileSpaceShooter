@@ -1240,14 +1240,36 @@ The kill no longer pays straight into the wallet (4.8c did); anything left float
 land is lost.
 
 #### 5.5 Spawner
-- [ ] Spawn off-screen around the player
-- [x] Edge marks for enemies (owner, 2026-10-26): an enemy that has been on screen gets a solid,
-  fixed-size dot at the screen's edge while it's off screen and within `sight_range_u` (60 U,
-  `flight.json` `edge_markers`); beyond that it's forgotten until seen again. Being hit doesn't
-  spot the shooter (shots don't carry their ship). Built in `FlightSandbox._marks()`; the
-  carrier's arrow is in 3.5.
-- [ ] An API shared by Creative test, WaveTime and Story tiles
-- **Done when:** a level-30 encounter spawns, fights and can be cleared in the sandbox.
+✅ 2026-10-26.
+- **`Spawner`** (`src/flight/spawner.gd`): the API that Creative's test flight, WaveTime and
+  Story tiles share. It owns the enemies and the carrier: it builds, arms and pilots them,
+  picks whom each one hunts, and emits `enemy_destroyed`, `cleared` and `carrier_lost`.
+  - `spawn_encounter(level, hvt)` brings in a whole fight off screen round the player.
+  - `spawn_ship(…, AHEAD|AROUND)` brings in one ship, ahead for the sandbox's Spawn cards.
+  - `spawn_carrier(bp, entry, route)` brings in the escort carrier.
+  - The mode supplies the player (`player`) and the view (`view_half_u`), and handles loot, XP
+    and the HUD. The sandbox is now one such client.
+- **`SpawnRing`** (`src/model/spawn_ring.gd`, tested in `test_spawn_ring.gd`): ships come in
+  groups of up to 3, each group from its own side, lined up abreast just beyond the view's
+  corner and at least 10 U inside the arena. A group turns to find room near a wall. Every
+  ship faces the player. Tuning is in `flight.json` `spawner`.
+- **Edge dots for enemies you've seen** (owner, 2026-10-26): an enemy that has been on screen
+  gets a solid, fixed-size dot at the screen's edge while it's off screen and within
+  `sight_range_u` (60 U, `edge_markers`). Beyond that it's forgotten until seen again. Being hit
+  doesn't spot the shooter. The carrier's arrow is in 3.5; radar (v2) marks the rest.
+- `drive_flight` checks the "done when": a level-30 fight spawns off screen inside the
+  arena, opens fire, and once every ship is down the HUD says "level 30 cleared!" and their
+  loot floats where they fell.
+
+⚠️ Ships are spaced by `Spawner.reach_u`, their reach from the core, not half their length:
+the core needn't sit in the middle.
+
+⚠️ `FlightController` skips its first tick. Until a body has had one physics step, Godot
+divides an impulse by mass 1, so a pulse ship kicking on its first tick was flung at about 80
+U/s.
+
+⚠️ `Spawner.clear()` also clears team 1's shots: a reset left high-level cannon rounds in
+flight.
 
 ---
 

@@ -21,7 +21,9 @@ extends Node
 ## player's own ships fly as chasers or strafers), or the carrier beside the player, starting its
 ## route (an escort, 12.3), which enemies then go for. Enemies come at the sandbox's encounter
 ## level (guns about 10 × it, dealing the level's damage share, 5.3), and the Encounter buttons
-## spawn a whole generated fight (`Encounter.generate`), a Kill HVT one led by a boss.
+## spawn a whole generated fight off screen round the player, a Kill HVT one led by a boss. The
+## Spawner (5.5) does all of that, as it will for WaveTime and Story; the sandbox handles loot,
+## XP and the HUD.
 ##
 ## Combat HUD (4.7): shield and hull bars, the active manual weapon, and a flash, jolt and buzz
 ## when hit. SWITCH pauses and lists the manual weapons (Q on a keyboard cycles them instead).
@@ -44,9 +46,27 @@ var impacts := ImpactFx.new()
 var last_spawn_usec: int = 0
 
 var arena: Arena
+## Brings in the enemies and the carrier, and owns them (5.5).
+var spawner := Spawner.new()
 ## Every enemy alive, oldest first, and the newest of them (or null when there are none).
-var enemies: Array[ShipBody] = []
-var target: ShipBody
+var enemies: Array[ShipBody]:
+	get:
+		return spawner.enemies
+var target: ShipBody:
+	get:
+		return spawner.target
+## The carrier the player escorts (PLAN.md 12.3), an ally flying its route that enemies go for,
+## or null.
+var carrier: ShipBody:
+	get:
+		return spawner.carrier
+## The roster (5.1) and the difficulty curve (5.3).
+var roster: EnemyRoster:
+	get:
+		return spawner.roster
+var levels: Encounter.Rules:
+	get:
+		return spawner.levels
 var damage_table: DamageTable
 ## Raw damage a tap deals (from data; 0 makes taps only pick).
 var test_hit := 60.0
@@ -97,15 +117,10 @@ var cargo := Inventory.new()
 var pickups := PickupField.new()
 var _rng := RandomNumberGenerator.new()
 var _level_button := Button.new()
-## The roster (5.1): its enemies fly themselves (5.2), and its ally is the carrier.
-var roster: EnemyRoster
-## The carrier the player escorts (PLAN.md 12.3), an ally flying its route that enemies go for,
-## or null.
-var carrier: ShipBody
-var spawner := SpawnPicker.new()
-## The difficulty curve (5.3).
-var levels: Encounter.Rules
+var spawn_list := SpawnPicker.new()
 var _spawn_button := Button.new()
+## The level of the fight spawned from the list, until it's cleared (0: none).
+var _fight_level := 0
 
 
 ## Spawns `bp` (already validated) at the origin, and the practice target ahead of it.
@@ -116,8 +131,6 @@ func open(bp: Blueprint, placement: Placement) -> void:
 	_sandbox = _flight.get("sandbox", {})
 	arena = Arena.from_table(_flight.get("arena", {}))
 	damage_table = DamageTable.from_table(Data.table(&"damage_types"))
-	roster = EnemyRoster.from_table(Data.table(&"enemies"), Data.json_dir("enemies"))
-	levels = Encounter.Rules.from_table(Data.table(&"levels"))
 	test_hit = float(_sandbox.get("test_hit", test_hit))
 	_world.name = "World"
 	add_child(_world)
@@ -146,6 +159,17 @@ func open(bp: Blueprint, placement: Placement) -> void:
 	pool.exploded.connect(impacts.blast)
 	pool.shot_down.connect(impacts.pop)
 	pool.shot_down.connect(func(_point: Vector2) -> void: _show_status())
+	spawner.name = "Spawner"
+	spawner.setup(placement, _flight, pool, _world)
+	spawner.player = func() -> ShipBody: return ship
+	spawner.view_half_u = func() -> Vector2: return _world.get_viewport_rect().size * 0.5 / (_camera.zoom.x * PX)
+	spawner.spawned.connect(func(body: ShipBody) -> void: body.rebuilt.connect(_show_status))
+	spawner.enemy_destroyed.connect(_on_enemy_destroyed)
+	spawner.cleared.connect(_on_cleared)
+	spawner.carrier_lost.connect(func() -> void:
+		_note = "the carrier is lost"
+		_note_until = Time.get_ticks_msec() + 3000)
+	add_child(spawner)
 	_spawn_player()
 	_camera.make_current()
 	spawn(SPAWN_ENEMIES, str(_sandbox.get("start_target", "target_barge")))
@@ -169,7 +193,7 @@ func _spawn_player() -> void:
 	ship.enable_damage(damage_table)
 	_world.add_child(ship)
 	pickups.target = ship
-	pickups.reach_u = _extent_u(_bp, _placement) * 0.5
+	pickups.reach_u = Spawner.extent_u(_bp, _placement) * 0.5
 	pilot = FlightController.new()
 	pilot.name = "Pilot"
 	ship.add_child(pilot)
@@ -181,7 +205,7 @@ func _spawn_player() -> void:
 	weapons = WeaponController.new()
 	weapons.name = "Weapons"
 	ship.add_child(weapons)
-	weapons.attach(ship, pool, _placement.weapons, _live_enemies)
+	weapons.attach(ship, pool, _placement.weapons, spawner.live)
 	var guns := GunView.new()
 	guns.name = "Guns"
 	ship.add_child(guns)
@@ -189,45 +213,33 @@ func _spawn_player() -> void:
 	hud.attach(ship, weapons, _camera, _flight.get("combat_hud", {}))
 	ship.rebuilt.connect(_show_status)
 	ship.destroyed.connect(_on_player_destroyed)
-	_camera.configure(_flight.get("camera", {}), ship, _extent_u(_bp, _placement))
+	_camera.configure(_flight.get("camera", {}), ship, Spawner.extent_u(_bp, _placement))
 
 
-## Where a spawn comes from: `data/enemies/` (the roster and the practice targets) or the
-## player's ship library.
-const SPAWN_ENEMIES := &"enemies"
-const SPAWN_LIBRARY := &"library"
-## The Spawn list's encounter buttons: a generated fight at a level, or a Kill HVT one.
+## Where a spawn comes from (the Spawner's), and the Spawn list's encounter buttons: a
+## generated fight at a level, or a Kill HVT one.
+const SPAWN_ENEMIES := Spawner.FROM_ENEMIES
+const SPAWN_LIBRARY := Spawner.FROM_LIBRARY
 const SPAWN_ENCOUNTER := &"encounter"
 const SPAWN_HVT := &"hvt"
 
 
-## Spawns ship `id` from `kind`. The roster's ally (the carrier) joins the player's side beside
-## them and starts its route, replacing any carrier already flying; anything else is an enemy a
-## few tiles ahead, facing the player, at encounter level `level` (the sandbox's when 0) with its
-## guns at `gun_level` (10 × the level when 0). Returns the ship, or null if there's no such ship.
+## Spawns ship `id` from `kind`: an enemy a few tiles ahead, facing the player, at encounter
+## level `level` (the sandbox's when 0) with its guns at `gun_level` (10 × the level when 0); the
+## roster's ally is the carrier, beside the player and flying `carrier_route`. Returns the ship,
+## or null if there's no such ship.
 func spawn(kind: StringName, id: String, level := 0, gun_level := 0) -> ShipBody:
-	var errors: PackedStringArray = []
-	var bp: Blueprint
-	if kind == SPAWN_LIBRARY:
-		bp = BlueprintLibrary.new().load_ship(id)
-	else:
-		var raw: Dictionary = Data.json_dir("enemies").get(id, {})
-		bp = Blueprint.from_dict(raw, errors) if not raw.is_empty() else null
-	if bp == null or not _placement.validate(bp).is_empty():
-		push_warning("sandbox: can't spawn %s %s %s" % [kind, id, errors])
-		return null
 	var entry := roster.entry(StringName(id)) if kind == SPAWN_ENEMIES else null
 	if entry != null and entry.ally:
-		return _spawn_carrier(bp, entry)
-	var at_level := level if level > 0 else int(_sandbox.get("encounter_level", 1))
-	return _spawn_enemy(bp, entry, at_level, gun_level if gun_level > 0 else clampi(roundi(levels.gun_per_level * at_level), 1, 999))
+		var bp := spawner.blueprint(kind, id)
+		return spawner.spawn_carrier(bp, entry, _sandbox.get("carrier_route", [])) if bp != null else null
+	return spawner.spawn_ship(kind, id, level if level > 0 else int(_sandbox.get("encounter_level", 1)), gun_level)
 
 
-## A generated fight at `level` (5.3): every enemy in it, a few tiles ahead. Returns it.
+## A generated fight at `level` (5.3), off screen round the player (5.5). Returns it.
 func spawn_encounter(level: int, hvt := false) -> Encounter:
-	var fight := Encounter.generate(levels, roster, level, randi(), hvt)
-	for one in fight.spawns:
-		spawn(SPAWN_ENEMIES, String(one.id), level, one.gun_level)
+	var fight := spawner.spawn_encounter(level, hvt)
+	_fight_level = level
 	_note = "level %d: %d enemies, guns ~L%d" % [level, fight.spawns.size(), roundi(levels.gun_per_level * level)]
 	_note_until = Time.get_ticks_msec() + 3000
 	return fight
@@ -235,172 +247,9 @@ func spawn_encounter(level: int, hvt := false) -> Encounter:
 
 ## Every enemy, gone.
 func clear_enemies() -> void:
-	for enemy in enemies:
-		if is_instance_valid(enemy):
-			enemy.queue_free()
-	enemies.clear()
-	target = null
+	spawner.clear()
+	_fight_level = 0
 	_clear_pick()
-
-
-func _live_enemies() -> Array:
-	return _alive([], enemies)
-
-
-## The ships in `a` and `b` still in play. Untyped on purpose: a freed ship can't be held in a
-## ShipBody variable even to ask whether it's valid.
-static func _alive(a: Array, b: Array = []) -> Array:
-	var out := []
-	for body: Variant in a + b:
-		if is_instance_valid(body) and not (body as ShipBody).is_wreck():
-			out.append(body)
-	return out
-
-
-func _spawn_enemy(bp: Blueprint, entry: EnemyRoster.Entry, level: int, gun_level: int) -> ShipBody:
-	var enemy := ShipBody.create(bp, _placement)
-	enemy.name = "Enemy"
-	enemy.team = 1
-	enemy.level = level
-	enemy.gun_level = gun_level
-	enemy.gun_damage = float(levels.band_for(level).get("damage", 1.0))
-	enemy.guns = GunLayout.compute(bp, _placement, enemy.gun_level, {}, enemy.gun_damage)
-	var flies := not enemy.envelope.thrusters.is_empty()
-	var facing := deg_to_rad(float(_sandbox.get("spawn_facing_deg" if flies else "target_rotation_deg", 180.0)))
-	_place_ahead(enemy, bp, facing)
-	enemy.enable_damage(damage_table)
-	enemy.linear_damp = 0.3
-	enemy.angular_damp = 0.3
-	enemy.rebuilt.connect(_show_status)
-	enemy.destroyed.connect(func() -> void:
-		enemies.erase(enemy)
-		target = enemies.back() if not enemies.is_empty() else null
-		_clear_pick()
-		_drop_loot(enemy, bp)
-		_on_kill(enemy))
-	_world.add_child(enemy)
-	enemies.append(enemy)
-	target = enemy
-	if not enemy.guns.guns.is_empty():
-		var guns := WeaponController.new()
-		guns.name = "Weapons"
-		guns.all_auto = true  # nobody holds FIRE for it
-		enemy.add_child(guns)
-		guns.attach(enemy, pool, _placement.weapons, _player_side)
-		var view := GunView.new()
-		enemy.add_child(view)
-		view.attach(guns)
-	if flies:
-		var behaviour := entry.behaviour if entry != null else _behaviour_for(enemy)
-		_give_pilot(enemy, behaviour, entry.flee_below if entry != null else 0.0).target = _pick_victim.bind(enemy)
-	return enemy
-
-
-## How one of the player's own ships flies as an enemy: at you nose first if it has fixed guns,
-## round you if it has only turrets and swivels.
-static func _behaviour_for(body: ShipBody) -> StringName:
-	for gun in body.guns.guns:
-		if gun.arc <= 0.0 and not gun.stats["rear_only"]:
-			return &"chase"
-	return &"strafe"
-
-
-## Puts `body` ahead of the player (or the arena's middle), clear of the ship and the other
-## enemies, turned `facing` from the player's heading.
-func _place_ahead(body: ShipBody, bp: Blueprint, facing: float) -> void:
-	var from := ship.global_position / PX if is_instance_valid(ship) else Vector2.ZERO
-	var heading := ship.global_rotation if is_instance_valid(ship) else 0.0
-	var mine := _extent_u(_bp, _placement) * 0.5 if is_instance_valid(ship) else 0.0
-	var size := _extent_u(bp, _placement)
-	var at := from + Vector2.from_angle(heading) * (mine + size * 0.5 + float(_sandbox.get("spawn_gap_u", 6.0)))
-	var side := Vector2.from_angle(heading + PI * 0.5)
-	for attempt in 8:
-		var clear := true
-		for other in _live_enemies():
-			if (other.global_position / PX).distance_to(at) < (size + _extent_u(other.blueprint, _placement)) * 0.5 + 1.0:
-				clear = false
-		if clear:
-			break
-		at += side * (size + 1.0) * (attempt + 1) * (1.0 if attempt % 2 == 0 else -1.0)
-	body.position = at * PX
-	body.rotation = heading + facing
-
-
-## The player and the carrier: what enemy guns shoot at.
-func _player_side() -> Array:
-	return _alive([ship, carrier])
-
-
-## Whom an enemy goes after: the player or the carrier, the nearer one, counting the carrier's
-## distance at `carrier_bias` so raiders make for it (an escort mission's point, 12.3).
-func _pick_victim(hunter: ShipBody) -> ShipBody:
-	if not is_instance_valid(hunter):
-		return null
-	var best: ShipBody = null
-	var best_d := INF
-	for body: ShipBody in _player_side():
-		var d := hunter.global_position.distance_to(body.global_position) \
-				* (float(_sandbox.get("carrier_bias", 0.6)) if body == carrier else 1.0)
-		if d < best_d:
-			best_d = d
-			best = body
-	return best
-
-
-## The carrier joins beside the player, pointing their way, and flies its route: `carrier_route`,
-## laid out in the player's frame at spawn (x ahead, y to their right). Enemies go for it.
-func _spawn_carrier(bp: Blueprint, entry: EnemyRoster.Entry) -> ShipBody:
-	if is_instance_valid(carrier):
-		carrier.queue_free()
-	carrier = ShipBody.create(bp, _placement)
-	carrier.name = "Carrier"
-	carrier.team = 0
-	var from := ship.global_position / PX if is_instance_valid(ship) else Vector2.ZERO
-	var heading := ship.global_rotation if is_instance_valid(ship) else 0.0
-	var beside := (_extent_u(_bp, _placement) * 0.5 if is_instance_valid(ship) else 0.0) + float(_sandbox.get("carrier_beside_u", 4.0))
-	var at := from + Vector2.from_angle(heading + PI * 0.5) * beside
-	carrier.position = at * PX
-	carrier.rotation = heading
-	carrier.enable_damage(damage_table)
-	_world.add_child(carrier)
-	var guns := WeaponController.new()
-	guns.name = "Weapons"
-	guns.all_auto = true
-	carrier.add_child(guns)
-	guns.attach(carrier, pool, _placement.weapons, _live_enemies)
-	var view := GunView.new()
-	carrier.add_child(view)
-	view.attach(guns)
-	var ai := _give_pilot(carrier, entry.behaviour, 0.0)
-	for point: Variant in _sandbox.get("carrier_route", []):
-		ai.brain.route.append(at + Vector2(float(point[0]), float(point[1])).rotated(heading))
-	var flying := carrier
-	carrier.destroyed.connect(func() -> void:
-		if carrier == flying:
-			carrier = null
-		_note = "the carrier is lost"
-		_note_until = Time.get_ticks_msec() + 3000)
-	return carrier
-
-
-## An AI-flown ship (PLAN.md 5.2): a FlightController like the player's, its exhaust, and an
-## AiPilot flying `behaviour` (whose target the caller sets).
-func _give_pilot(body: ShipBody, behaviour: StringName, flee_below: float) -> AiPilot:
-	var flier := FlightController.new()
-	flier.name = "Pilot"
-	body.add_child(flier)
-	flier.attach(body, _flight)
-	var exhaust := ThrusterFxSet.new()
-	exhaust.name = "Exhaust"
-	body.add_child(exhaust)
-	exhaust.attach(body, flier)
-	var brain := AiBrain.for_ship(Data.table(&"ai"), behaviour, body.blueprint, _placement, flier.model.linear_damp, arena)
-	brain.flee_below = flee_below
-	var ai := AiPilot.new()
-	ai.name = "Ai"
-	body.add_child(ai)
-	ai.attach(body, flier, brain)
-	return ai
 
 
 ## Spawn: pause and list everything that can be spawned.
@@ -444,13 +293,13 @@ func open_spawner() -> void:
 	sections.append({"title": "Enemies", "cards": foes})
 	sections.append({"title": "Escort: the carrier flies beside you", "cards": friends})
 	sections.append({"title": "Your ships, as enemies", "cards": own})
-	spawner.open(sections, _placement)
-	spawner.visible = true
+	spawn_list.open(sections, _placement)
+	spawn_list.visible = true
 	get_tree().paused = true
 
 
 func _close_spawner(kind: StringName = &"", id: String = "") -> void:
-	spawner.visible = false
+	spawn_list.visible = false
 	get_tree().paused = false
 	if id.is_empty():
 		return
@@ -470,6 +319,21 @@ func _on_player_destroyed() -> void:
 	_after_respawn_delay(func() -> void:
 		_spawn_player()
 		_show_status())
+
+
+## An enemy is gone: its loot (5.4) and, if the player's guns had a hand in it, its XP (4.8b).
+func _on_enemy_destroyed(body: ShipBody, built: Blueprint) -> void:
+	_clear_pick()
+	_drop_loot(body, built)
+	_on_kill(body)
+
+
+## The last enemy is gone; if it was a fight from the Spawn list, say so.
+func _on_cleared() -> void:
+	if _fight_level > 0:
+		_note = "level %d cleared!" % _fight_level
+		_note_until = Time.get_ticks_msec() + 4000
+		_fight_level = 0
 
 
 ## What `body` (built as `built`) drops when it's destroyed, by whoever (5.4): its materials
@@ -638,7 +502,7 @@ func _process(_delta: float) -> void:
 func _marks() -> Array:
 	var marks: Array = []
 	var seen := {}
-	for enemy: ShipBody in _live_enemies():
+	for enemy: ShipBody in spawner.live():
 		var id := enemy.get_instance_id()
 		if enemy.global_position.distance_to(ship.global_position) > markers.sight_range_u * PX:
 			continue
@@ -664,7 +528,7 @@ static func _hull_share(body: ShipBody) -> float:
 func _physics_process(_delta: float) -> void:
 	# The sandbox's soft wall, for the player and a flying target. Story mode opens the world map
 	# at the edge instead (4.10).
-	for body: ShipBody in _alive([ship, carrier], enemies):
+	for body: ShipBody in Spawner.alive([ship, carrier], enemies):
 		body.apply_central_force(arena.push(body.global_position / PX) * body.mass * PX)
 
 
@@ -845,11 +709,11 @@ func _build_ui() -> void:
 	_spawn_button.position.y += 192
 	_spawn_button.pressed.connect(open_spawner)
 	ui.add_child(_spawn_button)
-	spawner.name = "SpawnPicker"
-	spawner.visible = false
-	spawner.picked.connect(_close_spawner)
-	spawner.closed.connect(_close_spawner.bind(&"", ""))
-	ui.add_child(spawner)
+	spawn_list.name = "SpawnPicker"
+	spawn_list.visible = false
+	spawn_list.picked.connect(_close_spawner)
+	spawn_list.closed.connect(_close_spawner.bind(&"", ""))
+	ui.add_child(spawn_list)
 	picker.name = "WeaponPicker"
 	picker.visible = false
 	picker.picked.connect(_close_switch)
@@ -880,15 +744,6 @@ func _open_controls_panel(open: bool) -> void:
 		_controls_panel.refresh()
 		_controls_panel.reset_size()
 		_controls_panel.position = (_controls_panel.get_viewport_rect().size - _controls_panel.size) * 0.5
-
-
-## The ship's longest side, in U, for the camera's resting zoom.
-func _extent_u(bp: Blueprint, placement: Placement) -> float:
-	var bounds := Rect2()
-	for tile in bp.tiles:
-		for p in placement.tile_polygon(tile):
-			bounds = bounds.expand(p)  # starts at the origin, which the core always covers
-	return maxf(bounds.size.x, bounds.size.y)
 
 
 ## The arena's edge in the world: a red line, drawn the same width on screen at any zoom.

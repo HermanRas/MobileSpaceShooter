@@ -13,7 +13,7 @@ var _spy := ScriptErrorSpy.new()
 func _ready() -> void:
 	# These checks place targets by the first sandbox's 6 U spawn gap (guns in range, a beam that
 	# reaches); the game spawns them further out (owner, 2026-10-26). Only this run's copy changes.
-	Data.table(&"flight")["sandbox"]["spawn_gap_u"] = 6.0
+	Data.table(&"flight")["spawner"]["spawn_gap_u"] = 6.0
 	OS.add_logger(_spy)
 	_hangar = (load("res://scenes/hangar/hangar.tscn") as PackedScene).instantiate()
 	add_child(_hangar)
@@ -62,6 +62,7 @@ func _ready() -> void:
 	await _step_control_layouts()
 	await _step_camera_and_arena()
 	await _step_zoom_and_markers()
+	await _step_a_level_30_fight()
 	_finish()
 
 
@@ -299,7 +300,7 @@ func _step_enemies_fly_themselves() -> void:
 	# The Spawn button (owner, 2026-10-26): a paused list of cards; a tap spawns that ship ahead.
 	sandbox._spawn_button.pressed.emit()
 	await _frames(3)
-	var picker := sandbox.spawner
+	var picker := sandbox.spawn_list
 	_check(picker.visible and get_tree().paused, "Spawn pauses and opens the list")
 	var card := func(name: String) -> Button: return picker.find_child(name, true, false) as Button
 	_check(card.call("enemies_target_barge") != null and card.call("enemies_wasp") != null and card.call("enemies_leviathan") != null
@@ -391,7 +392,8 @@ func _check_flies_itself(sandbox: FlightSandbox, id: String) -> void:
 		_check(false, "%s survived 4 s" % id)
 		return
 	var moved := enemy.global_position.distance_to(start) / ShipMesh.PX_PER_U
-	_check(sticks > 60 and moved > 2.0 and turned > 0.3,
+	# A chaser spawns facing us, so it needn't turn much; it must steer a little all the same.
+	_check(sticks > 60 and moved > 2.0 and turned > 0.1,
 			"%s flies itself: %.1f U, turned %.0f°, stick held %d of 240 ticks (%s)" % [id, moved, rad_to_deg(turned), sticks, ai.brain.behaviour])
 	_check(sandbox.arena.contains(enemy.global_position / ShipMesh.PX_PER_U), "%s stays in the arena (at %s U, we are at %s U)" % [id, (enemy.global_position / ShipMesh.PX_PER_U).round(), (sandbox.ship.global_position / ShipMesh.PX_PER_U).round() if sandbox.ship != null else Vector2.INF])
 
@@ -471,10 +473,11 @@ func _remove_target(sandbox: FlightSandbox) -> void:
 
 
 ## The enemies cleared and ship `id` (data/enemies) spawned ahead.
+## (At level 1 with level-1 guns, so the starter outlives a few seconds next to a boss.)
 func _swap(sandbox: FlightSandbox, id: String) -> void:
 	sandbox.clear_enemies()
 	await _physics_frames(1)
-	sandbox.spawn(FlightSandbox.SPAWN_ENEMIES, id)
+	sandbox.spawn(FlightSandbox.SPAWN_ENEMIES, id, 1, 1)
 	await _physics_frames(2)
 
 
@@ -530,6 +533,52 @@ func _step_camera_and_arena() -> void:
 	await _physics_frames(180)
 	var depth := (ship.global_position.x - half) / PX
 	_check(depth < 8.0, "past the edge it's pushed back in (10 U out -> %.1f U)" % depth)
+	_hangar.land()
+	await _frames(2)
+
+
+## Phase 5.5, the "done when": a level-30 encounter spawns off screen round us (inside the
+## arena), closes in and fights, and once every ship is down the fight is cleared.
+func _step_a_level_30_fight() -> void:
+	var errors: PackedStringArray = []
+	_hangar.load_blueprint(Blueprint.from_dict(Data.json_dir("blueprints")["starter"], errors))
+	await _frames(2)
+	var sandbox: FlightSandbox = _hangar.fly()
+	_remove_target(sandbox)
+	await _physics_frames(3)
+	var fight := sandbox.spawn_encounter(30)
+	await _physics_frames(2)
+	var foes := sandbox.enemies.duplicate()
+	var hidden := foes.all(func(e: ShipBody) -> bool: return not sandbox.markers.on_screen(sandbox._camera, e.global_position))
+	var inside := foes.all(func(e: ShipBody) -> bool: return sandbox.arena.contains(e.global_position / PX))
+	_check(foes.size() == fight.spawns.size() and foes.size() > 0 and hidden and inside,
+			"level 30: %d enemies spawn off screen round us, inside the arena" % foes.size())
+	var nearest := func() -> float:
+		var best := INF
+		for e in sandbox.spawner.live():
+			if sandbox.ship != null:
+				best = minf(best, (e as ShipBody).global_position.distance_to(sandbox.ship.global_position) / PX)
+		return best
+	var start: float = nearest.call()
+	var shot := false
+	for i in 480:
+		await _physics_frames(1)
+		for e in sandbox.spawner.live():
+			var guns := (e as ShipBody).get_node_or_null("Weapons") as WeaponController
+			if guns != null and Array(guns.gunnery.fired).any(func(n: int) -> bool: return n > 0):
+				shot = true
+		if shot or sandbox.ship == null:
+			break
+	_check(shot, "they come at us and open fire (nearest %.0f U, then %.0f U)" % [start, nearest.call()])
+	_save_shot("drive_flight_level_30.png")
+	for e in sandbox.spawner.live():
+		var body := e as ShipBody
+		var core: int = body.blueprint.tiles.filter(func(t: Blueprint.Tile) -> bool: return t.type == &"core")[0].id
+		body.take_hit(core, 1.0e9, &"kinetic", 1.0)
+	await _frames(3)
+	_check(sandbox.enemies.is_empty() and "level 30 cleared" in sandbox._hud.text,
+			"every ship down: the fight is cleared (%s)" % sandbox._hud.text)
+	_check(sandbox.pickups.count() > 0, "and their loot floats where they fell (%d pickups)" % sandbox.pickups.count())
 	_hangar.land()
 	await _frames(2)
 

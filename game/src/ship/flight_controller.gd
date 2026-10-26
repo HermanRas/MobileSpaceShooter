@@ -20,6 +20,10 @@ var throttles := PackedFloat32Array()
 var braking := false
 
 var _ship: ShipBody
+## Until the body has had one physics step, Godot still divides an impulse by mass 1 (its mass
+## is applied during the step), so a pulse kick on the first tick flings it at ~mass × the speed.
+## The first tick after attach is skipped.
+var _fresh := true
 
 
 ## Builds the flight model for `ship` with `tuning` (data/flight.json) and sets its damping.
@@ -36,6 +40,9 @@ func attach(ship: ShipBody, tuning: Dictionary) -> void:
 
 func _physics_process(delta: float) -> void:
 	if _ship == null or model == null:
+		return
+	if _fresh:
+		_fresh = false
 		return
 	var cmd := model.command(stick, _ship.rotation, _ship.linear_velocity / PX, _ship.angular_velocity)
 	braking = cmd["braking"]
