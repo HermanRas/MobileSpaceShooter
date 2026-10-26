@@ -61,6 +61,7 @@ func _ready() -> void:
 	await _step_fly_the_starter_with_the_stick()
 	await _step_control_layouts()
 	await _step_camera_and_arena()
+	await _step_zoom_and_markers()
 	_finish()
 
 
@@ -531,6 +532,89 @@ func _step_camera_and_arena() -> void:
 	_check(depth < 8.0, "past the edge it's pushed back in (10 U out -> %.1f U)" % depth)
 	_hangar.land()
 	await _frames(2)
+
+
+## Owner, 2026-10-26: +/-, the mouse wheel and a two-finger pinch zoom the view (saved in
+## Settings, put back afterwards); a carrier off screen gets a green arrow at the edge.
+func _step_zoom_and_markers() -> void:
+	var saved: float = Settings.get_value(&"view_zoom")
+	Settings.set_value(&"view_zoom", 1.0)
+	var errors: PackedStringArray = []
+	_hangar.load_blueprint(Blueprint.from_dict(Data.json_dir("blueprints")["starter"], errors))
+	await _frames(2)
+	var sandbox: FlightSandbox = _hangar.fly()
+	_remove_target(sandbox)
+	await _frames(3)
+	var camera: FollowCamera = get_viewport().get_camera_2d()
+	_key(KEY_EQUAL)
+	_key(KEY_EQUAL)
+	await _frames(1)
+	_check(is_equal_approx(camera.view_zoom, camera.zoom_step * camera.zoom_step)
+			and is_equal_approx(float(Settings.get_value(&"view_zoom")), camera.view_zoom),
+			"= zooms in twice and saves it (%.2f)" % camera.view_zoom)
+	_key(KEY_MINUS)
+	var wheel := InputEventMouseButton.new()
+	wheel.button_index = MOUSE_BUTTON_WHEEL_DOWN
+	wheel.pressed = true
+	Input.parse_input_event(wheel)
+	await _frames(1)
+	_check(is_equal_approx(camera.view_zoom, 1.0), "- and a wheel notch zoom back out (%.2f)" % camera.view_zoom)
+
+	# Two fingers on open space (right of the stick, above FIRE) spread to twice as far apart.
+	var screen := get_viewport().get_visible_rect().size
+	var a := Vector2(screen.x * 0.55, screen.y * 0.3)
+	var b := a + Vector2(100, 0)
+	_touch_at(3, a, true)
+	_touch_at(4, b, true)
+	await _frames(1)
+	for step in 5:
+		_drag_to(4, b + Vector2(20 * (step + 1), 0))
+		await _frames(1)
+	_check(absf(camera.view_zoom - 2.0) < 0.05 and is_equal_approx(float(Settings.get_value(&"view_zoom")), 1.0),
+			"a pinch spreading 100 -> 200 px zooms to 2x (%.2f), not saved yet" % camera.view_zoom)
+	_touch_at(4, b + Vector2(100, 0), false)
+	_touch_at(3, a, false)
+	await _frames(1)
+	_check(is_equal_approx(float(Settings.get_value(&"view_zoom")), camera.view_zoom), "and saved when the fingers lift")
+	var zoomed := camera.zoom.x
+	await _frames(30)
+	_check(camera.zoom.x > zoomed * 0.95, "the zoom holds at rest (%.2f -> %.2f)" % [zoomed, camera.zoom.x])
+
+	camera.zoom_by(1.0 / camera.view_zoom)
+	var carrier := sandbox.spawn(FlightSandbox.SPAWN_ENEMIES, "pike")
+	await _frames(2)
+	var on_screen := _carrier_arrow(sandbox)
+	if carrier != null:
+		_teleport(carrier, sandbox.ship.global_position + Vector2(0, 120) * PX)
+	await _physics_frames(2)
+	await _frames(2)
+	_check(not on_screen and _carrier_arrow(sandbox), "a carrier off screen gets an arrow at the edge (beside us: %s, %s)"
+			% [on_screen, sandbox.markers._marks])
+	var far: float = sandbox.markers._marks[0][2] if not sandbox.markers._marks.is_empty() else 0.0
+	_check(far > sandbox.markers.dot_within_u and sandbox.markers.size_share(far) < 1.0
+			and sandbox.markers.size_share(sandbox.markers.dot_within_u) == 1.0,
+			"far off it's a smaller arrow (%.0f U out: %.2f), full size near the view" % [far, sandbox.markers.size_share(far)])
+	_save_shot("drive_flight_markers.png")
+	_hangar.land()
+	await _frames(2)
+	Settings.set_value(&"view_zoom", saved)
+
+
+## Whether the edge markers show a carrier arrow.
+func _carrier_arrow(sandbox: FlightSandbox) -> bool:
+	for mark: Array in sandbox.markers._marks:
+		if mark[1] == FlightSandbox.CARRIER_MARK and EdgeMarkers.edge_point(mark[0], sandbox.markers.size) != null:
+			return true
+	return false
+
+
+func _key(keycode: Key) -> void:
+	for pressed in [true, false]:
+		var key := InputEventKey.new()
+		key.physical_keycode = keycode
+		key.keycode = keycode
+		key.pressed = pressed
+		Input.parse_input_event(key)
 
 
 ## Phase 3.4: stick + FIRE with two fingers at once, the 1-stick scheme, and the left-handed

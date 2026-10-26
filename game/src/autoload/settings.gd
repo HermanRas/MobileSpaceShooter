@@ -18,6 +18,8 @@ const DEFAULTS := {
 	"sfx_volume": 1.0,
 	"vibration": true,
 	"screen_shake": true,
+	# The flight camera's zoom, times its resting zoom (pinch, mouse wheel or +/-; owner, 2026-10-26).
+	"view_zoom": 1.0,
 	"recent_colors": [],
 }
 
@@ -30,7 +32,35 @@ const KEY_BINDINGS := {
 	&"fire": [KEY_SPACE],
 	&"switch_weapon": [KEY_Q],
 	&"pause": [KEY_ESCAPE, KEY_P],
+	&"zoom_in": [KEY_EQUAL, KEY_KP_ADD],
+	&"zoom_out": [KEY_MINUS, KEY_KP_SUBTRACT],
 }
+
+## The hotkeys list in the Controls panel: what each action does, in KEY_BINDINGS order.
+const ACTION_NAMES := {
+	&"move_up": "Thrust up",
+	&"move_down": "Thrust down",
+	&"move_left": "Thrust left",
+	&"move_right": "Thrust right",
+	&"fire": "Fire",
+	&"switch_weapon": "Next weapon group",
+	&"pause": "Pause",
+	&"zoom_in": "Zoom in",
+	&"zoom_out": "Zoom out",
+}
+## Clearer names than OS.get_keycode_string() gives for these keys.
+const KEY_NAMES := {KEY_EQUAL: "+ (=)", KEY_MINUS: "-", KEY_KP_ADD: "Num +", KEY_KP_SUBTRACT: "Num -"}
+## Keys that aren't input actions: the flight view's mouse zoom and the hangar's shortcuts
+## (hangar.gd reads these keys itself).
+const OTHER_HOTKEYS: Array[Array] = [
+	["Flight", "Mouse wheel", "Zoom"],
+	["Hangar", "Ctrl+Z", "Undo"],
+	["Hangar", "Ctrl+Y, Ctrl+Shift+Z", "Redo"],
+	["Hangar", "Delete, Backspace", "Remove the selected part"],
+	["Hangar", "R", "Rotate the selected part"],
+	["Hangar", "D", "Duplicate the selected part"],
+	["Hangar", "M", "Mirror on or off"],
+]
 
 var _values: Dictionary = DEFAULTS.duplicate()
 
@@ -53,6 +83,18 @@ func set_value(key: StringName, value: Variant) -> void:
 	data["format"] = FORMAT
 	Save.write_json(PATH, data)
 	changed.emit(key)
+
+
+## Every hotkey as [where, keys, what]: the flight actions from KEY_BINDINGS, then OTHER_HOTKEYS.
+static func hotkeys() -> Array[Array]:
+	var rows: Array[Array] = []
+	for action: StringName in KEY_BINDINGS:
+		var keys: PackedStringArray = []
+		for keycode: Key in KEY_BINDINGS[action]:
+			keys.append(KEY_NAMES.get(keycode, OS.get_keycode_string(keycode)))
+		rows.append(["Flight", ", ".join(keys), ACTION_NAMES.get(action, String(action))])
+	rows.append_array(OTHER_HOTKEYS)
+	return rows
 
 
 func _register_inputs() -> void:

@@ -29,6 +29,8 @@ extends Node
 signal closed
 
 const PX := ShipMesh.PX_PER_U
+## The edge mark for the carrier you escort (enemies get marks with radar tech, v2).
+const CARRIER_MARK := Color(0.4, 1.0, 0.5, 0.95)
 
 var ship: ShipBody
 var pilot: FlightController
@@ -50,6 +52,11 @@ var test_hit := 60.0
 var _camera := FollowCamera.new()
 var _arena_view := _ArenaView.new()
 var _edge_glow := _EdgeGlow.new()
+## A mark at the screen's edge for the carrier when it's off screen.
+var markers := EdgeMarkers.new()
+## Fingers down on open space (not the stick or a button), index -> screen position: two of
+## them pinch the zoom.
+var _touches := {}
 var _status := Label.new()
 var _picked := -1
 var _overlay := Node2D.new()
@@ -377,6 +384,7 @@ func _give_pilot(body: ShipBody, behaviour: StringName, flee_below: float) -> Ai
 
 ## Spawn: pause and list everything that can be spawned.
 func open_spawner() -> void:
+	_touches.clear()  # a panel over the fingers takes their release
 	var sections: Array[Dictionary] = []
 	var practice: Array[Dictionary] = []
 	var foes: Array[Dictionary] = []
@@ -510,6 +518,7 @@ func _exit_tree() -> void:
 
 ## SWITCH: pause and list the manual weapons (4.7).
 func open_switch() -> void:
+	_touches.clear()  # a panel over the fingers takes their release
 	if ship == null or weapons == null:
 		return
 	if weapons.all_auto or weapons.gunnery.manual_weapons().is_empty():
@@ -557,6 +566,7 @@ func _process(_delta: float) -> void:
 	if Time.get_ticks_msec() < _note_until:
 		parts.append(_note)
 	_hud.text = "  ·  ".join(parts)
+	markers.point_at(_camera, [[carrier.global_position, CARRIER_MARK]] if is_instance_valid(carrier) else [])
 
 
 static func _hull_share(body: ShipBody) -> float:
@@ -580,10 +590,33 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed(&"switch_weapon") and weapons != null:
 		weapons.gunnery.cycle()
 		return
+	if event.is_action_pressed(&"zoom_in", true) or event.is_action_pressed(&"zoom_out", true):
+		_camera.zoom_by(_camera.zoom_step if event.is_action(&"zoom_in") else 1.0 / _camera.zoom_step)
+		return
+	if event is InputEventMouseButton and (event as InputEventMouseButton).pressed:
+		var wheel := (event as InputEventMouseButton).button_index
+		if wheel == MOUSE_BUTTON_WHEEL_UP or wheel == MOUSE_BUTTON_WHEEL_DOWN:
+			_camera.zoom_by(_camera.zoom_step if wheel == MOUSE_BUTTON_WHEEL_UP else 1.0 / _camera.zoom_step)
+		return
+	if event is InputEventMagnifyGesture:  # a laptop's touchpad pinch
+		_camera.zoom_by((event as InputEventMagnifyGesture).factor)
+		return
+	if event is InputEventScreenDrag:
+		_pinch(event as InputEventScreenDrag)
+		return
 	# Touches only: a mouse click arrives as a touch too (emulate_touch_from_mouse), and taking
 	# both would hit twice.
-	if not (event is InputEventScreenTouch and (event as InputEventScreenTouch).pressed):
+	if not event is InputEventScreenTouch:
 		return
+	var touch := event as InputEventScreenTouch
+	if not touch.pressed:
+		if _touches.has(touch.index):
+			_touches.erase(touch.index)
+			_camera.save_zoom()
+		return
+	_touches[touch.index] = touch.position
+	if _touches.size() > 1:
+		return  # the second finger of a pinch doesn't pick
 	var world_point: Vector2 = _camera.get_canvas_transform().affine_inverse() * (event as InputEventFromWindow).position
 	var hit := ship_tile_at_point(world_point)
 	_picked_ship = hit[0]
@@ -592,6 +625,23 @@ func _unhandled_input(event: InputEvent) -> void:
 		_test_hit(_picked_ship, _picked)
 	_overlay.queue_redraw()
 	_show_status()
+
+
+## Two fingers on open space zoom the view by how far apart they spread (owner, 2026-10-26).
+func _pinch(drag: InputEventScreenDrag) -> void:
+	if not _touches.has(drag.index):
+		return  # the stick's finger, or FIRE's
+	var previous: Vector2 = _touches[drag.index]
+	_touches[drag.index] = drag.position
+	if _touches.size() < 2:
+		return
+	for index: int in _touches:
+		if index != drag.index:
+			var anchor: Vector2 = _touches[index]
+			var before := previous.distance_to(anchor)
+			if before > 1.0:
+				_camera.zoom_by(drag.position.distance_to(anchor) / before, false)
+			return
 
 
 ## The tile of the player's ship under a world point, or -1.
@@ -676,6 +726,9 @@ func _build_ui() -> void:
 	_edge_glow.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_edge_glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	ui.add_child(_edge_glow)
+	markers.name = "EdgeMarkers"
+	markers.configure(_flight.get("edge_markers", {}))
+	ui.add_child(markers)
 	_status.position = Vector2(16, 12)
 	_status.add_theme_font_size_override(&"font_size", 20)
 	_status.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -739,6 +792,7 @@ func _next_gun_level() -> void:
 
 
 func _open_controls_panel(open: bool) -> void:
+	_touches.clear()  # a panel over the fingers takes their release
 	_controls_panel.visible = open
 	if open:
 		_controls_panel.refresh()

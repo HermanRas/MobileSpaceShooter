@@ -852,8 +852,14 @@ emulated as a mouse), so on-screen game buttons are `TouchButton`, which reads
 #### 3.5 Camera and space
 ✅ 2026-10-25; the owner confirmed speed feels fast and the edge is clear on the phone.
 - **`FollowCamera`** (`src/flight/`): rests with the ship's longest side at 22% of the screen
-  height, leads by 0.45 s of velocity, zooms out with speed down to 60%, and snaps on jumps
-  longer than a screen.
+  height, leads by 0.45 s of velocity, zooms out with speed down to 45% (deepened from 60% on
+  2026-10-26 so a fast ship sees further), and snaps on jumps longer than a screen.
+- **Player zoom** (owner, 2026-10-26): pinch with two fingers on open space, the mouse wheel or
+  `+`/`-` scale all of that by 0.35–2.5×, saved as `view_zoom` in Settings (also a slider in
+  the Controls panel, which now lists every hotkey from `Settings.hotkeys()`). A pinch saves
+  once, when the fingers lift. The carrier gets an `EdgeMarkers` mark at the screen edge when
+  it's off screen: an arrow that shrinks with distance, and a full-size dot just before it
+  comes into view (`flight.json` `edge_markers`).
 - **`Starfield`:** a screen-space shader, three hashed star layers at 10/30/60% parallax with
   twinkle; no textures.
 - **`Arena`** (`src/model/arena.gd`, tested): a 240 U square with a 25 U warning margin. The
@@ -1217,7 +1223,8 @@ laser's 18 U reach.
 - **Done when:** killing an all-shield enemy drops mostly Crystal (a test), and pickups fly to the ship.
 
 #### 5.5 Spawner
-- [ ] Spawn off-screen around the player, with off-screen enemy arrows at the screen edge
+- [ ] Spawn off-screen around the player. (Edge marks exist for the carrier, 3.5; enemy marks
+  wait for v2 radar tech, owner 2026-10-26.)
 - [ ] An API shared by Creative test, WaveTime and Story tiles
 - **Done when:** a level-30 encounter spawns, fights and can be cleared in the sandbox.
 
@@ -1567,6 +1574,11 @@ and A.2/A.3 parts.
   together (a wedge of chasers, strafers screening a sniper, escorts round a boss). Hooks for v1:
   the AI pilot (5.2) takes its goal from outside (a target, a point, a ship to guard), so a group
   leader can hand out slots; the encounter generator (5.3) spawns ships in clusters.
+- **Radar tech** (owner, 2026-10-26): a ship part or upgrade that gives enemies the edge marks
+  the carrier already has (`EdgeMarkers`: an arrow that shrinks with distance, a dot just
+  before it comes into view). **Long-range radar** is an end-game upgrade adding a **ping**
+  menu that reports each enemy's level and distance. Hook for v1: `EdgeMarkers.point_at()`
+  takes any list of positions and colours.
 - More player bases, and a layered customiser (hairstyles, outfits) on top of v1's recolouring
 - True twin-stick aiming
 - More thrusters and weapons, plus weapon mods
