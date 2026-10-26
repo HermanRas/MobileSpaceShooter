@@ -3,9 +3,8 @@ extends PanelContainer
 ## Every setting (PLAN.md 4.7, 6.4) in three columns: Controls (scheme, handedness, stick size
 ## and opacity), Sound & feel (music and SFX volume, vibration, screen shake, the flight view's
 ## zoom) and the hotkeys (owner, 2026-10-26). Each applies at once (a slider while it's dragged)
-## and is saved to Settings. Opened from the flight sandbox and the main menu's Settings.
-
-signal closed
+## and is saved to Settings. Opened from the flight sandbox and the main menu's Settings; back
+## (the gesture, or Esc) closes it.
 
 ## How long a slider must be still before its value is saved, in seconds.
 const SAVE_AFTER_S := 0.4
@@ -56,12 +55,6 @@ func refresh() -> void:
 	_toggle(column, "Left-handed (stick on the right)", &"left_handed")
 	_slider(column, "Stick size", &"stick_size", 0.6, 1.6)
 	_slider(column, "Opacity", &"stick_opacity", 0.2, 1.0)
-
-	var close := Button.new()
-	close.text = "Done"
-	close.custom_minimum_size = Vector2(160, 56)
-	close.pressed.connect(func() -> void: closed.emit())
-	column.add_child(close)
 
 	var feel := VBoxContainer.new()
 	feel.name = "SoundAndFeel"

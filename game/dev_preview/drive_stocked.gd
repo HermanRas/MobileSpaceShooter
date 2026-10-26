@@ -253,9 +253,9 @@ func _step_the_market_trades() -> void:
 	_hangar._on_changed()
 	await _frames(1)
 	_check(_market_button("buy_tech_10").disabled, "with no GC, Buy is greyed out")
-	await _tap(0, _hangar._market.find_children("*", "Button", true, false).filter(
-			func(b: Button) -> bool: return b.text == "Done")[0].get_global_rect().get_center())
-	_check(not _hangar._market.visible, "Done closes it")
+	_hangar.on_back()
+	await _frames(1)
+	_check(not _hangar._market.visible and _hangar.is_inside_tree(), "back closes it, staying in the hangar")
 
 
 func _market_button(button_name: String) -> Button:

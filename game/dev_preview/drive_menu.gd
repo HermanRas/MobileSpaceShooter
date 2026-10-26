@@ -123,12 +123,13 @@ func _ready() -> void:
 	if music != null:
 		music.value = was_music
 		await get_tree().create_timer(0.6).timeout
-	var done := _find_text(settings, "Done")
-	_check(done != null, "with a Done button")
-	if done != null:
-		done.pressed.emit()
-		await _frames(3)
-	_check(_is(get_tree().current_scene, Router.MAIN_MENU), "Done comes home")
+	_check(_find_text(settings, "Done") == null, "with no Done button (back closes it)")
+	var esc := InputEventKey.new()
+	esc.physical_keycode = KEY_ESCAPE
+	esc.pressed = true
+	Input.parse_input_event(esc)
+	await _frames(3)
+	_check(_is(get_tree().current_scene, Router.MAIN_MENU), "Esc comes home")
 
 	await _press("Credits")
 	var credits := get_tree().current_scene
@@ -140,6 +141,7 @@ func _ready() -> void:
 		notices.pressed.emit()
 		await _frames(2)
 	_check("FreeType" in _all_text(credits), "and the engine's third-party notices on request")
+	_check(_find_text(credits, "Back") == null, "with no Back button")
 	credits.call("on_back")
 	await _frames(3)
 	_check(_is(get_tree().current_scene, Router.MAIN_MENU), "back comes home")

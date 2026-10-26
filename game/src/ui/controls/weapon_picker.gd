@@ -5,7 +5,6 @@ extends PanelContainer
 ## It runs while the tree is paused (process_mode ALWAYS); whoever opens it pauses and resumes.
 
 signal picked(weapon_id: StringName)
-signal closed
 
 const CARD := Vector2(150, 130)
 
@@ -55,11 +54,6 @@ func open(gunnery: Gunnery) -> void:
 		label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		card.add_child(label)
 		row.add_child(card)
-	var back := Button.new()
-	back.text = "Back"
-	back.custom_minimum_size = Vector2(160, 56)
-	back.pressed.connect(func() -> void: closed.emit())
-	column.add_child(back)
 
 
 ## A gun from above, as the hangar's palette draws it.

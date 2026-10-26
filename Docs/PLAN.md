@@ -1351,8 +1351,11 @@ and mutes at 0, and that a toggle is saved. The panel fits a 1280-wide PC window
 ✅ 2026-10-26.
 - **`PauseMenu`** (`src/ui/hud/`) has Resume, Settings (the controls panel, which comes back to
   the menu) and Return to hangar. The flight opens it from its Pause button (in place of
-  Controls; Hangar stays for a quick land), the pause key (Esc, P, Start), the back button, or
-  the app losing focus or going to the background. Story's "Save and return to hangar" (only
+  Controls), the pause key (P, Start), the back button, or the app losing focus or going to the
+  background.
+- **One way back** (owner, 2026-10-26): no screen or panel has a Back, Close or Done button. The
+  back gesture, or Esc on a keyboard (`Router`'s `back` action), closes what's open, pauses a
+  flight, or leaves the screen. Dialogs keep their Cancel. Story's "Save and return to hangar" (only
   after 10 s without combat, D18) comes with Story.
 - **The back button**, through `Router` → each scene's `on_back()`:
   - In flight it closes an open panel first, then pauses or resumes. It never lands straight
@@ -1408,6 +1411,8 @@ at zero size.
 #### 8.1 The run loop `[D4]`
 - [ ] Choose an owned ship → arena → waves on a timer (the next wave comes at 60 s or when the current one is cleared, whichever is first)
 - [ ] `wave → level` mapping in `data/levels.json`
+- [ ] Fly out and fly back (owner, 2026-10-26): a short launch from the hangar bay into the arena,
+  and a return-and-dock screen when the run ends, so leaving and coming home read as moments
 - **Done when:** a run starts, escalates and ends in death.
 
 #### 8.2 HUD

@@ -215,11 +215,16 @@ func perf_note() -> String:
 	return "  last refresh %.1f ms (%s)" % [last_refresh_usec / 1000.0, ", ".join(parts)]
 
 
+## Back (the gesture, or Esc) closes what's open: there are no Close buttons (owner, 2026-10-26).
 func on_back() -> void:
 	if _sandbox != null:
 		_sandbox.on_back()  # it pauses rather than lands (6.5)
 	elif not _carry.is_empty():
 		_end_carry()
+	elif _market != null and _market.visible:
+		_open_market(false)
+	elif _library_panel.visible:
+		_open_library(false)
 	else:
 		Router.goto_main_menu()
 
@@ -926,7 +931,6 @@ func _build_ui() -> void:
 		_show_wallet()
 		_market = MarketPanel.new()
 		_market.visible = false
-		_market.closed.connect(_open_market.bind(false))
 		_market.trade_requested.connect(func(material: StringName, amount: int) -> void:
 			if not editor.trade(material, amount):
 				_show_notice(editor.refusal))
@@ -947,7 +951,6 @@ func _build_ui() -> void:
 	_library_panel = LibraryPanel.new()
 	_library_panel.library = _library
 	_library_panel.visible = false
-	_library_panel.closed.connect(_open_library.bind(false))
 	_library_panel.new_requested.connect(func() -> void:
 		editor.new_ship("New ship")
 		_select(-1)

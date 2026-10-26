@@ -2,7 +2,8 @@ extends Control
 ## Making or editing a pilot (PLAN.md 6.2, D3): a name (LineEdit, so Android brings up its
 ## keyboard), a male or female base, and a swatch for each of hair, eyes, outfit and trim
 ## (`data/characters.json`), with a portrait cycling the four moods. Save keeps it and returns
-## to the pilots (or to `Profiles.edit_return`, when WaveTime sent a new player here).
+## to the pilots (or to `Profiles.edit_return`, when WaveTime sent a new player here); back (the
+## gesture, or Esc) leaves without saving.
 
 const PILOTS := "res://scenes/menu/profiles.tscn"
 const SWATCH := 52.0
@@ -73,7 +74,6 @@ func _ready() -> void:
 	var buttons := HBoxContainer.new()
 	buttons.add_theme_constant_override(&"separation", 12)
 	right.add_child(buttons)
-	buttons.add_child(MenuKit.button("Cancel", on_back, Vector2(160, 60)))
 	_save = MenuKit.button("Save", _save_pilot, Vector2(160, 60))
 	buttons.add_child(_save)
 	_update_save()

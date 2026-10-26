@@ -1,6 +1,7 @@
 extends Control
 ## The pilots on this device (PLAN.md 6.2, D2): a card each (portrait, name, record) to select,
-## edit or delete (after a confirmation), and a New pilot card. Back goes to the main menu.
+## edit or delete (after a confirmation), and a New pilot card. Back (the gesture, or Esc) goes to the
+## main menu.
 
 const CHARACTER := "res://scenes/menu/character.tscn"
 const CARD := Vector2(280, 340)
@@ -28,7 +29,6 @@ func _ready() -> void:
 	title.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	bar.add_child(title)
-	bar.add_child(MenuKit.button("Back", on_back, Vector2(160, 60)))
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED

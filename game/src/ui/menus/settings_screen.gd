@@ -1,6 +1,7 @@
 extends Control
 ## Settings (PLAN.md 6.1, filled out in 6.4): for now the Controls panel the flight sandbox
-## opens, over the menu backdrop. Done or the back button goes back to the main menu.
+## opens, over the menu backdrop. Back (the gesture, or Esc) goes to
+## the main menu.
 
 
 func _ready() -> void:
@@ -11,7 +12,6 @@ func _ready() -> void:
 	add_child(center)
 	var panel := ControlsPanel.new()
 	panel.name = "Controls"
-	panel.closed.connect(on_back)
 	center.add_child(panel)
 
 

@@ -1,6 +1,7 @@
 extends Control
 ## Tutorials (owner, 2026-10-26): the WaveTime and Story tutorials (15.2; locked until they
-## exist) and the enemy gallery, every ship of the roster to look at. Back goes to the main menu.
+## exist) and the enemy gallery, every ship of the roster to look at. Back (the gesture, or Esc) goes to the
+## main menu.
 
 const GALLERY := "res://scenes/debug/enemy_gallery.tscn"
 const TILE := Vector2(300, 140)
@@ -24,9 +25,6 @@ func _ready() -> void:
 	tiles.add_child(MenuKit.tile("Story", "Locked: arrives in 15.2", Callable(), "StoryTutorial", TILE))
 	tiles.add_child(MenuKit.tile("Enemy gallery", "Every enemy ship, by tier", func() -> void: Router.goto(GALLERY),
 			"EnemyGallery", TILE))
-	var back := MenuKit.button("Back", on_back)
-	back.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	column.add_child(back)
 
 
 func on_back() -> void:

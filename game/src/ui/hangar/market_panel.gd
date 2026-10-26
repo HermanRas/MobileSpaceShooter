@@ -5,7 +5,6 @@ extends PanelContainer
 ## trades through HangarEditor (so a trade is an undo step) and calls `show_market` again.
 
 signal trade_requested(material: StringName, amount: int)
-signal closed
 
 const LOTS: Array[int] = [10, 100]
 
@@ -62,9 +61,6 @@ func show_market(stock: Inventory, economy: Economy) -> void:
 			sell.name = "sell_%s_%d" % [material, lot]
 			sell.disabled = stock.amount(material) < lot
 			grid.add_child(sell)
-	var done := _button("Done", func() -> void: closed.emit())
-	done.custom_minimum_size = Vector2(160, 56)
-	_column.add_child(done)
 
 
 func _button(text: String, action: Callable) -> Button:

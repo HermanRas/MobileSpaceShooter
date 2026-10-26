@@ -21,12 +21,6 @@ func _ready() -> void:
 	var title := _label("Credits", 34)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	bar.add_child(title)
-	var back := Button.new()
-	back.name = "Back"
-	back.text = "Back"
-	back.custom_minimum_size = Vector2(160, 60)
-	back.pressed.connect(on_back)
-	bar.add_child(back)
 
 	var scroll := ScrollContainer.new()
 	scroll.name = "Scroll"

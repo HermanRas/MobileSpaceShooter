@@ -733,42 +733,33 @@ func _build_ui() -> void:
 	_hud.add_theme_font_size_override(&"font_size", 20)
 	_hud.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	ui.add_child(_hud)
-	var back := Button.new()
-	back.text = "Hangar"
-	back.size = Vector2(132, 56)
-	back.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT, Control.PRESET_MODE_KEEP_SIZE, 16)
-	back.pressed.connect(close)
-	ui.add_child(back)
 	var pause := Button.new()
 	pause.name = "Pause"
 	pause.text = "Pause"
 	pause.size = Vector2(132, 56)
 	pause.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT, Control.PRESET_MODE_KEEP_SIZE, 16)
-	pause.position.y += 64
 	pause.pressed.connect(open_pause)
 	ui.add_child(pause)
 	_level_button.text = "Guns L%d" % gun_level
 	_level_button.size = Vector2(132, 56)
 	_level_button.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT, Control.PRESET_MODE_KEEP_SIZE, 16)
-	_level_button.position.y += 128
+	_level_button.position.y += 64
 	_level_button.pressed.connect(_next_gun_level)
 	_level_button.visible = stock == null  # a stocked ship's guns are at their own levels
 	ui.add_child(_level_button)
 	_spawn_button.text = "Spawn"
 	_spawn_button.size = Vector2(132, 56)
 	_spawn_button.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT, Control.PRESET_MODE_KEEP_SIZE, 16)
-	_spawn_button.position.y += 192
+	_spawn_button.position.y += 128
 	_spawn_button.pressed.connect(open_spawner)
 	ui.add_child(_spawn_button)
 	spawn_list.name = "SpawnPicker"
 	spawn_list.visible = false
 	spawn_list.picked.connect(_close_spawner)
-	spawn_list.closed.connect(_close_spawner.bind(&"", ""))
 	ui.add_child(spawn_list)
 	picker.name = "WeaponPicker"
 	picker.visible = false
 	picker.picked.connect(_close_switch)
-	picker.closed.connect(_close_switch.bind(&""))
 	ui.add_child(picker)
 	pause_menu.name = "PauseMenu"
 	pause_menu.resumed.connect(resume)
@@ -778,7 +769,6 @@ func _build_ui() -> void:
 	_controls_panel = ControlsPanel.new()
 	_controls_panel.process_mode = Node.PROCESS_MODE_ALWAYS  # opened from the pause menu
 	_controls_panel.visible = false
-	_controls_panel.closed.connect(_open_controls_panel.bind(false))
 	ui.add_child(_controls_panel)
 
 

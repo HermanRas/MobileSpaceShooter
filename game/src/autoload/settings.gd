@@ -31,7 +31,8 @@ const KEY_BINDINGS := {
 	&"move_right": [KEY_D, KEY_RIGHT],
 	&"fire": [KEY_SPACE],
 	&"switch_weapon": [KEY_Q],
-	&"pause": [KEY_ESCAPE, KEY_P],
+	&"back": [KEY_ESCAPE],
+	&"pause": [KEY_P],
 	&"zoom_in": [KEY_EQUAL, KEY_KP_ADD],
 	&"zoom_out": [KEY_MINUS, KEY_KP_SUBTRACT],
 }
@@ -44,6 +45,7 @@ const ACTION_NAMES := {
 	&"move_right": "Thrust right",
 	&"fire": "Fire",
 	&"switch_weapon": "Next weapon group",
+	&"back": "Back: close, pause or leave",
 	&"pause": "Pause",
 	&"zoom_in": "Zoom in",
 	&"zoom_out": "Zoom out",
@@ -99,7 +101,7 @@ static func hotkeys() -> Array[Array]:
 		var keys: PackedStringArray = []
 		for keycode: Key in KEY_BINDINGS[action]:
 			keys.append(KEY_NAMES.get(keycode, OS.get_keycode_string(keycode)))
-		rows.append(["Flight", ", ".join(keys), ACTION_NAMES.get(action, String(action))])
+		rows.append(["Everywhere" if action == &"back" else "Flight", ", ".join(keys), ACTION_NAMES.get(action, String(action))])
 	rows.append_array(OTHER_HOTKEYS)
 	return rows
 

@@ -6,7 +6,6 @@ extends PanelContainer
 ## sandbox pauses and resumes.
 
 signal picked(kind: StringName, id: String)
-signal closed
 
 const CARD := Vector2(170, 160)
 const MARGIN := 24.0
@@ -36,11 +35,6 @@ func _ready() -> void:
 	title.add_theme_font_size_override(&"font_size", 26)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	bar.add_child(title)
-	var back := Button.new()
-	back.text = "Close"
-	back.custom_minimum_size = Vector2(132, 56)
-	back.pressed.connect(func() -> void: closed.emit())
-	bar.add_child(back)
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED

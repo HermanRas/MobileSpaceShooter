@@ -10,7 +10,6 @@ signal load_requested(id: String)
 signal new_requested
 signal save_requested
 signal save_as_requested(new_name: String)
-signal closed
 
 const CARD := Vector2(180, 210)
 
@@ -54,7 +53,6 @@ func _ready() -> void:
 	_delete_button = _button(bar, "Delete", func() -> void:
 		_confirm.dialog_text = "Delete this ship? This can't be undone."
 		_confirm.popup_centered())
-	_button(bar, "Close", func() -> void: closed.emit())
 
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL

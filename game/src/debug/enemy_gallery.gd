@@ -33,14 +33,6 @@ func _ready() -> void:
 	_camera.zoom = Vector2(0.75, 0.75)
 	add_child(_camera)
 	_camera.make_current()
-	var back := Button.new()
-	back.text = "Back"
-	back.custom_minimum_size = Vector2(132, 56)
-	back.position = Vector2(16, 16)
-	back.pressed.connect(on_back)
-	var ui := CanvasLayer.new()
-	ui.add_child(back)
-	add_child(ui)
 
 
 func _card(entry: EnemyRoster.Entry, placement: Placement, center: Vector2) -> void:
