@@ -1,0 +1,26 @@
+{
+	"format": 1,
+	"id": "test_mines",
+	"name": "Mines test",
+	"author": "mss",
+	"tags": ["test", "weapon:mines"],
+	"_doc": "Weapon test ship (Phase 4.6): the gunboat's hull with only the Mines, on every mount it allows: a manual mine layer on the rear edge of tile 1 (FIRE drops a mine).",
+	"tiles": [
+		{"id": 0, "type": "core", "shape": "square", "size": "L", "pos": [0, 0], "rot": 0, "paint": "#d8d8d8"},
+		{"id": 1, "type": "hardpoint", "shape": "square", "size": "L", "pos": [-1, 0], "rot": 0, "paint": "#3a3f45"},
+		{"id": 2, "type": "hardpoint", "shape": "square", "size": "L", "pos": [-1, -1], "rot": 0, "paint": "#3a3f45"},
+		{"id": 3, "type": "hardpoint", "shape": "square", "size": "L", "pos": [-1, 1], "rot": 0, "paint": "#3a3f45"},
+		{"id": 4, "type": "hardpoint", "shape": "square", "size": "L", "pos": [0, -1], "rot": 0, "paint": "#3a3f45"},
+		{"id": 5, "type": "hardpoint", "shape": "square", "size": "L", "pos": [0, 1], "rot": 0, "paint": "#3a3f45"},
+		{"id": 6, "type": "hardpoint", "shape": "square", "size": "L", "pos": [1, 0], "rot": 0, "paint": "#3a3f45"},
+		{"id": 7, "type": "hardpoint", "shape": "square", "size": "L", "pos": [0, -2], "rot": 0, "paint": "#4a5560"},
+		{"id": 8, "type": "hardpoint", "shape": "square", "size": "L", "pos": [0, 2], "rot": 0, "paint": "#4a5560"}
+	],
+	"mounts": [
+		{"tile": 2, "edge": 3, "port": 0, "part": "thruster.pulse", "size": "L", "level": 1},
+		{"tile": 3, "edge": 3, "port": 0, "part": "thruster.pulse", "size": "L", "level": 1},
+		{"tile": 4, "edge": 1, "port": 0, "part": "thruster.pulse", "size": "M", "level": 1},
+		{"tile": 5, "edge": 1, "port": 2, "part": "thruster.pulse", "size": "M", "level": 1},
+		{"tile": 1, "edge": 3, "port": 1, "part": "weapon.mines", "mount": "fixed", "mode": "manual"}
+	]
+}

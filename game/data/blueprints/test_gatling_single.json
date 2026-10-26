@@ -1,0 +1,30 @@
+{
+	"format": 1,
+	"id": "test_gatling_single",
+	"name": "Gatling test",
+	"author": "mss",
+	"tags": ["test", "weapon:gatling_single"],
+	"_doc": "Weapon test ship (Phase 4.6): the gunboat's hull with only the Gatling, on every mount it allows: a manual fixed one on the nose (FIRE); auto swivel ones on tiles 4 and 5; auto turrets on the wing tips (7, 8).",
+	"tiles": [
+		{"id": 0, "type": "core", "shape": "square", "size": "L", "pos": [0, 0], "rot": 0, "paint": "#d8d8d8"},
+		{"id": 1, "type": "hull", "shape": "square", "size": "L", "pos": [-1, 0], "rot": 0, "paint": "#7d8a96"},
+		{"id": 2, "type": "hardpoint", "shape": "square", "size": "L", "pos": [-1, -1], "rot": 0, "paint": "#3a3f45"},
+		{"id": 3, "type": "hardpoint", "shape": "square", "size": "L", "pos": [-1, 1], "rot": 0, "paint": "#3a3f45"},
+		{"id": 4, "type": "hardpoint", "shape": "square", "size": "L", "pos": [0, -1], "rot": 0, "paint": "#3a3f45"},
+		{"id": 5, "type": "hardpoint", "shape": "square", "size": "L", "pos": [0, 1], "rot": 0, "paint": "#3a3f45"},
+		{"id": 6, "type": "hardpoint", "shape": "square", "size": "L", "pos": [1, 0], "rot": 0, "paint": "#3a3f45"},
+		{"id": 7, "type": "hardpoint", "shape": "square", "size": "L", "pos": [0, -2], "rot": 0, "paint": "#4a5560"},
+		{"id": 8, "type": "hardpoint", "shape": "square", "size": "L", "pos": [0, 2], "rot": 0, "paint": "#4a5560"}
+	],
+	"mounts": [
+		{"tile": 2, "edge": 3, "port": 0, "part": "thruster.pulse", "size": "L", "level": 1},
+		{"tile": 3, "edge": 3, "port": 0, "part": "thruster.pulse", "size": "L", "level": 1},
+		{"tile": 4, "edge": 1, "port": 0, "part": "thruster.pulse", "size": "M", "level": 1},
+		{"tile": 5, "edge": 1, "port": 2, "part": "thruster.pulse", "size": "M", "level": 1},
+		{"tile": 6, "edge": 1, "port": 1, "part": "weapon.gatling_single", "mount": "fixed", "mode": "manual"},
+		{"tile": 4, "edge": 1, "port": 2, "part": "weapon.gatling_single", "mount": "swivel", "mode": "auto"},
+		{"tile": 5, "edge": 1, "port": 0, "part": "weapon.gatling_single", "mount": "swivel", "mode": "auto"},
+		{"tile": 7, "face": true, "part": "weapon.gatling_single", "mount": "turret", "mode": "auto"},
+		{"tile": 8, "face": true, "part": "weapon.gatling_single", "mount": "turret", "mode": "auto"}
+	]
+}

@@ -4,6 +4,8 @@ extends RefCounted
 ## beside each as `<id>.png`. Writes go through `Save`, so they're atomic with a `.bak`.
 
 const DIR := "user://library"
+## Which sample ships were copied in, and which version: not `.json`, so list() skips it.
+const SEEN := "samples.seen"
 
 var dir: String
 
@@ -34,6 +36,28 @@ func list() -> Array[Dictionary]:
 	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		return a["modified"] > b["modified"] if a["modified"] != b["modified"] else a["name"] < b["name"])
 	return out
+
+
+## Copies the game's sample ships (`data/blueprints`, as file name -> parsed JSON) into the
+## library, so they can be loaded like any saved ship, phone included. Each one is copied once,
+## and again only when the game ships a changed version, so one the player deleted stays gone
+## until then (and a changed sample replaces the player's edits to it). Returns the ids written;
+## they need thumbnails.
+func seed_samples(samples: Dictionary) -> PackedStringArray:
+	var seen := Save.read_json(dir.path_join(SEEN)) if FileAccess.file_exists(dir.path_join(SEEN)) else {}
+	var written: PackedStringArray = []
+	for id: String in samples:
+		var stamp := str(JSON.stringify(samples[id]).hash())
+		if seen.get(id, "") == stamp or not is_valid_id(id):
+			continue
+		var errors: PackedStringArray = []
+		var bp := Blueprint.from_dict(samples[id], errors)
+		if bp != null and save_ship(bp) == OK:
+			written.append(id)
+			seen[id] = stamp
+	if not written.is_empty():
+		Save.write_json(dir.path_join(SEEN), seen)
+	return written
 
 
 func load_ship(id: String) -> Blueprint:

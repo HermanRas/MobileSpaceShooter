@@ -78,6 +78,22 @@ func _ready() -> void:
 
 	_build_ui()
 	_on_changed()
+	_seed_samples.call_deferred()
+
+
+## Puts the game's sample ships in the library (new or changed ones only), with thumbnails from
+## a renderer of their own, so a Save made meanwhile can't share its viewport.
+func _seed_samples() -> void:
+	var written := _library.seed_samples(Data.json_dir("blueprints"))
+	if written.is_empty():
+		return
+	var renderer := ThumbnailRenderer.new()
+	add_child(renderer)
+	for id in written:
+		var bp := _library.load_ship(id)
+		if bp != null:
+			await renderer.render(bp, placement, _library.thumbnail_path(id))
+	renderer.queue_free()
 
 
 ## Loads a ship into the hangar (from the library, or a test).
