@@ -17,7 +17,7 @@ extends RefCounted
 ## The goal comes from outside (a target, a ship to guard), so a group leader can later hand out
 ## posts (v2 formations, PLAN.md §9).
 
-const BEHAVIOURS: Array[StringName] = [&"chase", &"strafe", &"keep_range", &"ram", &"lay_mines", &"escort"]
+const BEHAVIOURS: Array[StringName] = [&"chase", &"strafe", &"keep_range", &"ram", &"lay_mines", &"escort", &"convoy"]
 
 var behaviour: StringName = &"chase"
 var flee_below := 0.0
@@ -34,6 +34,11 @@ var arena: Arena
 var orbit_sign := 1.0
 ## Which side of its charge an escort holds (+1 right, -1 left).
 var post_side := 1.0
+## A convoy's waypoints (world U), the one it's heading for, and whether it goes round again.
+## The carrier the player escorts flies one (PLAN.md 12.3).
+var route := PackedVector2Array()
+var route_index := 0
+var loop_route := true
 var tuning: Dictionary = {}
 ## The last tick's wish, for tests and the debug overlay.
 var wanted := Vector2.ZERO
@@ -88,6 +93,8 @@ func think(me: Dictionary, target: Dictionary, friends: Array = [], charge: Dict
 		var engage: bool = not target.is_empty() and (target["pos"] as Vector2).distance_to(charge["pos"]) \
 				<= float(_rules().get("guard_u", 20.0))
 		face = _hold_post(pos, charge, target if engage else {})
+	elif behaviour == &"convoy":
+		_follow_route(pos)
 	elif target.is_empty():
 		wanted = Vector2.ZERO
 	else:
@@ -186,6 +193,25 @@ func _hold_post(pos: Vector2, charge: Dictionary, raider: Dictionary = {}) -> Ve
 	var speed := minf(gap.length() * float(_rules().get("hold_gain", 0.8)), _stopping_speed(gap.length()))
 	wanted = (charge["vel"] as Vector2) + gap.normalized() * speed
 	return (raider["pos"] as Vector2) - pos if not raider.is_empty() else Vector2.from_angle(float(charge["heading"]))
+
+
+## On to the next waypoint at a cruise, whatever is shooting at it (its turrets fight); it stops
+## at the end of a route that doesn't loop, and holds still without one.
+func _follow_route(pos: Vector2) -> void:
+	wanted = Vector2.ZERO
+	if route.is_empty() or route_index >= route.size():
+		return
+	if pos.distance_to(route[route_index]) <= float(_rules().get("reach_u", 6.0)):
+		route_index += 1
+		if route_index >= route.size():
+			if not loop_route:
+				return
+			route_index = 0
+	var to := route[route_index] - pos
+	var speed := top_speed * float(_rules().get("cruise_share", 0.6))
+	if not loop_route and route_index == route.size() - 1:
+		speed = minf(speed, _stopping_speed(to.length()))
+	wanted = to.normalized() * speed
 
 
 ## How fast it can go and still stop within `distance`: by turning round if its brakes are weak,

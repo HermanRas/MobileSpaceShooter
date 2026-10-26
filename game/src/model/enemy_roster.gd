@@ -1,8 +1,9 @@
 class_name EnemyRoster
 extends RefCounted
-## The enemy roster (PLAN.md 5.1) from `data/enemies.json`: which enemy blueprints exist, their
-## tier, role, the AI behaviour that flies them (5.2), the encounter levels they appear at, and
-## their faction (`neutral` until v2). The encounter generator (5.3) picks from here.
+## The roster of AI-flown ships (PLAN.md 5.1) from `data/enemies.json`: which blueprints exist,
+## their tier, role, the AI behaviour that flies them (5.2), the encounter levels they appear at,
+## and their faction (`neutral` until v2). The encounter generator (5.3) picks enemies from here;
+## an ally (the carrier the player escorts, 12.3) flies on the player's side and is never one.
 
 const DEFAULT_FACTION := &"neutral"
 
@@ -16,6 +17,8 @@ class Entry:
 	var max_level: int
 	var faction: StringName
 	var boss: bool
+	## On the player's side (the carrier), not an enemy.
+	var ally: bool
 	## The AI turns for home below this share of its hull (0: it never does).
 	var flee_below: float
 	var blueprint: Blueprint
@@ -59,6 +62,7 @@ static func from_table(table: Dictionary, blueprints: Dictionary) -> EnemyRoster
 		entry.max_level = int(levels[1])
 		entry.faction = StringName(raw.get("faction", DEFAULT_FACTION))
 		entry.boss = bool(raw.get("boss", false))
+		entry.ally = bool(raw.get("ally", false))
 		entry.flee_below = clampf(float(raw.get("flee_below", 0.0)), 0.0, 1.0)
 		entry.blueprint = bp
 		roster.entries.append(entry)
@@ -72,11 +76,11 @@ func entry(id: StringName) -> Entry:
 	return null
 
 
-## The ordinary (not boss) enemies that appear at `level`.
+## The ordinary enemies (no bosses, no allies) that appear at `level`.
 func for_level(level: int) -> Array[Entry]:
 	var out: Array[Entry] = []
 	for each in entries:
-		if not each.boss and each.fits(level):
+		if not each.boss and not each.ally and each.fits(level):
 			out.append(each)
 	return out
 

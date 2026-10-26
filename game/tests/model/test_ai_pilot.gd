@@ -108,8 +108,28 @@ func test_a_minelayer_circles_inside_mine_range() -> void:
 	assert_true(close > 60 * 10, "within mine range for most of 15 s (%d ticks)" % close)
 
 
-func test_an_escort_holds_its_post_until_an_enemy_comes_near() -> void:
-	var pilot := _pilot(&"pike", Vector2(-10, 8))
+func test_the_carrier_flies_its_route_whatever_attacks_it() -> void:
+	var pilot := _pilot(&"pike", Vector2.ZERO)
+	pilot.brain.route = PackedVector2Array([Vector2(40, 0), Vector2(40, 40), Vector2(0, 40), Vector2(0, 0)])
+	var raider := {"pos": Vector2(10, 5), "vel": Vector2.ZERO}
+	var reached := {}
+	for i in 60 * 120:
+		_tick(pilot, raider)
+		reached[pilot.brain.route_index] = true
+	assert_eq(reached.size(), 4, "owner, 2026-10-26: it heads for every waypoint in turn, raider or not")
+	pilot.brain.route = PackedVector2Array([Vector2(-20, 0)])
+	pilot.brain.route_index = 0
+	pilot.brain.loop_route = false
+	for i in 60 * 40:
+		_tick(pilot, raider)
+	assert_true(pilot.sim.position.distance_to(Vector2(-20, 0)) < 8.0 and pilot.sim.velocity.length() < 1.5,
+			"and stops at the end of a one-way route (%.1f U off, %.1f U/s)" % [pilot.sim.position.distance_to(Vector2(-20, 0)),
+			pilot.sim.velocity.length()])
+
+
+func test_an_enemy_escort_holds_its_post_until_an_enemy_comes_near() -> void:
+	var pilot := _pilot(&"hornet", Vector2(-10, 8))
+	pilot.brain.behaviour = &"escort"  # a boss's guard (12.2)
 	var charge := {"pos": Vector2.ZERO, "vel": Vector2(3, 0), "heading": 0.0}
 	var far := {"pos": Vector2(500, 500), "vel": Vector2.ZERO}
 	for i in 60 * 20:

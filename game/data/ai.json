@@ -19,6 +19,7 @@
 		"keep_range": {"_doc": "Stay between min_share and max_share of range, nose on the target.", "min_share": 0.6, "max_share": 0.85},
 		"ram": {"_doc": "Full speed at where the target will be.", "speed_share": 1.0},
 		"lay_mines": {"_doc": "Circle close, so mines drop across the target's path.", "radius_u": 7.0, "speed_share": 0.8, "pull": 0.8},
-		"escort": {"_doc": "Hold a post offset_u beside the ship it guards; with an enemy within guard_u of that ship, the post moves between the two and its turrets fight.", "offset_u": 4.0, "guard_u": 20.0, "hold_gain": 0.8}
+		"convoy": {"_doc": "The carrier the player escorts (12.3): on to each waypoint (within reach_u counts as there) at cruise_share of top speed, whatever shoots at it; its turrets fight.", "cruise_share": 0.6, "reach_u": 6.0},
+		"escort": {"_doc": "An enemy guarding a ship (a boss's escorts, 12.2): hold a post offset_u beside it; with an enemy within guard_u of that ship, the post moves between the two and its turrets fight.", "offset_u": 4.0, "guard_u": 20.0, "hold_gain": 0.8}
 	}
 }

@@ -1,5 +1,6 @@
 extends Node
-## Writes the enemy roster's blueprints (PLAN.md 5.1) into `data/enemies/`, and checks each one:
+## Writes the roster's blueprints (PLAN.md 5.1) into `data/enemies/`: the enemies, and the Pike,
+## the carrier the player protects on escort missions (12.3). It checks each one:
 ## no placement problems, no thrust or gun warnings. Run it again after changing a design:
 ##   $GODOT --headless --path game res://dev_preview/make_enemies.tscn
 ## Exit code 0 = every ship came out clean.
@@ -17,6 +18,8 @@ const TYPES := {"C": &"core", "H": &"hull", "A": &"armor", "S": &"shield", "P": 
 const SIDES := {"rear": Vector2.LEFT, "front": Vector2.RIGHT, "top": Vector2.UP, "bottom": Vector2.DOWN}
 ## Neutral raiders until factions (v2, PLAN.md §9): rust hulls, brown armour. Bosses run darker.
 const PAINT := {&"core": "#d8d8d8", &"hull": "#7a5050", &"armor": "#6b5a3e", &"shield": "#3d5f8f", &"hardpoint": "#3a3f45"}
+## The player's side: the hangar's greys and blues.
+const ALLY_PAINT := {&"core": "#d8d8d8", &"hull": "#8c96a0", &"armor": "#6f7f8f", &"shield": "#3d6f9f", &"hardpoint": "#3a3f45"}
 const BOSS_PAINT := {&"core": "#e0c060", &"hull": "#4a2228", &"armor": "#3e3022", &"shield": "#2f3f6f", &"hardpoint": "#2a2d33"}
 
 const SHIPS := [
@@ -51,8 +54,8 @@ const SHIPS := [
 		"core": [1, 1], "rows": ["P#H#H/..", "H#C#H#P#", "P#H#H\\.."],
 		"mounts": [[-1, -1, "rear", "pulse", "L", 1], [-1, 1, "rear", "pulse", "L", 1],
 			[2, 0, "front", "cannon", "fixed"], [2, 0, "front", "pulse", "S", 1, 0], [2, 0, "front", "pulse", "S", 1, 3]]},
-	{"id": "pike", "name": "Pike", "tier": 2, "role": "escort",
-		"doc": "Escort (owner, 2026-10-26): long, skinny and armoured, it rides beside transports with three turrets along its spine.",
+	{"id": "pike", "name": "Pike", "tier": 2, "role": "carrier", "ally": true,
+		"doc": "The carrier (owner, 2026-10-26): long, skinny and armoured, the ship the player escorts and keeps alive on escort missions (12.3). It flies its route; its three turrets fight back.",
 		"core": [4, 1], "rows": ["P#................", "P#A#P#A#C#A#P#A#P#", "P#................"],
 		"mounts": [[-4, -1, "rear", "pulse", "L", 1], [-4, 1, "rear", "pulse", "L", 1], [-4, 0, "rear", "pulse", "L", 1],
 			[4, 0, "front", "pulse", "M", 1], [4, 0, "top", "pulse", "M", 1], [4, 0, "bottom", "pulse", "M", 1],
@@ -164,8 +167,9 @@ func _make(spec: Dictionary) -> void:
 	bp.id = spec["id"]
 	bp.name = spec["name"]
 	bp.author = "mss"
-	bp.tags = PackedStringArray(["enemy", "role:%s" % spec["role"], "tier:%d" % spec["tier"]] + (["boss"] if spec.get("boss", false) else []))
-	var paint: Dictionary = BOSS_PAINT if spec.get("boss", false) else PAINT
+	bp.tags = PackedStringArray(["ally" if spec.get("ally", false) else "enemy", "role:%s" % spec["role"], "tier:%d" % spec["tier"]]
+			+ (["boss"] if spec.get("boss", false) else []))
+	var paint: Dictionary = BOSS_PAINT if spec.get("boss", false) else ALLY_PAINT if spec.get("ally", false) else PAINT
 	var core: Array = spec["core"]
 	var at := {}  # Vector2i cell -> tile id
 	var cells: Array = []

@@ -1,5 +1,6 @@
 extends Node2D
-## Phase 5.1 debug gallery: every ship on the enemy roster, a row per tier (its boss at the end),
+## Phase 5.1 debug gallery: every ship on the roster (the carrier, an ally, among them), a row per
+## tier (its boss at the end),
 ## drawn as the hangar draws them, with tier, role, behaviour, levels and firepower. Drag to
 ## look around; Back returns to the menu.
 
@@ -65,11 +66,11 @@ func _card(entry: EnemyRoster.Entry, placement: Placement, center: Vector2) -> v
 	var envelope := ThrustEnvelope.compute(bp, placement, stats)
 	var label := Label.new()
 	label.text = "%s%s\nT%d %s · %s · L%d-%d\n%d tiles · %d guns %d dmg/s · %.1f U/s²" % [
-		bp.name, "  (BOSS)" if entry.boss else "", entry.tier, entry.role, entry.behaviour, entry.min_level, entry.max_level,
+		bp.name, "  (BOSS)" if entry.boss else "  (ALLY)" if entry.ally else "", entry.tier, entry.role, entry.behaviour, entry.min_level, entry.max_level,
 		bp.tiles.size(), guns.guns.size(), roundi(guns.dps()), envelope.accel(ThrustEnvelope.FORWARD)]
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.add_theme_font_size_override(&"font_size", 20)
-	label.add_theme_color_override(&"font_color", Color(1, 0.8, 0.45) if entry.boss else Color.WHITE)
+	label.add_theme_color_override(&"font_color", Color(1, 0.8, 0.45) if entry.boss else Color(0.55, 0.85, 1.0) if entry.ally else Color.WHITE)
 	label.size = Vector2(CELL.x, 90)
 	label.position = center + Vector2(-CELL.x * 0.5, CELL.y * 0.5 - 100)
 	add_child(label)

@@ -1,6 +1,6 @@
 extends TestCase
-## Phase 5.1: the enemy roster. 12 ships over 4 tiers and 6 roles, an escort, and a boss per
-## tier; every one valid, able to fly, and armed for its role.
+## Phase 5.1: the roster. 12 enemies over 4 tiers and 6 roles, a boss per tier, and the carrier
+## the player escorts; every one valid, able to fly, and armed for its role.
 
 const COMBAT_ROLES: Array[StringName] = [&"chaser", &"strafer", &"sniper", &"kamikaze", &"minelayer", &"brute"]
 
@@ -27,7 +27,10 @@ func test_all_seventeen_load() -> void:
 		assert_true(roster.boss(tier) != null, "a boss for tier %d" % tier)
 	for role in COMBAT_ROLES:
 		assert_eq(regular.filter(func(e: EnemyRoster.Entry) -> bool: return e.role == role).size(), 2, "%s at two tiers" % role)
-	assert_eq(roster.entries.filter(func(e: EnemyRoster.Entry) -> bool: return e.role == &"escort").size(), 1, "one escort")
+	var allies := roster.entries.filter(func(e: EnemyRoster.Entry) -> bool: return e.ally)
+	assert_eq(allies.map(func(e: EnemyRoster.Entry) -> StringName: return e.id), [&"pike"], "one ally: the carrier")
+	assert_eq(allies[0].role, &"carrier")
+	assert_eq(allies[0].behaviour, &"convoy", "it flies a route")
 	assert_true(roster.entries.all(func(e: EnemyRoster.Entry) -> bool: return e.faction == &"neutral"), "neutral until v2")
 
 
@@ -40,7 +43,7 @@ func test_every_ship_is_valid_and_flies_without_warnings() -> void:
 		assert_eq(envelope.warnings.map(func(w: Dictionary) -> String: return w["text"]), [], "%s: forward, brake, turn" % entry.id)
 		assert_eq(GunLayout.compute(bp, placement).warnings.map(func(w: Dictionary) -> String: return w["text"]), [],
 				"%s: no gun fires into its own hull" % entry.id)
-		assert_true("enemy" in bp.tags and "role:%s" % entry.role in bp.tags and "tier:%d" % entry.tier in bp.tags,
+		assert_true(("ally" if entry.ally else "enemy") in bp.tags and "role:%s" % entry.role in bp.tags and "tier:%d" % entry.tier in bp.tags,
 				"%s is tagged" % entry.id)
 
 
@@ -60,7 +63,7 @@ func test_each_role_is_armed_for_its_job() -> void:
 				assert_true(guns.size() >= 1, "%s is armed" % entry.id)
 
 
-func test_the_escort_is_long_skinny_and_armoured() -> void:
+func test_the_carrier_is_long_skinny_and_armoured() -> void:
 	var pike := roster.entry(&"pike").blueprint
 	var low := Vector2.INF
 	var high := -Vector2.INF
@@ -70,6 +73,7 @@ func test_the_escort_is_long_skinny_and_armoured() -> void:
 			high = high.max(p)
 	var size := high - low
 	assert_true(size.x >= 3.0 * size.y, "owner, 2026-10-26: long and skinny (%s U)" % size)
+	assert_true(roster.for_level(50).all(func(e: EnemyRoster.Entry) -> bool: return e.id != &"pike"), "and never an enemy")
 	assert_true(pike.tiles.filter(func(t: Blueprint.Tile) -> bool: return t.type == &"armor").size() >= 4, "and armoured")
 
 
@@ -78,7 +82,7 @@ func test_a_boss_outguns_its_tier() -> void:
 		var boss := roster.boss(tier)
 		var boss_tiles := boss.blueprint.tiles.size()
 		for entry in roster.entries:
-			if entry.tier == tier and not entry.boss:
+			if entry.tier == tier and not entry.boss and not entry.ally:
 				assert_true(boss_tiles > entry.blueprint.tiles.size(), "%s is bigger than %s" % [boss.id, entry.id])
 		assert_true(boss_tiles <= placement.max_tiles, "%s fits the tile cap" % boss.id)
 

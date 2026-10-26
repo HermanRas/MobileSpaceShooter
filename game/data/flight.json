@@ -22,15 +22,19 @@
 		"zoom_rate": 2.0
 	},
 	"sandbox": {
-		"_doc": "Flight sandbox extras (4.2): a practice target (a blueprint from data/enemies) parked at target_at_u turned target_rotation_deg (ahead of the ship, which faces +x); the Target button steps through `targets`, and one with guns shoots back (4.6a). Roster ships (5.1) are on it too; until the AI pilot (5.2) they sit still and only their turrets fight. A tap on any ship's tile highlights it, and hits it for test_hit raw damage of test_hit_type (0 since the guns arrived in 4.3). A destroyed ship comes back after respawn_s. The Guns button steps a Creative ship's guns through gun_levels (4.3); a stocked ship's guns are inventory items at their own levels, and a kill earns them XP as an encounter_level enemy would (4.8b, until encounters, Phase 5).",
-		"targets": ["target_barge", "rocket_pod", "shield_block", "wasp", "pike", "marauder", "gorgon", "tyrant", "leviathan"],
-		"target_at_u": [10, 0],
+		"_doc": "Flight sandbox extras (4.2): start_target (a practice target from data/enemies) is parked ahead at the start. The Spawn button (owner, 2026-10-26) lists every ship to spawn: practice targets, the roster, the carrier and the player's own ships. An enemy appears spawn_gap_u ahead of the player's ship, turned spawn_facing_deg from the player (one without thrusters, a practice target, target_rotation_deg); a roster ship flies itself (5.2). The carrier (the roster's ally) appears carrier_beside_u to the player's right, pointing the same way, and flies carrier_route round and round (laid out in the player's frame at spawn: x ahead, y to the right); enemies go for whichever of the player and the carrier is nearer, the carrier's distance counted at carrier_bias, so they make for it (an escort mission, 12.3). A tap on any ship's tile highlights it, and hits it for test_hit raw damage of test_hit_type (0 since the guns arrived in 4.3). The player's ship comes back respawn_s after it's destroyed. The Guns button steps a Creative ship's guns through gun_levels (4.3); a stocked ship's guns are inventory items at their own levels, and a kill earns them XP as an encounter_level enemy would (4.8b, until encounters, Phase 5).",
 		"target_rotation_deg": 90,
 		"test_hit": 0,
 		"test_hit_type": "kinetic",
 		"respawn_s": 3.0,
 		"gun_levels": [1, 10, 100, 999],
-		"encounter_level": 3
+		"encounter_level": 3,
+		"start_target": "target_barge",
+		"spawn_gap_u": 6.0,
+		"spawn_facing_deg": 180,
+		"carrier_beside_u": 4.0,
+		"carrier_route": [[35, 0], [35, 32], [0, 32], [0, 0]],
+		"carrier_bias": 0.6
 	},
 	"combat_hud": {
 		"_doc": "Phase 4.7. A hit on the player flashes the screen (red for hull, blue for shield only) for flash_s, at up to flash_alpha. Screen shake jolts the view by shake_px_per_damage per point of damage, up to shake_max_px, settling at shake_decay per second. A hull hit of at least vibrate_min_damage buzzes the phone for vibrate_ms. Both obey the Controls settings.",

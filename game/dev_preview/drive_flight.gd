@@ -106,8 +106,9 @@ func _step_damage(sandbox: FlightSandbox) -> void:
 	_check(sandbox._world.get_children().any(func(n: Node) -> bool: return n is Explosion), "with an explosion")
 	_check(_wrecks(sandbox).size() >= 3, "and flings its pieces apart (%d wrecks)" % _wrecks(sandbox).size())
 	_save_shot("drive_explosion.png")
-	await get_tree().create_timer(float(sandbox._sandbox.get("respawn_s", 3.0)) + 0.3).timeout
-	_check(sandbox.target != null and sandbox.target.blueprint.tiles.size() == tiles_before, "a fresh target comes back")
+	sandbox.spawn(FlightSandbox.SPAWN_ENEMIES, "target_barge")
+	await _physics_frames(2)
+	_check(sandbox.target != null and sandbox.target.blueprint.tiles.size() == tiles_before, "Spawn brings a fresh one")
 
 
 ## Phase 4.3, the "done when": the gunboat carries one gun of each mount type. Its auto guns (two
@@ -200,10 +201,9 @@ func _step_rockets_and_flak() -> void:
 	Input.action_release(&"fire")
 	_check(fired[0] >= 1, "FIRE launches the nose AP rocket (%d)" % fired[0])
 
-	sandbox._next_target()
-	await _physics_frames(2)
-	_check(sandbox.target != null and sandbox.target.blueprint.id == "rocket_pod", "Target swaps in the rocket pod")
-	# The skirmisher can destroy the pod (it comes back), so count from whichever one is there.
+	await _swap(sandbox, "rocket_pod")
+	_check(sandbox.target != null and sandbox.target.blueprint.id == "rocket_pod", "Spawn puts the rocket pod ahead")
+	# The skirmisher can destroy the pod, so count while it lasts.
 	var pod_shots := 0
 	for i in 360:
 		await _physics_frames(1)
@@ -231,9 +231,7 @@ func _step_specials() -> void:
 	_check(sandbox != null, "the specialist can fly")
 	if sandbox == null:
 		return
-	while sandbox.target == null or sandbox.target.blueprint.id != "shield_block":
-		sandbox._next_target()
-		await _physics_frames(1)
+	await _swap(sandbox, "shield_block")
 	var block := sandbox.target
 	var health := func() -> float:
 		var total := block.damage.shield
@@ -294,37 +292,79 @@ func _step_enemies_fly_themselves() -> void:
 		_check(false, "the starter flies")
 		return
 	_check(sandbox.target.get_node_or_null("Ai") == null, "a practice barge has no pilot")
-	for id: String in ["wasp", "marauder"]:
-		while sandbox.target == null or sandbox.target.blueprint.id != id:
-			sandbox._next_target()
-			await _physics_frames(1)
-		var enemy := sandbox.target
-		var ai := enemy.get_node_or_null("Ai") as AiPilot
-		_check(ai != null, "%s gets an AI pilot" % id)
-		if ai == null:
-			continue
-		var start := enemy.global_position
-		var turned := 0.0
-		var last := enemy.global_rotation
-		var sticks := 0
-		for i in 240:
-			await _physics_frames(1)
-			if not is_instance_valid(enemy):
-				break
-			turned += absf(angle_difference(last, enemy.global_rotation))
-			last = enemy.global_rotation
-			if (enemy.get_node("Pilot") as FlightController).stick.length() > 0.15:
-				sticks += 1
-		if not is_instance_valid(enemy):
-			_check(false, "%s survived 4 s" % id)
-			continue
-		var moved := enemy.global_position.distance_to(start) / ShipMesh.PX_PER_U
-		_check(sticks > 60 and moved > 2.0 and turned > 0.3,
-				"%s flies itself: %.1f U, turned %.0f°, stick held %d of 240 ticks (%s)" % [id, moved, rad_to_deg(turned), sticks, ai.brain.behaviour])
-		_check(sandbox.arena.contains(enemy.global_position / ShipMesh.PX_PER_U), "%s stays in the arena" % id)
+	# The Spawn button (owner, 2026-10-26): a paused list of cards; a tap spawns that ship ahead.
+	sandbox._spawn_button.pressed.emit()
+	await _frames(3)
+	var picker := sandbox.spawner
+	_check(picker.visible and get_tree().paused, "Spawn pauses and opens the list")
+	var card := func(name: String) -> Button: return picker.find_child(name, true, false) as Button
+	_check(card.call("enemies_target_barge") != null and card.call("enemies_wasp") != null and card.call("enemies_leviathan") != null
+			and card.call("enemies_pike") != null, "with practice targets, the roster and the carrier")
+	_check(card.call("library_starter") != null, "and the player's own ships")
+	_save_shot("drive_flight_spawn.png")
+	var before := sandbox.enemies.size()
+	var wasp_card: Button = card.call("enemies_wasp")
+	if wasp_card != null:
+		wasp_card.pressed.emit()
+		await _physics_frames(2)
+		_check(not picker.visible and not get_tree().paused, "a tap closes it and play resumes")
+		_check(sandbox.enemies.size() == before + 1 and sandbox.target.blueprint.id == "wasp", "and the Wasp is spawned")
+		var ahead := (sandbox.target.global_position - sandbox.ship.global_position).rotated(-sandbox.ship.global_rotation)
+		_check(ahead.x > 3.0 * ShipMesh.PX_PER_U, "ahead of us, stepped aside from the barge (%s U)" % (ahead / ShipMesh.PX_PER_U))
+	await _check_flies_itself(sandbox, "wasp")
+	# Escort (12.3): the carrier joins our side beside us, flies its route, and the raider goes for it.
+	var carrier := sandbox.spawn(FlightSandbox.SPAWN_ENEMIES, "pike")
+	await _physics_frames(2)
+	_check(carrier != null and carrier == sandbox.carrier and carrier.team == 0 and carrier.get_node_or_null("Ai") != null
+			and not sandbox.enemies.has(carrier), "spawning the Pike brings in the carrier, on our side, flying itself")
+	if carrier != null:
+		var off := (carrier.global_position - sandbox.ship.global_position).rotated(-sandbox.ship.global_rotation) / ShipMesh.PX_PER_U
+		_check(off.y > 1.0 and absf(off.x) < 3.0, "beside us, to our right (%s U)" % off)
+	if carrier != null:
+		var start := carrier.global_position
+		_teleport(sandbox.target, carrier.global_position + Vector2(9, -3) * ShipMesh.PX_PER_U)
+		_teleport(sandbox.ship, carrier.global_position + Vector2(-30, 0) * ShipMesh.PX_PER_U)
+		await _physics_frames(30)
+		if is_instance_valid(carrier) and sandbox.target != null:
+			var ai := sandbox.target.get_node("Ai") as AiPilot
+			_check(ai.target.call() == carrier, "a raider nearer the carrier goes for it")
+			_check(carrier.global_position.distance_to(start) / ShipMesh.PX_PER_U > 1.0, "the carrier keeps flying its route")
+			_save_shot("drive_flight_escort.png")
+	if is_instance_valid(sandbox.carrier):
+		sandbox.carrier.queue_free()
+	await _check_flies_itself(sandbox, "marauder")
 	_save_shot("drive_flight_ai.png")
 	_hangar.on_back()
 	await _frames(3)
+
+
+## A roster target `id` gets a pilot, and in 4 s moves, turns and holds its stick (5.2).
+func _check_flies_itself(sandbox: FlightSandbox, id: String) -> void:
+	await _swap(sandbox, id)
+	var enemy := sandbox.target
+	var ai := enemy.get_node_or_null("Ai") as AiPilot
+	_check(ai != null, "%s gets an AI pilot" % id)
+	if ai == null:
+		return
+	var start := enemy.global_position
+	var turned := 0.0
+	var last := enemy.global_rotation
+	var sticks := 0
+	for i in 240:
+		await _physics_frames(1)
+		if not is_instance_valid(enemy):
+			break
+		turned += absf(angle_difference(last, enemy.global_rotation))
+		last = enemy.global_rotation
+		if (enemy.get_node("Pilot") as FlightController).stick.length() > 0.15:
+			sticks += 1
+	if not is_instance_valid(enemy):
+		_check(false, "%s survived 4 s" % id)
+		return
+	var moved := enemy.global_position.distance_to(start) / ShipMesh.PX_PER_U
+	_check(sticks > 60 and moved > 2.0 and turned > 0.3,
+			"%s flies itself: %.1f U, turned %.0f°, stick held %d of 240 ticks (%s)" % [id, moved, rad_to_deg(turned), sticks, ai.brain.behaviour])
+	_check(sandbox.arena.contains(enemy.global_position / ShipMesh.PX_PER_U), "%s stays in the arena" % id)
 
 
 ## Phase 4.7, the "done when": with two manual weapon types aboard, FIRE fires only the active
@@ -398,9 +438,15 @@ func _step_lose_a_thruster(sandbox: FlightSandbox) -> void:
 
 ## Flight checks want open space: the practice target sits right ahead.
 func _remove_target(sandbox: FlightSandbox) -> void:
-	if sandbox.target != null:
-		sandbox.target.queue_free()
-		sandbox.target = null
+	sandbox.clear_enemies()
+
+
+## The enemies cleared and ship `id` (data/enemies) spawned ahead.
+func _swap(sandbox: FlightSandbox, id: String) -> void:
+	sandbox.clear_enemies()
+	await _physics_frames(1)
+	sandbox.spawn(FlightSandbox.SPAWN_ENEMIES, id)
+	await _physics_frames(2)
 
 
 ## A hit on `tile_id` found the way a bullet will find it: a physics query at its centre.

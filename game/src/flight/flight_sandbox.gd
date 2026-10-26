@@ -9,12 +9,17 @@ extends Node
 ## warns near its edge and pushes the ship back in past it.
 ##
 ## Damage (4.2): a practice target is parked ahead. Ships lose tiles, break apart and blow up;
-## a destroyed ship comes back after a few seconds. Tapping a tile highlights it (and hits it for
+## the player's comes back after a few seconds. Tapping a tile highlights it (and hits it for
 ## `test_hit`, if data sets one).
 ##
 ## Guns (4.3): the ship's WeaponController fires into one ProjectilePool. Auto guns pick off the
-## target on their own; FIRE fires the manual ones (in 1-stick, every gun is auto). The Target
-## button swaps the practice target; one with guns (the rocket pod, 4.6a) shoots back.
+## enemies on their own; FIRE fires the manual ones (in 1-stick, every gun is auto).
+##
+## Spawn (owner, 2026-10-26): the Spawn button pauses and lists every ship with its picture
+## (SpawnPicker): practice targets, the enemy roster, the carrier and the player's own ships. A
+## tap puts an enemy a few tiles ahead, facing the player (a roster ship flies itself, 5.2; the
+## player's own ships fly as chasers or strafers), or the carrier beside the player, starting its
+## route (an escort, 12.3), which enemies then go for.
 ##
 ## Combat HUD (4.7): shield and hull bars, the active manual weapon, and a flash, jolt and buzz
 ## when hit. SWITCH pauses and lists the manual weapons (Q on a keyboard cycles them instead).
@@ -33,7 +38,8 @@ var impacts := ImpactFx.new()
 var last_spawn_usec: int = 0
 
 var arena: Arena
-## The practice target, or null while it's respawning.
+## Every enemy alive, oldest first, and the newest of them (or null when there are none).
+var enemies: Array[ShipBody] = []
 var target: ShipBody
 var damage_table: DamageTable
 ## Raw damage a tap deals (from data; 0 makes taps only pick).
@@ -72,11 +78,13 @@ var economy: Economy
 var xp_earned := 0
 var loot_earned := {}
 var _level_button := Button.new()
-## Which of the sandbox's `targets` is parked ahead.
-var target_index := 0
-## The enemy roster (5.1): a target on it flies itself (5.2).
+## The roster (5.1): its enemies fly themselves (5.2), and its ally is the carrier.
 var roster: EnemyRoster
-var _target_button := Button.new()
+## The carrier the player escorts (PLAN.md 12.3), an ally flying its route that enemies go for,
+## or null.
+var carrier: ShipBody
+var spawner := SpawnPicker.new()
+var _spawn_button := Button.new()
 
 
 ## Spawns `bp` (already validated) at the origin, and the practice target ahead of it.
@@ -110,7 +118,7 @@ func open(bp: Blueprint, placement: Placement) -> void:
 	pool.shot_down.connect(func(_point: Vector2) -> void: _show_status())
 	_spawn_player()
 	_camera.make_current()
-	_spawn_target()
+	spawn(SPAWN_ENEMIES, str(_sandbox.get("start_target", "target_barge")))
 	var stars := Starfield.new()
 	stars.camera = _camera
 	add_child(stars)
@@ -141,7 +149,7 @@ func _spawn_player() -> void:
 	weapons = WeaponController.new()
 	weapons.name = "Weapons"
 	ship.add_child(weapons)
-	weapons.attach(ship, pool, _placement.weapons, func() -> Array: return [target] if target != null else [])
+	weapons.attach(ship, pool, _placement.weapons, _live_enemies)
 	var guns := GunView.new()
 	guns.name = "Guns"
 	ship.add_child(guns)
@@ -152,50 +160,180 @@ func _spawn_player() -> void:
 	_camera.configure(_flight.get("camera", {}), ship, _extent_u(_bp, _placement))
 
 
-func _spawn_target() -> void:
-	if target != null:
-		return  # a respawn that a Target press already beat
+## Where a spawn comes from: `data/enemies/` (the roster and the practice targets) or the
+## player's ship library.
+const SPAWN_ENEMIES := &"enemies"
+const SPAWN_LIBRARY := &"library"
+
+
+## Spawns ship `id` from `kind`. The roster's ally (the carrier) joins the player's side beside
+## them and starts its route, replacing any carrier already flying; anything else is an enemy a
+## few tiles ahead, facing the player. Returns the ship, or null if there's no such ship.
+func spawn(kind: StringName, id: String) -> ShipBody:
 	var errors: PackedStringArray = []
-	var names: Array = _sandbox.get("targets", ["target_barge"])
-	var raw: Dictionary = Data.json_dir("enemies").get(str(names[target_index % names.size()]), {})
-	var bp := Blueprint.from_dict(raw, errors) if not raw.is_empty() else null
-	if bp == null:
-		push_warning("sandbox: no target blueprint %s" % [errors])
-		return
-	target = ShipBody.create(bp, _placement)
-	target.name = "Target"
-	target.team = 1
-	var at: Array = _sandbox.get("target_at_u", [10, 0])
-	target.position = Vector2(float(at[0]), float(at[1])) * PX
-	target.rotation = deg_to_rad(float(_sandbox.get("target_rotation_deg", 0.0)))
-	target.enable_damage(damage_table)
-	target.linear_damp = 0.3
-	target.angular_damp = 0.3
-	target.rebuilt.connect(_show_status)
-	var spawned := target
-	target.destroyed.connect(func() -> void:
-		target = null
+	var bp: Blueprint
+	if kind == SPAWN_LIBRARY:
+		bp = BlueprintLibrary.new().load_ship(id)
+	else:
+		var raw: Dictionary = Data.json_dir("enemies").get(id, {})
+		bp = Blueprint.from_dict(raw, errors) if not raw.is_empty() else null
+	if bp == null or not _placement.validate(bp).is_empty():
+		push_warning("sandbox: can't spawn %s %s %s" % [kind, id, errors])
+		return null
+	var entry := roster.entry(StringName(id)) if kind == SPAWN_ENEMIES else null
+	if entry != null and entry.ally:
+		return _spawn_carrier(bp, entry)
+	return _spawn_enemy(bp, entry)
+
+
+## Every enemy, gone.
+func clear_enemies() -> void:
+	for enemy in enemies:
+		if is_instance_valid(enemy):
+			enemy.queue_free()
+	enemies.clear()
+	target = null
+	_clear_pick()
+
+
+func _live_enemies() -> Array:
+	return _alive([], enemies)
+
+
+## The ships in `a` and `b` still in play. Untyped on purpose: a freed ship can't be held in a
+## ShipBody variable even to ask whether it's valid.
+static func _alive(a: Array, b: Array = []) -> Array:
+	var out := []
+	for body: Variant in a + b:
+		if is_instance_valid(body) and not (body as ShipBody).is_wreck():
+			out.append(body)
+	return out
+
+
+func _spawn_enemy(bp: Blueprint, entry: EnemyRoster.Entry) -> ShipBody:
+	var enemy := ShipBody.create(bp, _placement)
+	enemy.name = "Enemy"
+	enemy.team = 1
+	var flies := not enemy.envelope.thrusters.is_empty()
+	var facing := deg_to_rad(float(_sandbox.get("spawn_facing_deg" if flies else "target_rotation_deg", 180.0)))
+	_place_ahead(enemy, bp, facing)
+	enemy.enable_damage(damage_table)
+	enemy.linear_damp = 0.3
+	enemy.angular_damp = 0.3
+	enemy.rebuilt.connect(_show_status)
+	enemy.destroyed.connect(func() -> void:
+		enemies.erase(enemy)
+		target = enemies.back() if not enemies.is_empty() else null
 		_clear_pick()
-		_on_kill(spawned, bp)
-		_after_respawn_delay(_spawn_target))
-	_world.add_child(target)
-	if not target.guns.guns.is_empty():
+		_on_kill(enemy, bp))
+	_world.add_child(enemy)
+	enemies.append(enemy)
+	target = enemy
+	if not enemy.guns.guns.is_empty():
 		var guns := WeaponController.new()
 		guns.name = "Weapons"
-		target.add_child(guns)
-		guns.attach(target, pool, _placement.weapons, func() -> Array: return [ship] if ship != null else [])
+		guns.all_auto = true  # nobody holds FIRE for it
+		enemy.add_child(guns)
+		guns.attach(enemy, pool, _placement.weapons, _player_side)
 		var view := GunView.new()
-		target.add_child(view)
+		enemy.add_child(view)
 		view.attach(guns)
-	var entry := roster.entry(StringName(bp.id))
-	if entry != null and not target.envelope.thrusters.is_empty():
-		_give_pilot(target, entry)
-	_target_button.text = "Target: %s" % target.blueprint.name
+	if flies:
+		var behaviour := entry.behaviour if entry != null else _behaviour_for(enemy)
+		_give_pilot(enemy, behaviour, entry.flee_below if entry != null else 0.0).target = _pick_victim.bind(enemy)
+	return enemy
 
 
-## A roster ship flies itself (PLAN.md 5.2): a FlightController like the player's, its exhaust,
-## and an AiPilot set on the player.
-func _give_pilot(body: ShipBody, entry: EnemyRoster.Entry) -> void:
+## How one of the player's own ships flies as an enemy: at you nose first if it has fixed guns,
+## round you if it has only turrets and swivels.
+static func _behaviour_for(body: ShipBody) -> StringName:
+	for gun in body.guns.guns:
+		if gun.arc <= 0.0 and not gun.stats["rear_only"]:
+			return &"chase"
+	return &"strafe"
+
+
+## Puts `body` ahead of the player (or the arena's middle), clear of the ship and the other
+## enemies, turned `facing` from the player's heading.
+func _place_ahead(body: ShipBody, bp: Blueprint, facing: float) -> void:
+	var from := ship.global_position / PX if is_instance_valid(ship) else Vector2.ZERO
+	var heading := ship.global_rotation if is_instance_valid(ship) else 0.0
+	var mine := _extent_u(_bp, _placement) * 0.5 if is_instance_valid(ship) else 0.0
+	var size := _extent_u(bp, _placement)
+	var at := from + Vector2.from_angle(heading) * (mine + size * 0.5 + float(_sandbox.get("spawn_gap_u", 6.0)))
+	var side := Vector2.from_angle(heading + PI * 0.5)
+	for attempt in 8:
+		var clear := true
+		for other in _live_enemies():
+			if (other.global_position / PX).distance_to(at) < (size + _extent_u(other.blueprint, _placement)) * 0.5 + 1.0:
+				clear = false
+		if clear:
+			break
+		at += side * (size + 1.0) * (attempt + 1) * (1.0 if attempt % 2 == 0 else -1.0)
+	body.position = at * PX
+	body.rotation = heading + facing
+
+
+## The player and the carrier: what enemy guns shoot at.
+func _player_side() -> Array:
+	return _alive([ship, carrier])
+
+
+## Whom an enemy goes after: the player or the carrier, the nearer one, counting the carrier's
+## distance at `carrier_bias` so raiders make for it (an escort mission's point, 12.3).
+func _pick_victim(hunter: ShipBody) -> ShipBody:
+	if not is_instance_valid(hunter):
+		return null
+	var best: ShipBody = null
+	var best_d := INF
+	for body: ShipBody in _player_side():
+		var d := hunter.global_position.distance_to(body.global_position) \
+				* (float(_sandbox.get("carrier_bias", 0.6)) if body == carrier else 1.0)
+		if d < best_d:
+			best_d = d
+			best = body
+	return best
+
+
+## The carrier joins beside the player, pointing their way, and flies its route: `carrier_route`,
+## laid out in the player's frame at spawn (x ahead, y to their right). Enemies go for it.
+func _spawn_carrier(bp: Blueprint, entry: EnemyRoster.Entry) -> ShipBody:
+	if is_instance_valid(carrier):
+		carrier.queue_free()
+	carrier = ShipBody.create(bp, _placement)
+	carrier.name = "Carrier"
+	carrier.team = 0
+	var from := ship.global_position / PX if is_instance_valid(ship) else Vector2.ZERO
+	var heading := ship.global_rotation if is_instance_valid(ship) else 0.0
+	var beside := (_extent_u(_bp, _placement) * 0.5 if is_instance_valid(ship) else 0.0) + float(_sandbox.get("carrier_beside_u", 4.0))
+	var at := from + Vector2.from_angle(heading + PI * 0.5) * beside
+	carrier.position = at * PX
+	carrier.rotation = heading
+	carrier.enable_damage(damage_table)
+	_world.add_child(carrier)
+	var guns := WeaponController.new()
+	guns.name = "Weapons"
+	guns.all_auto = true
+	carrier.add_child(guns)
+	guns.attach(carrier, pool, _placement.weapons, _live_enemies)
+	var view := GunView.new()
+	carrier.add_child(view)
+	view.attach(guns)
+	var ai := _give_pilot(carrier, entry.behaviour, 0.0)
+	for point: Variant in _sandbox.get("carrier_route", []):
+		ai.brain.route.append(at + Vector2(float(point[0]), float(point[1])).rotated(heading))
+	var flying := carrier
+	carrier.destroyed.connect(func() -> void:
+		if carrier == flying:
+			carrier = null
+		_note = "the carrier is lost"
+		_note_until = Time.get_ticks_msec() + 3000)
+	return carrier
+
+
+## An AI-flown ship (PLAN.md 5.2): a FlightController like the player's, its exhaust, and an
+## AiPilot flying `behaviour` (whose target the caller sets).
+func _give_pilot(body: ShipBody, behaviour: StringName, flee_below: float) -> AiPilot:
 	var flier := FlightController.new()
 	flier.name = "Pilot"
 	body.add_child(flier)
@@ -204,23 +342,59 @@ func _give_pilot(body: ShipBody, entry: EnemyRoster.Entry) -> void:
 	exhaust.name = "Exhaust"
 	body.add_child(exhaust)
 	exhaust.attach(body, flier)
-	var brain := AiBrain.for_ship(Data.table(&"ai"), entry.behaviour, body.blueprint, _placement, flier.model.linear_damp, arena)
-	brain.flee_below = entry.flee_below
+	var brain := AiBrain.for_ship(Data.table(&"ai"), behaviour, body.blueprint, _placement, flier.model.linear_damp, arena)
+	brain.flee_below = flee_below
 	var ai := AiPilot.new()
 	ai.name = "Ai"
 	body.add_child(ai)
 	ai.attach(body, flier, brain)
-	ai.target = func() -> ShipBody: return ship
+	return ai
 
 
-## Parks the next practice target in place of this one.
-func _next_target() -> void:
-	target_index += 1
-	if target != null:
-		target.queue_free()
-		target = null
-	_clear_pick()
-	_spawn_target()
+## Spawn: pause and list everything that can be spawned.
+func open_spawner() -> void:
+	var sections: Array[Dictionary] = []
+	var practice: Array[Dictionary] = []
+	var foes: Array[Dictionary] = []
+	var friends: Array[Dictionary] = []
+	var raws := Data.json_dir("enemies")
+	for id: String in raws:
+		var errors: PackedStringArray = []
+		var bp := Blueprint.from_dict(raws[id], errors)
+		if bp == null:
+			continue
+		var entry := roster.entry(StringName(id))
+		var card := {"kind": SPAWN_ENEMIES, "id": id, "name": bp.name, "bp": bp}
+		if entry == null:
+			practice.append(card)
+		elif entry.ally:
+			card["note"] = "ally"
+			friends.append(card)
+		else:
+			card["note"] = "T%d %s" % [entry.tier, entry.role]
+			card["order"] = entry.tier * 10 + (5 if entry.boss else 0)
+			foes.append(card)
+	foes.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return [a["order"], a["name"]] < [b["order"], b["name"]])
+	var library := BlueprintLibrary.new()
+	var own: Array[Dictionary] = []
+	for row in library.list():
+		var bp := library.load_ship(row["id"])
+		if bp != null and _placement.validate(bp).is_empty():
+			own.append({"kind": SPAWN_LIBRARY, "id": row["id"], "name": bp.name, "bp": bp})
+	sections.append({"title": "Practice targets", "cards": practice})
+	sections.append({"title": "Enemies", "cards": foes})
+	sections.append({"title": "Escort: the carrier flies beside you", "cards": friends})
+	sections.append({"title": "Your ships, as enemies", "cards": own})
+	spawner.open(sections, _placement)
+	spawner.visible = true
+	get_tree().paused = true
+
+
+func _close_spawner(kind: StringName = &"", id: String = "") -> void:
+	spawner.visible = false
+	get_tree().paused = false
+	if not id.is_empty():
+		spawn(kind, id)
 
 
 func _on_player_destroyed() -> void:
@@ -344,17 +518,28 @@ func _process(_delta: float) -> void:
 		parts.append("FIRE" if weapons.all_auto or ship.guns.manual_count() > 0 else "FIRE: no manual guns")
 	if warning > 0.0:
 		parts.append("leaving the area" if arena.contains(ship.global_position / PX) else "outside the area: turning you back")
+	if is_instance_valid(carrier) and carrier.damage != null:
+		parts.append("carrier %d%%" % roundi(_hull_share(carrier) * 100.0))
 	if Time.get_ticks_msec() < _note_until:
 		parts.append(_note)
 	_hud.text = "  ·  ".join(parts)
 
 
+static func _hull_share(body: ShipBody) -> float:
+	var left := 0.0
+	var full := 0.0
+	for tile_id: int in body.damage.hp:
+		full += body.damage.max_hp[tile_id]
+		if body.damage.is_attached(tile_id):
+			left += body.damage.hp[tile_id]
+	return left / full if full > 0.0 else 0.0
+
+
 func _physics_process(_delta: float) -> void:
 	# The sandbox's soft wall, for the player and a flying target. Story mode opens the world map
 	# at the edge instead (4.10).
-	for body: ShipBody in [ship, target]:
-		if is_instance_valid(body) and not body.is_wreck():
-			body.apply_central_force(arena.push(body.global_position / PX) * body.mass * PX)
+	for body: ShipBody in _alive([ship, carrier], enemies):
+		body.apply_central_force(arena.push(body.global_position / PX) * body.mass * PX)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -485,13 +670,17 @@ func _build_ui() -> void:
 	_level_button.pressed.connect(_next_gun_level)
 	_level_button.visible = stock == null  # a stocked ship's guns are at their own levels
 	ui.add_child(_level_button)
-	_target_button.size = Vector2(220, 56)
-	_target_button.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT, Control.PRESET_MODE_KEEP_SIZE, 16)
-	_target_button.position.y += 192
-	_target_button.pressed.connect(_next_target)
-	ui.add_child(_target_button)
-	if target != null:
-		_target_button.text = "Target: %s" % target.blueprint.name
+	_spawn_button.text = "Spawn"
+	_spawn_button.size = Vector2(132, 56)
+	_spawn_button.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT, Control.PRESET_MODE_KEEP_SIZE, 16)
+	_spawn_button.position.y += 192
+	_spawn_button.pressed.connect(open_spawner)
+	ui.add_child(_spawn_button)
+	spawner.name = "SpawnPicker"
+	spawner.visible = false
+	spawner.picked.connect(_close_spawner)
+	spawner.closed.connect(_close_spawner.bind(&"", ""))
+	ui.add_child(spawner)
 	picker.name = "WeaponPicker"
 	picker.visible = false
 	picker.picked.connect(_close_switch)

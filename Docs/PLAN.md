@@ -1123,20 +1123,23 @@ levels, faction, boss, `flee_below`) and loaded by `EnemyRoster` (`src/model/ene
 | 3 (L35–80) | Bulwark brute, Harrier strafer, Longbow sniper | Tyrant, 45 tiles |
 | 4 (L60–100) | Mauler brute, Widow minelayer, Meteor kamikaze | Leviathan, 67 tiles |
 
-- **Escort:** Pike (L1–100), a 9 U armoured spine with three turrets.
+- **Carrier:** Pike, a 9 U armoured spine with three turrets. It is the **ally** the player
+  escorts and keeps alive (owner, 2026-10-26; 12.3), not an enemy. It flies its route
+  (`convoy`), and enemies go for it.
 - **Authoring:** the ships are drawn as ASCII grids in `dev_preview/make_enemies.gd`, which
   writes the blueprints and refuses any ship with a placement problem, a thrust warning or a
   blocked gun. Edit a ship there, not in the JSON.
 - **Gallery:** the main menu's debug **Enemy gallery** (`scenes/debug/enemy_gallery.tscn`).
-- **Sandbox:** Wasp, Pike and the four bosses are on its Target list.
+- **Sandbox:** everything on the roster can be spawned (5.2's Spawn button).
 - **Tests:** `tests/model/test_enemy_roster.gd` checks the counts, validity, roles' weapons,
-  the escort's shape, bosses outgrowing their tier, and that every level 1–100 has enemies.
+  the carrier's shape (and that it's never an enemy), bosses outgrowing their tier, and that
+  every level 1–100 has enemies.
 
 ⚠️ Big ships brake weakly (0.2–0.6 U/s² back against 4–6 forward), and most have little side
 thrust. The owner accepted this for the MVP (2026-10-26). The AI (5.2) turns and burns rather
 than counting on reverse thrust; more variety in brakes and side thrusters comes with the v2
 faction rosters (§9).
-- [ ] Owner: look over the gallery (and the bosses on the sandbox's Target button)
+- [ ] Owner: look over the gallery (and spawn the bosses in the sandbox)
 
 #### 5.2 AI pilot
 ✅ 2026-10-26.
@@ -1150,14 +1153,23 @@ faction rosters (§9).
   - **keep_range:** hold a band of its gun range.
   - **ram:** full speed at the intercept point.
   - **lay_mines:** circle inside mine range.
-  - **escort:** hold a post beside its charge; with a raider near, the post moves between the
-    charge and the raider.
+  - **escort:** an enemy guarding a ship (a boss's guards, 12.2) holds a post beside it; with
+    a raider near, the post moves between the two.
+  - **convoy:** the carrier flies its waypoints whatever attacks it; its turrets fight back.
   - **flee:** below `flee_below` of its hull, it runs.
 - **Always on:** friends push each other apart, and the arena edge pulls ships back in.
 - **Pilot node:** `AiPilot` (`src/ai/ai_pilot.gd`) feeds the brain each physics tick, before the
   `FlightController`.
-- **Sandbox:** a roster ship on the Target list gets a pilot, an exhaust and the arena push.
-  The practice targets still sit still.
+- **Sandbox Spawn button** (owner, 2026-10-26), replacing Target: it pauses and lists every
+  ship with its picture (`SpawnPicker`, `src/ui/controls/`): practice targets, the roster by
+  tier, the carrier, and the player's own library ships.
+  - **A tap spawns it.** An enemy appears a few tiles ahead, facing you, stepped aside from
+    anything already there. A roster ship flies itself; one of your own ships flies as a chaser
+    (if it has fixed guns) or a strafer.
+  - **The carrier** appears beside you and starts `carrier_route`, laid out from your heading.
+  - **Enemies go for** whichever of you and the carrier is nearer, the carrier's distance
+    counted at `carrier_bias` (0.6).
+  - **Several enemies** can be out at once (`FlightSandbox.enemies`); killed ones don't respawn.
 - **Tests:** `tests/model/test_ai_pilot.gd` flies each behaviour headless in `FlightSim` with
   real roster ships, including a chaser on a circling target and six ships at an arena corner
   with the player past the edge. drive_flight checks Wasp and Marauder fly themselves in the
@@ -1168,7 +1180,7 @@ that would turn it push against the stick), and most enemies brake weakly. So th
 first: it holds the stick at most 90° off the nose. A ship closing too fast while nose-on lets
 go of the stick instead, so the auto-brake slows it without turning. Debris avoidance is left
 to physics, since wrecks fade in seconds.
-- [ ] Owner, on the phone: fight Wasp (strafe), Pike (escort, without a charge it keeps range) and the bosses on the sandbox's Target button. Bosses hit hard at L1 (the Marauder is about 500 dmg/s against the starter's 1,160 HP); enemy gun levels and the balance come with 5.3
+- [ ] Owner, on the phone: Spawn → fight Wasp (strafe), the bosses and your own ships; spawn the Pike carrier and keep it alive. Bosses hit hard at L1 (the Marauder is about 500 dmg/s against the starter's 1,160 HP); enemy gun levels and the balance come with 5.3
 
 #### 5.3 Level scaling 1–100
 - [ ] `data/levels.json`: a budget curve, tier mix per level band, weapon-level bands, enemy count
@@ -1395,7 +1407,7 @@ to physics, since wrecks fade in seconds.
 - **Done when:** completing it pays out and turns the tile green on commit.
 
 #### 12.3 Protect VIP
-- [ ] A VIP ship (AI) flies a route; waves target it; fail if it dies
+- [ ] A VIP ship (AI) flies a route; waves target it; fail if it dies. The VIP is the Pike carrier (5.1), flown by the `convoy` behaviour (5.2).
 - **Done when:** both the success and fail paths work.
 
 #### 12.4 Mine XYZ
