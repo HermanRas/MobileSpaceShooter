@@ -23,7 +23,7 @@
 	},
 	"sandbox": {
 		"_doc": "Flight sandbox extras (4.2): a practice target (a blueprint from data/enemies) parked at target_at_u turned target_rotation_deg (ahead of the ship, which faces +x); the Target button steps through `targets`, and one with guns shoots back (4.6a). A tap on any ship's tile highlights it, and hits it for test_hit raw damage of test_hit_type (0 since the guns arrived in 4.3). A destroyed ship comes back after respawn_s. The Guns button steps the player's guns through gun_levels (4.3, until guns are items in 4.8).",
-		"targets": ["target_barge", "rocket_pod"],
+		"targets": ["target_barge", "rocket_pod", "shield_block"],
 		"target_at_u": [10, 0],
 		"target_rotation_deg": 90,
 		"test_hit": 0,

@@ -21,7 +21,8 @@ const TYPE_COLORS := {
 }
 ## The tab for thrusters (Phase 3.2); its row holds thruster types and L1-3 instead of shapes.
 const THRUSTERS := &"thrusters"
-## The tab for guns (Phase 4.3): gun types, then the mount type and the fire mode.
+## The tab for guns (Phase 4.3): a button that steps through the gun families (Guns, Rockets,
+## Special; 4.6b), that family's guns, then the mount type and the fire mode.
 const WEAPONS := &"weapons"
 ## A nozzle, wide end up against the hull, for the thruster swatches.
 const NOZZLE := [Vector2(-0.5, -0.25), Vector2(0.5, -0.25), Vector2(0.35, 0.25), Vector2(-0.35, 0.25)]
@@ -36,6 +37,7 @@ var shapes: ShapeLib
 var thrusters: ThrusterLib
 var weapons: WeaponLib
 var mount_type: StringName = &"turret"
+var family := ""
 var mode: StringName = &"auto"
 var type: StringName = &"hull"
 var tile_size: StringName = &"L"
@@ -138,9 +140,21 @@ func _thruster_row() -> void:
 
 
 func _weapon_row() -> void:
+	var families := weapons.families()
+	if not families.has(family):
+		family = families[0] if not families.is_empty() else ""
+	var family_button := Button.new()
+	family_button.text = family + " ▸"
+	family_button.custom_minimum_size = Vector2(110, BUTTON.y)
+	family_button.pressed.connect(func() -> void:
+		family = families[(families.find(family) + 1) % families.size()]
+		_refresh_shapes())
+	_shape_row.add_child(family_button)
 	for weapon_id in weapons.weapon_ids():
+		if weapons.weapon(weapon_id)["family"] != family:
+			continue
 		var swatch := _ShapeSwatch.new()
-		swatch.custom_minimum_size = Vector2(84, BUTTON.y)  # 8+ guns and the mount/mode buttons share the row
+		swatch.custom_minimum_size = Vector2(90, BUTTON.y)
 		swatch.polygon = PackedVector2Array(GUN)
 		swatch.fill = Color(0.35, 0.38, 0.42)
 		swatch.caption = weapons.weapon(weapon_id)["name"]

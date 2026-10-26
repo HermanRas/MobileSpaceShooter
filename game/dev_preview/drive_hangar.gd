@@ -180,6 +180,14 @@ func _step_weapons() -> void:
 	await _frames(2)
 	var gatling := _swatch("gatling_single")
 	_check(gatling != null, "the Weapons tab shows the gatling")
+	_check(_swatch("laser") == null, "only the Guns family at first")
+	for i in 2:
+		_palette_tab(_hangar._palette.family + " ▸").pressed.emit()
+		await _frames(2)
+	_check(_swatch("laser") != null and _swatch("mines") != null, "the family button steps to Special")
+	_palette_tab(_hangar._palette.family + " ▸").pressed.emit()
+	await _frames(2)
+	gatling = _swatch("gatling_single")
 	if gatling == null:
 		return
 	# The rear-left hardpoint (-1, -1) has a free top edge.

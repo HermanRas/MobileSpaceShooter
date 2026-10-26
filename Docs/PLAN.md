@@ -982,10 +982,29 @@ a drive ran. `tests/core/test_scripts_compile.gd` now compiles everything in `sr
 ⚠️ The skirmisher can kill the pod mid-check and a new one respawns, so the drive counts shots
 from whichever pod is alive.
 
-#### 4.6b Weapons batch B: laser, EMP, mines
-- [ ] Laser (hitscan beam with a `Line2D` shader, heat bar), EMP (area pulse, disables), mines (rear drop, proximity)
-- [ ] The Weapons palette row holds 8 guns at 84 px; with 11 it needs grouping or scrolling
-- **Done when:** all three work, and each one has a sandbox target that shows what it's for.
+#### 4.6b Laser, EMP, mines
+✅ 2026-10-26. Three new guns in `weapons.json`:
+- **Laser** (`beam`): no projectile. Each tick `WeaponController` casts a ray down every beam
+  that's on (`beam_ends`, which `GunView` draws as glow plus core), and each pulse (`damage` at
+  `rate`) hurts what the ray hit. It heats over `heat_s` of firing, then overheats until it has
+  cooled to `heat_resume`; `GunView` shows heat as an arc round its base.
+- **EMP:** a slow orb with an airburst pulse of type `emp`. It goes on fixed and turret mounts
+  only.
+- **Mines:** `rear_only`, so the slots offer only rear-facing edges and `Mounting.problems`
+  flags any other. A mine drops behind the ship, slows by `drag`, waits `life_s`, and goes off
+  within `proximity_u` of an enemy. Explosions can destroy it. On auto, a layer drops while an
+  enemy is within `range_u`.
+- **Hangar:** the Weapons palette steps through `family` groups (Guns / Rockets / Special) with
+  one button.
+- **Sandbox and samples:** a `shield_block` target; a `specialist` sample with nose and swivel
+  lasers, EMP turrets and a rear mine layer.
+- **Tests:** `tests/model/test_specials.gd`. `drive_flight` checks the laser pulses landing, the
+  EMP knocking the block out, and a mine going off.
+
+⚠️ Beam damage comes in pulses because a per-frame sliver (1 HP) is cut to the 20% floor by
+any armour. The rare shot extras (homing, drag, proximity) are bit flags, so a plain bullet's
+step never reads its spec dictionary: that kept 600 shots at 1.1 ms on the PC.
+- [ ] Owner, on the phone: skirmisher vs barge and rocket pod; specialist vs shield block
 
 #### 4.7 Combat HUD and weapon switch
 - [ ] Shield/hull bars, hit flash, optional screen shake, vibration on taking damage

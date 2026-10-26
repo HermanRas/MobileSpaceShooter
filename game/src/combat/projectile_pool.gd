@@ -9,7 +9,8 @@ extends Node2D
 ## it at 600 shots on the phone. 4.6a: a shot with splash explodes where it hits (an airburst one
 ## also when its fuse runs out), hurting every enemy tile in reach and destroying enemy rockets
 ## there; a homing shot steers for its target. What a weapon's shots do is kept once per weapon
-## (`_specs`), so the per-shot arrays stay small.
+## (`_specs`), so the per-shot arrays stay small. 4.6b: a mine slows by its drag and explodes when
+## an enemy hull comes within its proximity (a circle query a tick, for mines only).
 
 ## A shot from `weapon_id` moving at `velocity` struck `tile_id` of `body` at `point` (world
 ## pixels and pixels per second). Emitted before the damage lands.
@@ -24,6 +25,10 @@ const PX := ShipMesh.PX_PER_U
 const LOOK_ID := &"vis.fx.projectiles"
 ## A life below this marks a rocket an explosion destroyed; it goes on its next step.
 const DOWNED := -1000.0
+## Per-shot flags for the rare extras, so a plain bullet's step never looks at its spec.
+const HOMES := 1
+const DRAGS := 2
+const FUSED := 4
 
 ## Shots in flight; the first `count` entries of each array are live.
 var count := 0
@@ -42,11 +47,13 @@ var _life := PackedFloat32Array()
 var _mask := PackedInt32Array()
 var _team := PackedByteArray()
 var _spec := PackedInt32Array()
+var _flags := PackedByteArray()
 var _look := PackedInt32Array()
 ## The ShipBody a homing shot steers for, else null.
 var _target: Array[Object] = []
 ## [{"weapon", "damage", "type", "pierce", "splash" (px), "splash_u", "splash_damage",
-## "splash_type", "airburst", "homing", "rocket"}], and "weapon|damage" -> index there.
+## "splash_type", "airburst", "homing", "rocket", "proximity" (px), "drag"}], and
+## "weapon|damage" -> index there.
 var _specs: Array[Dictionary] = []
 var _spec_of := {}
 ## [{"color", "length", "width"}] in pixels, and weapon id -> index there.
@@ -68,6 +75,7 @@ func _ready() -> void:
 	_mask.resize(CAPACITY)
 	_team.resize(CAPACITY)
 	_spec.resize(CAPACITY)
+	_flags.resize(CAPACITY)
 	_look.resize(CAPACITY)
 	_target.resize(CAPACITY)
 	var quad := QuadMesh.new()
@@ -102,8 +110,11 @@ func fire(shot: Dictionary, team: int, weapon_id: StringName, homing_target: Nod
 	_mask[i] = ShipBody.enemy_mask(team)
 	_team[i] = team
 	_spec[i] = _spec_for(shot, weapon_id)
+	var spec := _specs[_spec[i]]
+	_flags[i] = (HOMES if spec["homing"] > 0.0 and homing_target != null else 0) \
+			| (DRAGS if spec["drag"] > 0.0 else 0) | (FUSED if spec["proximity"] > 0.0 else 0)
 	_look[i] = _look_for(weapon_id)
-	_target[i] = homing_target if float(shot.get("homing", 0.0)) > 0.0 else null
+	_target[i] = homing_target if _flags[i] & HOMES else null
 	count += 1
 
 
@@ -134,15 +145,25 @@ func _physics_process(delta: float) -> void:
 			shot_down.emit(_pos[i])
 			_remove(i)
 			continue
-		var spec := _specs[_spec[i]]
-		if _target[i] != null:
-			_home(i, spec, delta)
+		if _flags[i]:
+			var extra := _specs[_spec[i]]
+			if _target[i] != null:
+				_home(i, extra, delta)
+			if _flags[i] & DRAGS:
+				_vel[i] *= maxf(1.0 - float(extra["drag"]) * delta, 0.0)
+			if _flags[i] & FUSED and _near_enemy(space, _pos[i], extra["proximity"], _mask[i]):
+				var at := _pos[i]
+				var team := _team[i]
+				_remove(i)
+				_explode(space, at, extra, team)
+				continue
 		var to := _pos[i] + _vel[i] * delta
 		_query.from = _pos[i]
 		_query.to = to
 		_query.collision_mask = _mask[i]
 		var found := space.intersect_ray(_query)
 		if not found.is_empty():
+			var spec := _specs[_spec[i]]
 			var body := found["collider"] as ShipBody
 			var tile_id := body.tile_at_shape(int(found["shape"])) if body != null else -1
 			var velocity := _vel[i]
@@ -157,6 +178,7 @@ func _physics_process(delta: float) -> void:
 		_pos[i] = to
 		_life[i] -= delta
 		if _life[i] <= 0.0:
+			var spec := _specs[_spec[i]]
 			var at := _pos[i]
 			var team := _team[i]
 			_remove(i)
@@ -173,7 +195,7 @@ func _process(_delta: float) -> void:
 	multimesh.visible_instance_count = count
 	for i in count:
 		var look := _looks[_look[i]]
-		var along := _vel[i].normalized()
+		var along := _vel[i].normalized() if _vel[i].length_squared() > 1.0 else Vector2.RIGHT  # a mine at rest
 		var length: float = look["length"]
 		# A streak trailing back from the shot's head.
 		multimesh.set_instance_transform_2d(i, Transform2D(along * length, along.orthogonal() * float(look["width"]),
@@ -190,6 +212,13 @@ func _home(i: int, spec: Dictionary, delta: float) -> void:
 		return
 	var toward := body.global_transform * body.center_of_mass - _pos[i]
 	_vel[i] = Gunnery.steer(_vel[i], toward, spec["homing"], delta)
+
+
+func _near_enemy(space: PhysicsDirectSpaceState2D, at: Vector2, radius: float, mask: int) -> bool:
+	_blast_shape.radius = radius
+	_blast_query.transform = Transform2D(0.0, at)
+	_blast_query.collision_mask = mask
+	return not space.intersect_shape(_blast_query, 1).is_empty()
 
 
 ## A blast at `point` (pixels): splash damage to every enemy hull in reach, and enemy rockets
@@ -226,6 +255,7 @@ func _remove(i: int) -> void:
 	_mask[i] = _mask[count]
 	_team[i] = _team[count]
 	_spec[i] = _spec[count]
+	_flags[i] = _flags[count]
 	_look[i] = _look[count]
 	_target[i] = _target[count]
 	_target[count] = null
@@ -241,6 +271,7 @@ func _spec_for(shot: Dictionary, weapon_id: StringName) -> int:
 		"splash": float(shot.get("splash_u", 0.0)) * PX, "splash_damage": float(shot.get("splash_damage", 0.0)),
 		"splash_type": StringName(shot.get("splash_type", "explosive")), "airburst": bool(shot.get("airburst", false)),
 		"homing": float(shot.get("homing", 0.0)), "rocket": bool(shot.get("rocket", false)),
+		"proximity": float(shot.get("proximity_u", 0.0)) * PX, "drag": float(shot.get("drag", 0.0)),
 	})
 	_spec_of[key] = _specs.size() - 1
 	return _specs.size() - 1

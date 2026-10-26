@@ -1,6 +1,6 @@
 {
 	"format": 1,
-	"_doc": "PLAN.md 4.4, Phase 4.3. Guns and the mounts they sit on. Distances in U, angles in degrees, time in seconds. An edge gun covers edge_u of a hardpoint edge (edge_u / port_pitch ports) and its barrel sticks out length_u, which is also the space it blocks. A turret sits on a hardpoint's face, which must hold a circle of turret_radius_u. over_hull: the gun sits on top of the ship and fires over its own tiles (owner, 2026-10-26: top-mounted guns can, side-mounted can't). rate is shots per second; a shot flies at speed_u U/s on top of the ship's own velocity and goes range_u. spread_deg is [at L1, at the top level]: the random scatter either side of the aim, which narrows as the gun levels up, on a log curve (owner, 2026-10-26: accuracy comes with level). A gun with spin_up_s (the multi gatling) starts at rate_start and reaches rate after firing that long; it winds down over spin_down_s when it stops. pierce is the share of armor a shot ignores (PLAN.md 4.5). Phase 4.6a: a shot with splash_u explodes where it hits, dealing splash_damage of splash_type to every tile in reach (and destroying enemy rockets there); with airburst it also explodes when its fuse runs out, timed to reach its target. pellets fires that many shots per trigger (flak). homing_deg_s steers a shot toward the target it was fired at. A rocket can be shot down by an explosion; an anti_missile gun also targets enemy rockets. Rockets come in four (owner, 2026-10-26): homing (Seeker) or fire-and-forget, each with an HE warhead (big splash) or AP (concentrated damage, small splash). Gun XP and the other stats' level scaling arrive in 4.8; those numbers are L1.",
+	"_doc": "PLAN.md 4.4, Phase 4.3. Guns and the mounts they sit on. Distances in U, angles in degrees, time in seconds. An edge gun covers edge_u of a hardpoint edge (edge_u / port_pitch ports) and its barrel sticks out length_u, which is also the space it blocks. A turret sits on a hardpoint's face, which must hold a circle of turret_radius_u. over_hull: the gun sits on top of the ship and fires over its own tiles (owner, 2026-10-26: top-mounted guns can, side-mounted can't). rate is shots per second; a shot flies at speed_u U/s on top of the ship's own velocity and goes range_u. spread_deg is [at L1, at the top level]: the random scatter either side of the aim, which narrows as the gun levels up, on a log curve (owner, 2026-10-26: accuracy comes with level). A gun with spin_up_s (the multi gatling) starts at rate_start and reaches rate after firing that long; it winds down over spin_down_s when it stops. pierce is the share of armor a shot ignores (PLAN.md 4.5). Phase 4.6a: a shot with splash_u explodes where it hits, dealing splash_damage of splash_type to every tile in reach (and destroying enemy rockets there); with airburst it also explodes when its fuse runs out, timed to reach its target. pellets fires that many shots per trigger (flak). homing_deg_s steers a shot toward the target it was fired at. A rocket can be shot down by an explosion; an anti_missile gun also targets enemy rockets. Rockets come in four (owner, 2026-10-26): homing (Seeker) or fire-and-forget, each with an HE warhead (big splash) or AP (concentrated damage, small splash). Phase 4.6b: a beam (laser) hits instantly along its barrel up to range_u, in pulses of `damage` at `rate` a second; it heats up over heat_s of firing, then overheats and stops until it has cooled (over cool_s from full) to heat_resume. A gun with rear_only goes only on an edge facing the back. A mine (proximity_u) is dropped behind at speed_u, slowed by drag, lives life_s, and explodes when an enemy comes within proximity_u; on auto it's dropped while an enemy is within range_u. family groups the guns in the hangar palette. Gun XP and the other stats' level scaling arrive in 4.8; those numbers are L1.",
 	"levels": {"_doc": "The top gun level (PLAN.md 4.4, D8).", "max": 999},
 	"mounts": {
 		"fixed": {"name": "Fixed", "on": "edge", "arc_deg": 0, "turn_deg_s": 0, "over_hull": false, "modes": ["manual", "auto"]},
@@ -13,6 +13,7 @@
 	},
 	"weapons": {
 		"gatling_single": {
+			"family": "Guns",
 			"name": "Gatling",
 			"damage_type": "kinetic",
 			"mounts": ["fixed", "swivel", "turret"],
@@ -29,6 +30,7 @@
 			"price_gc": 80
 		},
 		"gatling_multi": {
+			"family": "Guns",
 			"name": "Multi gatling",
 			"damage_type": "kinetic",
 			"mounts": ["fixed", "swivel", "turret"],
@@ -48,6 +50,7 @@
 			"price_gc": 320
 		},
 		"cannon": {
+			"family": "Guns",
 			"name": "Cannon",
 			"damage_type": "kinetic",
 			"mounts": ["fixed", "swivel", "turret"],
@@ -64,6 +67,7 @@
 			"price_gc": 420
 		},
 		"flak": {
+			"family": "Guns",
 			"name": "Flak",
 			"damage_type": "kinetic",
 			"mounts": ["fixed", "swivel", "turret"],
@@ -85,6 +89,7 @@
 			"price_gc": 260
 		},
 		"rocket_ff_he": {
+			"family": "Rockets",
 			"name": "Rocket HE",
 			"damage_type": "explosive",
 			"mounts": ["fixed", "swivel", "turret"],
@@ -104,6 +109,7 @@
 			"price_gc": 300
 		},
 		"rocket_ff_ap": {
+			"family": "Rockets",
 			"name": "Rocket AP",
 			"damage_type": "explosive",
 			"mounts": ["fixed", "swivel", "turret"],
@@ -123,6 +129,7 @@
 			"price_gc": 320
 		},
 		"rocket_homing_he": {
+			"family": "Rockets",
 			"name": "Seeker HE",
 			"damage_type": "explosive",
 			"mounts": ["fixed", "swivel", "turret"],
@@ -143,6 +150,7 @@
 			"price_gc": 450
 		},
 		"rocket_homing_ap": {
+			"family": "Rockets",
 			"name": "Seeker AP",
 			"damage_type": "explosive",
 			"mounts": ["fixed", "swivel", "turret"],
@@ -161,6 +169,72 @@
 			"turret_radius_u": 0.32,
 			"mass": 1.1,
 			"price_gc": 480
+		},
+		"laser": {
+			"family": "Special",
+			"name": "Laser",
+			"damage_type": "energy",
+			"mounts": ["fixed", "swivel", "turret"],
+			"beam": true,
+			"damage": 6,
+			"rate": 10,
+			"speed_u": 1000,
+			"range_u": 18,
+			"spread_deg": [0, 0],
+			"pierce": 0,
+			"heat_s": 3.0,
+			"cool_s": 2.0,
+			"heat_resume": 0.3,
+			"edge_u": 0.5,
+			"length_u": 0.6,
+			"turret_radius_u": 0.28,
+			"mass": 0.9,
+			"price_gc": 520
+		},
+		"emp": {
+			"family": "Special",
+			"name": "EMP",
+			"damage_type": "emp",
+			"mounts": ["fixed", "turret"],
+			"damage": 4,
+			"rate": 0.4,
+			"speed_u": 16,
+			"range_u": 14,
+			"spread_deg": [3.0, 0.5],
+			"pierce": 0,
+			"airburst": true,
+			"splash_u": 2.5,
+			"splash_damage": 30,
+			"splash_type": "emp",
+			"edge_u": 0.5,
+			"length_u": 0.5,
+			"turret_radius_u": 0.3,
+			"mass": 0.9,
+			"price_gc": 500
+		},
+		"mines": {
+			"family": "Special",
+			"name": "Mines",
+			"damage_type": "explosive",
+			"mounts": ["fixed"],
+			"rear_only": true,
+			"damage": 10,
+			"rate": 0.7,
+			"speed_u": 3,
+			"range_u": 12,
+			"life_s": 25,
+			"drag": 1.5,
+			"proximity_u": 1.3,
+			"spread_deg": [8.0, 2.0],
+			"pierce": 0,
+			"rocket": true,
+			"splash_u": 1.8,
+			"splash_damage": 70,
+			"edge_u": 0.5,
+			"length_u": 0.35,
+			"turret_radius_u": 0.3,
+			"mass": 0.8,
+			"price_gc": 380
 		}
 	}
 }

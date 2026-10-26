@@ -9,7 +9,10 @@ extends RefCounted
 ## tracks a target in its arc). In the 1-stick scheme every gun is auto (`all_auto`, §4.7).
 ## A side-mounted gun never fires into its own ship; a turret fires over it (GunLayout).
 ## 4.6a: an anti-missile gun (flak) also considers enemy rockets as targets; a flak pellet's fuse
-## is timed to its target, and a homing shot names the target it should steer for. Shots carry the ship's velocity, and the
+## is timed to its target, and a homing shot names the target it should steer for.
+## 4.6b: a beam gun (laser) heats while it fires and stops when it overheats, until it has cooled
+## to heat_resume; `beaming` says which beams are on this tick. A mine layer drops behind the
+## ship, ignoring arcs and the hull; on auto it drops while an enemy is within its range. Shots carry the ship's velocity, and the
 ## lead accounts for it.
 
 var layout: GunLayout
@@ -22,6 +25,10 @@ var all_auto := false
 var angles := PackedFloat32Array()
 var cooldowns := PackedFloat32Array()
 var spins := PackedFloat32Array()
+## Per gun: a beam's heat (0..1), whether it overheated, and whether it's firing this tick.
+var heats := PackedFloat32Array()
+var overheated: Array[bool] = []
+var beaming: Array[bool] = []
 var aims := PackedInt32Array()
 var fired := PackedInt32Array()
 var rng := RandomNumberGenerator.new()
@@ -40,21 +47,27 @@ func set_layout(gun_layout: GunLayout) -> void:
 	var before := {}
 	if layout != null:
 		for i in layout.guns.size():
-			before[layout.guns[i].key] = [angles[i], cooldowns[i], fired[i], spins[i]]
+			before[layout.guns[i].key] = [angles[i], cooldowns[i], fired[i], spins[i], heats[i], overheated[i]]
 	layout = gun_layout
 	var count := layout.guns.size()
 	angles.resize(count)
 	cooldowns.resize(count)
 	spins.resize(count)
+	heats.resize(count)
+	overheated.resize(count)
+	beaming.resize(count)
+	beaming.fill(false)
 	aims.resize(count)
 	fired.resize(count)
 	aims.fill(-1)
 	for i in count:
-		var kept: Array = before.get(layout.guns[i].key, [layout.guns[i].facing, 0.0, 0, 0.0])
+		var kept: Array = before.get(layout.guns[i].key, [layout.guns[i].facing, 0.0, 0, 0.0, 0.0, false])
 		angles[i] = kept[0]
 		cooldowns[i] = kept[1]
 		fired[i] = kept[2]
 		spins[i] = kept[3]
+		heats[i] = kept[4]
+		overheated[i] = kept[5]
 
 
 ## One tick. The ship's position (U), rotation and velocity (U/s) are in world space, and so are
@@ -76,11 +89,17 @@ func step(delta: float, ship_pos: Vector2, ship_rotation: float, ship_vel: Vecto
 		angles[i] = _turn(gun, angles[i], want, delta)
 		cooldowns[i] -= delta
 		var firing: bool
-		if gun.auto or all_auto:
+		var mine: bool = gun.stats["proximity_u"] > 0.0
+		if mine:
+			firing = fire_held if not (gun.auto or all_auto) else _any_within(pivot, targets, gun.stats["range_u"])
+		elif gun.auto or all_auto:
 			firing = aim[0] >= 0 and absf(angle_difference(angles[i], want)) <= fire_within
 		else:
 			firing = fire_held
-		firing = firing and gun.clear(angles[i])
+		firing = firing and (mine or gun.clear(angles[i]))
+		if gun.stats["beam"]:
+			firing = _heat(i, gun, firing, delta)
+			beaming[i] = firing
 		var rate := _spin(i, gun, firing, delta)
 		if not firing:
 			cooldowns[i] = maxf(cooldowns[i], 0.0)
@@ -135,6 +154,27 @@ func _choose(gun: GunLayout.Gun, muzzle: Vector2, ship_rotation: float, ship_vel
 	return best
 
 
+## Heats a beam while it fires and cools it while it doesn't; returns whether it may fire.
+func _heat(index: int, gun: GunLayout.Gun, wants: bool, delta: float) -> bool:
+	var firing := wants and not overheated[index]
+	if firing:
+		heats[index] = minf(heats[index] + delta / float(gun.stats["heat_s"]), 1.0)
+		if heats[index] >= 1.0:
+			overheated[index] = true
+	else:
+		heats[index] = maxf(heats[index] - delta / float(gun.stats["cool_s"]), 0.0)
+		if overheated[index] and heats[index] <= float(gun.stats["heat_resume"]):
+			overheated[index] = false
+	return firing
+
+
+static func _any_within(point: Vector2, targets: Array, reach: float) -> bool:
+	for target: Dictionary in targets:
+		if (target["pos"] as Vector2).distance_to(point) <= reach:
+			return true
+	return false
+
+
 ## Spins a multi gatling up while it fires and down while it doesn't; returns its rate now.
 func _spin(index: int, gun: GunLayout.Gun, firing: bool, delta: float) -> float:
 	var spin_up := float(gun.stats["spin_up_s"])
@@ -169,7 +209,7 @@ func _shot(index: int, gun: GunLayout.Gun, pivot: Vector2, ship_rotation: float,
 	var spread := gun.spread
 	var heading := Vector2.from_angle(angles[index] + ship_rotation + rng.randf_range(-spread, spread))
 	var speed := float(stats["speed_u"])
-	var life := float(stats["range_u"]) / speed
+	var life := float(stats["range_u"]) / speed if stats["life_s"] <= 0.0 else float(stats["life_s"])
 	if stats["airburst"] and target >= 0:
 		life = minf(time, life)  # the fuse: burst where the target will be
 	return {
@@ -177,4 +217,5 @@ func _shot(index: int, gun: GunLayout.Gun, pivot: Vector2, ship_rotation: float,
 		"life": life, "damage": stats["damage"], "type": stats["damage_type"], "pierce": stats["pierce"],
 		"splash_u": stats["splash_u"], "splash_damage": stats["splash_damage"], "splash_type": stats["splash_type"],
 		"airburst": stats["airburst"], "homing": stats["homing"], "rocket": stats["rocket"], "target": target,
+		"beam": stats["beam"], "proximity_u": stats["proximity_u"], "drag": stats["drag"],
 	}

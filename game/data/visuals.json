@@ -34,7 +34,10 @@
 				"rocket_ff_he": {"barrels": 2, "barrel_width_u": 0.14, "flash_u": 0.35},
 				"rocket_ff_ap": {"barrels": 2, "barrel_width_u": 0.14, "flash_u": 0.35},
 				"rocket_homing_he": {"barrels": 3, "barrel_width_u": 0.11, "flash_u": 0.35},
-				"rocket_homing_ap": {"barrels": 3, "barrel_width_u": 0.11, "flash_u": 0.35}
+				"rocket_homing_ap": {"barrels": 3, "barrel_width_u": 0.11, "flash_u": 0.35},
+				"laser": {"barrel_width_u": 0.1, "beam_color": "#ff4060"},
+				"emp": {"barrel_width_u": 0.16, "flash_u": 0.5},
+				"mines": {"barrels": 2, "barrel_width_u": 0.14}
 			}
 		},
 		"vis.fx.projectiles": {
@@ -47,7 +50,9 @@
 			"rocket_ff_he": {"color": "#ff9040", "length_u": 1.0, "width_u": 0.16},
 			"rocket_ff_ap": {"color": "#ff6040", "length_u": 1.0, "width_u": 0.13},
 			"rocket_homing_he": {"color": "#ffa850", "length_u": 1.1, "width_u": 0.16},
-			"rocket_homing_ap": {"color": "#ff7050", "length_u": 1.1, "width_u": 0.13}
+			"rocket_homing_ap": {"color": "#ff7050", "length_u": 1.1, "width_u": 0.13},
+			"emp": {"color": "#70c8ff", "length_u": 0.4, "width_u": 0.35},
+			"mines": {"color": "#ff5040", "length_u": 0.3, "width_u": 0.3}
 		},
 		"vis.fx.impacts": {
 			"_doc": "Where a shot strikes (Phase 4.5), drawn in code with one MultiMesh of soft dots; no files. A hit flashes flash_u across and throws `sparks` back the way the shot came, at up to speed_u U/s, shrinking out over life_s. Per weapon id, else default.",
@@ -57,7 +62,10 @@
 			"rocket_ff_he": {"color": "#ff8a30", "sparks": 14, "size_u": 0.2, "speed_u": 6, "life_s": 0.45, "flash_u": 0.6},
 			"rocket_ff_ap": {"color": "#ff6a30", "sparks": 8, "size_u": 0.16, "speed_u": 8, "life_s": 0.35, "flash_u": 0.6},
 			"rocket_homing_he": {"color": "#ff8a30", "sparks": 14, "size_u": 0.2, "speed_u": 6, "life_s": 0.45, "flash_u": 0.6},
-			"rocket_homing_ap": {"color": "#ff6a30", "sparks": 8, "size_u": 0.16, "speed_u": 8, "life_s": 0.35, "flash_u": 0.6}
+			"rocket_homing_ap": {"color": "#ff6a30", "sparks": 8, "size_u": 0.16, "speed_u": 8, "life_s": 0.35, "flash_u": 0.6},
+			"laser": {"color": "#ff6080", "sparks": 2, "size_u": 0.08, "speed_u": 4, "life_s": 0.15, "flash_u": 0.2},
+			"emp": {"color": "#70c8ff", "sparks": 16, "size_u": 0.14, "speed_u": 4, "life_s": 0.5, "flash_u": 0.4},
+			"mines": {"color": "#ff8a30", "sparks": 16, "size_u": 0.2, "speed_u": 6, "life_s": 0.5, "flash_u": 0.6}
 		},
 		"vis.fx.explosion": {
 			"_doc": "A ship's death (PLAN.md 4.2), drawn in code; no files. A white flash, an expanding ring and a burst of sparks (fireballs), sized by the ship: spark_size is [min, max] as a share of the ship's length. Colours run hot -> cooling.",

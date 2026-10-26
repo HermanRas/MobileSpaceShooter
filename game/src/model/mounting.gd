@@ -12,6 +12,9 @@ extends RefCounted
 ##
 ## A face mount is {"tile", "face": true, "part", "mount": "turret", "mode"}: a turret on the
 ## middle of a hardpoint, one per tile, which needs a circle of turret_radius_u to fit.
+## A rear_only gun (mines) goes only on an edge facing back: its normal within REAR_DOT of -x.
+
+const REAR_DOT := 0.7
 
 
 ## An edge mount's place on its host, in ship units, or {} if the reference is broken (or it's
@@ -181,7 +184,10 @@ static func weapon_slots(placement: Placement, bp: Blueprint, weapon_id: StringN
 	if placement.weapons == null or not placement.weapons.allows(weapon_id, mount_type):
 		return [] as Array[Dictionary]
 	if not placement.weapons.mount_type(mount_type)["face"]:
-		return edge_slots(placement, bp, part)
+		var slots := edge_slots(placement, bp, part)
+		if placement.weapons.weapon(weapon_id)["rear_only"]:
+			slots = slots.filter(func(s: Dictionary) -> bool: return _faces_rear(placement, bp, s))
+		return slots
 	var out: Array[Dictionary] = []
 	for tile in bp.tiles:
 		var def := placement.tiles.tile(tile.type)
@@ -250,6 +256,8 @@ static func problems(placement: Placement, bp: Blueprint, free_ports: PackedVect
 				reason = "doesn't fit its edge"
 			elif not _fits(placement, bp, mount, free, parts, i):
 				reason = "is blocked"
+			elif _weapon_def(placement, mount).get("rear_only", false) and not _faces_rear(placement, bp, mount):
+				reason = "has to face the rear"
 		if not reason.is_empty():
 			out.append(Placement.Problem.new(&"mount", ids, "the %s on tile %d %s"
 					% [str(mount.get("part", "part")).get_slice(".", 1), host, reason]))
@@ -278,6 +286,11 @@ static func mirrored(placement: Placement, bp: Blueprint, mount: Dictionary, twi
 			if want_ports.all(func(p: Vector2) -> bool: return _contains_near(covered, p)):
 				return moved_to(mount, {"tile": twin_id, "edge": edge.index, "port": first})
 	return {}
+
+
+static func _faces_rear(placement: Placement, bp: Blueprint, place: Dictionary) -> bool:
+	var tile := bp.tile_by_id(int(place["tile"]))
+	return tile != null and placement.tile_edges(tile)[int(place["edge"])].normal.dot(Vector2.LEFT) >= REAR_DOT
 
 
 static func _host(placement: Placement, bp: Blueprint, mount: Dictionary) -> Blueprint.Tile:

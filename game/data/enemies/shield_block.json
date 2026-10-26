@@ -1,0 +1,20 @@
+{
+	"format": 1,
+	"id": "shield_block",
+	"name": "Shield block",
+	"author": "mss",
+	"tags": ["target"],
+	"_doc": "The flight sandbox's laser and EMP target (Phase 4.6b): six shield tiles round a core make a 360-point pool that regenerates, which lasers (energy, x1.5 vs shields) and EMP (x3, and it knocks the shield out) are for. No thrusters; it just drifts.",
+	"tiles": [
+		{"id": 0, "type": "core", "shape": "square", "size": "L", "pos": [0, 0], "rot": 0, "paint": "#d8d8d8"},
+		{"id": 1, "type": "hull", "shape": "square", "size": "L", "pos": [-1, 0], "rot": 0, "paint": "#8a8f99"},
+		{"id": 2, "type": "hull", "shape": "square", "size": "L", "pos": [1, 0], "rot": 0, "paint": "#8a8f99"},
+		{"id": 3, "type": "shield", "shape": "square", "size": "L", "pos": [-1, -1], "rot": 0, "paint": "#3a7bd5"},
+		{"id": 4, "type": "shield", "shape": "square", "size": "L", "pos": [0, -1], "rot": 0, "paint": "#3a7bd5"},
+		{"id": 5, "type": "shield", "shape": "square", "size": "L", "pos": [1, -1], "rot": 0, "paint": "#3a7bd5"},
+		{"id": 6, "type": "shield", "shape": "square", "size": "L", "pos": [-1, 1], "rot": 0, "paint": "#3a7bd5"},
+		{"id": 7, "type": "shield", "shape": "square", "size": "L", "pos": [0, 1], "rot": 0, "paint": "#3a7bd5"},
+		{"id": 8, "type": "shield", "shape": "square", "size": "L", "pos": [1, 1], "rot": 0, "paint": "#3a7bd5"}
+	],
+	"mounts": []
+}

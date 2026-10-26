@@ -52,6 +52,7 @@ func _ready() -> void:
 
 	await _step_guns()
 	await _step_rockets_and_flak()
+	await _step_specials()
 	await _step_fly_the_starter_with_the_stick()
 	await _step_control_layouts()
 	await _step_camera_and_arena()
@@ -213,6 +214,68 @@ func _step_rockets_and_flak() -> void:
 	_check(pod_shots > 0, "the pod fires seekers at us (%d)" % pod_shots)
 	_check(sandbox.pool.downed > 0, "the flak shoots rockets down (%d)" % sandbox.pool.downed)
 	_save_shot("drive_flak.png")
+	_hangar.on_back()
+	await _frames(3)
+
+
+## Phase 4.6b: the specialist against the shield block. Its laser swivels beam the shield down,
+## its EMP turrets knock the block out, and a mine dropped behind goes off when the block is put
+## on top of it.
+func _step_specials() -> void:
+	var errors: PackedStringArray = []
+	_hangar.load_blueprint(Blueprint.from_dict(Data.json_dir("blueprints")["specialist"], errors))
+	await _frames(2)
+	var sandbox: FlightSandbox = _hangar.fly()
+	_check(sandbox != null, "the specialist can fly")
+	if sandbox == null:
+		return
+	while sandbox.target == null or sandbox.target.blueprint.id != "shield_block":
+		sandbox._next_target()
+		await _physics_frames(1)
+	var block := sandbox.target
+	var health := func() -> float:
+		var total := block.damage.shield
+		for tile_id: int in block.damage.hp:
+			total += block.damage.hp[tile_id]
+		return total
+	var before: float = health.call()
+	var laser_hits := [0]
+	sandbox.pool.hit.connect(func(_b: ShipBody, _t: int, _p: Vector2, _v: Vector2, weapon_id: StringName) -> void:
+		if weapon_id == &"laser":
+			laser_hits[0] += 1)
+	var beamed := false
+	var knocked_out := false
+	for i in 120:
+		await _physics_frames(1)
+		beamed = beamed or not sandbox.weapons.beam_ends.is_empty()
+		knocked_out = knocked_out or (is_instance_valid(block) and block.damage.is_disabled())
+	_check(beamed, "the laser swivels beam on their own")
+	_check(laser_hits[0] >= 10, "their pulses land (%d)" % laser_hits[0])
+	_check(not is_instance_valid(block) or health.call() < before - 150.0,
+			"the block loses shield and hull (%.0f -> %.0f)" % [before, health.call() if is_instance_valid(block) else 0.0])
+	_check(knocked_out, "the EMP knocks the block out")
+	_save_shot("drive_specials.png")
+
+	Input.action_press(&"fire")
+	await _physics_frames(10)
+	Input.action_release(&"fire")
+	var pool := sandbox.pool
+	var mine := Vector2.INF
+	for k in pool.count:
+		if pool._specs[pool._spec[k]]["proximity"] > 0.0:
+			mine = pool._pos[k]
+	_check(mine != Vector2.INF, "FIRE drops a mine behind")
+	if mine == Vector2.INF or sandbox.target == null:
+		_hangar.on_back()
+		return
+	await _physics_frames(30)  # it drifts to a stop
+	for k in pool.count:
+		if pool._specs[pool._spec[k]]["proximity"] > 0.0:
+			mine = pool._pos[k]
+	var blasts := pool.explosions
+	_teleport(sandbox.target, mine + Vector2(0, 0.8 * PX))
+	await _physics_frames(6)
+	_check(pool.explosions > blasts, "an enemy beside the mine sets it off")
 	_hangar.on_back()
 	await _frames(3)
 

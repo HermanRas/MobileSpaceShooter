@@ -96,12 +96,36 @@ static func from_table(table: Dictionary) -> WeaponLib:
 		def["homing"] = deg_to_rad(maxf(float(raw.get("homing_deg_s", 0.0)), 0.0))
 		def["rocket"] = bool(raw.get("rocket", false))
 		def["anti_missile"] = bool(raw.get("anti_missile", false))
+		def["family"] = str(raw.get("family", "Guns"))
+		def["beam"] = bool(raw.get("beam", false))
+		def["heat_s"] = float(raw.get("heat_s", 0.0))
+		def["cool_s"] = float(raw.get("cool_s", 0.0))
+		def["heat_resume"] = clampf(float(raw.get("heat_resume", 0.3)), 0.0, 0.99)
+		def["rear_only"] = bool(raw.get("rear_only", false))
+		def["proximity_u"] = maxf(float(raw.get("proximity_u", 0.0)), 0.0)
+		def["drag"] = maxf(float(raw.get("drag", 0.0)), 0.0)
+		def["life_s"] = maxf(float(raw.get("life_s", 0.0)), 0.0)
+		if def["beam"] and (def["heat_s"] <= 0.0 or def["cool_s"] <= 0.0):
+			lib.errors.append("%s: a beam needs heat_s and cool_s > 0" % weapon_id)
+			continue
+		if def["proximity_u"] > 0.0 and (def["splash_u"] <= 0.0 or def["life_s"] <= 0.0):
+			lib.errors.append("%s: a mine needs a splash and life_s" % weapon_id)
+			continue
 		if (def["splash_u"] > 0.0) != (def["splash_damage"] > 0.0) or (def["airburst"] and def["splash_u"] <= 0.0):
 			lib.errors.append("%s: splash_u and splash_damage go together, and airburst needs them" % weapon_id)
 			continue
 		def.make_read_only()
 		lib._weapons[StringName(weapon_id)] = def
 	return lib
+
+
+## The palette's gun groups, in the order the data first names them.
+func families() -> PackedStringArray:
+	var out: PackedStringArray = []
+	for weapon_id: StringName in _weapons:
+		if not out.has(_weapons[weapon_id]["family"]):
+			out.append(_weapons[weapon_id]["family"])
+	return out
 
 
 func weapon_ids() -> Array[StringName]:
@@ -121,7 +145,8 @@ func has_weapon(weapon_id: StringName) -> bool:
 ##   pierce (0-1), edge_u, length_u, turret_radius_u, mass, price_gc, and for a gun that spins
 ##   up: rate_start (shots/s when it starts), spin_up_s, spin_down_s (spin_up_s 0 if it doesn't);
 ##   pellets (shots per trigger), splash_u, splash_damage, splash_type, airburst, homing (rad/s),
-##   rocket (can be shot down), anti_missile (also targets enemy rockets)
+##   rocket (can be shot down), anti_missile (also targets enemy rockets); family (palette group);
+##   beam, heat_s, cool_s, heat_resume (lasers); rear_only; proximity_u, drag, life_s (mines)
 func weapon(weapon_id: StringName) -> Dictionary:
 	return _weapons.get(weapon_id, {})
 
