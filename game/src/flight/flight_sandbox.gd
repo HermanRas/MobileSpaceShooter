@@ -61,8 +61,13 @@ var _sandbox: Dictionary
 ## Which ship _picked is on.
 var _picked_ship: ShipBody
 var _last_hit := ""
-## The level the player's guns are at (the Guns button steps through `gun_levels`).
+## The level the player's guns are at (the Guns button steps through `gun_levels`); Creative only.
 var gun_level := 1
+## The profile's stock when the ship was built from it (PLAN.md 4.8a), or null. Its fitted guns
+## fly at their own levels, and a kill's XP goes to them.
+var stock: Inventory
+## XP earned this flight, all guns together.
+var xp_earned := 0
 var _level_button := Button.new()
 ## Which of the sandbox's `targets` is parked ahead.
 var target_index := 0
@@ -110,7 +115,10 @@ func open(bp: Blueprint, placement: Placement) -> void:
 func _spawn_player() -> void:
 	var started := Time.get_ticks_usec()
 	ship = ShipBody.create(_bp, _placement)
-	if gun_level != ship.gun_level:
+	if stock != null:
+		ship.gun_levels = _item_levels()
+		ship.guns = GunLayout.compute(ship.blueprint, _placement, 1, ship.gun_levels)
+	elif gun_level != ship.gun_level:
 		ship.gun_level = gun_level
 		ship.build(_bp, _placement)
 	last_spawn_usec = Time.get_ticks_usec() - started
@@ -158,9 +166,11 @@ func _spawn_target() -> void:
 	target.linear_damp = 0.3
 	target.angular_damp = 0.3
 	target.rebuilt.connect(_show_status)
+	var spawned := target
 	target.destroyed.connect(func() -> void:
 		target = null
 		_clear_pick()
+		_award_xp(spawned)
 		_after_respawn_delay(_spawn_target))
 	_world.add_child(target)
 	if not target.guns.guns.is_empty():
@@ -194,6 +204,44 @@ func _on_player_destroyed() -> void:
 	_after_respawn_delay(func() -> void:
 		_spawn_player()
 		_show_status())
+
+
+## A kill's XP (PLAN.md 4.8b), split between the player's gun items by the damage each dealt to
+## `body`. Guns that level up fly at their new level straight away.
+func _award_xp(body: ShipBody) -> void:
+	if stock == null or body.damage == null:
+		return
+	var xp := _placement.weapons.xp
+	var dealt := {}
+	for source: StringName in body.damage_by:
+		if stock.guns.has(String(source)):
+			dealt[String(source)] = body.damage_by[source]
+	if dealt.is_empty():
+		return
+	var total := xp.kill_xp(body.damage.hp.size(), int(_sandbox.get("encounter_level", 1)))
+	var ups: PackedStringArray = []
+	var shares := WeaponXp.split(total, dealt)
+	for id: String in shares:
+		var item: Inventory.GunItem = stock.guns[id]
+		var before := xp.level_for(item.xp)
+		item.xp += shares[id]
+		if xp.level_for(item.xp) > before:
+			ups.append("%s L%d" % [_placement.weapons.weapon(item.weapon).get("name", item.weapon), xp.level_for(item.xp)])
+	xp_earned += total
+	_note = "+%d XP%s" % [total, "  ·  " + ", ".join(ups) + "!" if not ups.is_empty() else ""]
+	_note_until = Time.get_ticks_msec() + 2500
+	if not ups.is_empty() and ship != null:
+		ship.gun_levels = _item_levels()
+		ship.guns = GunLayout.compute(ship.blueprint, _placement, 1, ship.gun_levels)
+		weapons.gunnery.set_layout(ship.guns)
+
+
+## Each gun item's level (item id -> level).
+func _item_levels() -> Dictionary:
+	var out := {}
+	for id: String in stock.guns:
+		out[id] = _placement.weapons.xp.level_for((stock.guns[id] as Inventory.GunItem).xp)
+	return out
 
 
 func _after_respawn_delay(then: Callable) -> void:
@@ -395,6 +443,7 @@ func _build_ui() -> void:
 	_level_button.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT, Control.PRESET_MODE_KEEP_SIZE, 16)
 	_level_button.position.y += 128
 	_level_button.pressed.connect(_next_gun_level)
+	_level_button.visible = stock == null  # a stocked ship's guns are at their own levels
 	ui.add_child(_level_button)
 	_target_button.size = Vector2(220, 56)
 	_target_button.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT, Control.PRESET_MODE_KEEP_SIZE, 16)

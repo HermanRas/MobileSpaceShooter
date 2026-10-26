@@ -13,6 +13,9 @@ extends PanelContainer
 signal drag_started(type: StringName, shape: StringName, size: StringName)
 signal thruster_drag_started(type_id: StringName, size: StringName, level: int)
 signal weapon_drag_started(weapon_id: StringName, mount_type: StringName, mode: StringName)
+## A loose part from the Inventory tab: a mount without a place, with `"gun": <item id>` for a
+## gun or `"stock": true` for a thruster.
+signal stock_drag_started(part: Dictionary)
 
 const TYPES: Array[StringName] = [&"hull", &"armor", &"shield", &"hardpoint"]
 const TYPE_COLORS := {
@@ -24,6 +27,11 @@ const THRUSTERS := &"thrusters"
 ## The tab for guns (Phase 4.3): a button that steps through the gun families (Guns, Rockets,
 ## Special; 4.6b), that family's guns, then the mount type and the fire mode.
 const WEAPONS := &"weapons"
+## The tab for loose guns and thrusters (Phase 4.8a), only outside Creative. Its row holds a
+## card per loose gun (level and XP bar) and per kind of loose thruster (× count), and a button
+## that picks the mount type a gun goes on (another than it had is a paid refit).
+const INVENTORY := &"inventory"
+const CARDS_PER_PAGE := 9
 ## A nozzle, wide end up against the hull, for the thruster swatches.
 const NOZZLE := [Vector2(-0.5, -0.25), Vector2(0.5, -0.25), Vector2(0.35, 0.25), Vector2(-0.35, 0.25)]
 ## A gun from above: a round base with a barrel to the right, for the gun swatches.
@@ -42,6 +50,12 @@ var mode: StringName = &"auto"
 var type: StringName = &"hull"
 var tile_size: StringName = &"L"
 var level: int = 1
+## The profile's stock and the ship it's building (for which guns are loose); null in Creative.
+var stock: Inventory
+var ship: Blueprint
+## The mount type an inventory gun goes on, or &"" for the one it had.
+var refit_to: StringName = &""
+var _page := 0
 
 var _shape_row := HBoxContainer.new()
 var _size_buttons: Array[Button] = []
@@ -54,7 +68,11 @@ func _ready() -> void:
 	var tabs := HBoxContainer.new()
 	column.add_child(tabs)
 	var type_group := ButtonGroup.new()
-	for tile_type: StringName in TYPES + [THRUSTERS, WEAPONS]:
+	var tab_ids: Array[StringName] = []
+	tab_ids.assign(TYPES + [THRUSTERS, WEAPONS])
+	if stock != null:
+		tab_ids.append(INVENTORY)
+	for tile_type: StringName in tab_ids:
 		var tab := Button.new()
 		tab.text = String(tile_type).capitalize()
 		tab.toggle_mode = true
@@ -88,7 +106,10 @@ func _refresh_shapes() -> void:
 	for child in _shape_row.get_children():
 		child.queue_free()
 	for size_button in _size_buttons:
-		size_button.visible = type != WEAPONS  # guns come in one size
+		size_button.visible = type != WEAPONS and type != INVENTORY  # guns come in one size
+	if type == INVENTORY:
+		_stock_row()
+		return
 	if type == THRUSTERS:
 		_thruster_row()
 		return
@@ -119,6 +140,8 @@ func _thruster_row() -> void:
 		swatch.scale_hint = {&"S": 0.45, &"M": 0.7, &"L": 1.0}[tile_size]
 		swatch.caption = thrusters.display_name(type_id)
 		swatch.tooltip_text = String(type_id)
+		if stock != null:
+			swatch.corner = "%d GC" % thrusters.spec(type_id, tile_size, level)["price_gc"]
 		swatch.gui_input.connect(func(event: InputEvent) -> void:
 			if _is_press(event):
 				thruster_drag_started.emit(type_id, tile_size, level)
@@ -135,7 +158,9 @@ func _thruster_row() -> void:
 		level_button.custom_minimum_size = Vector2(64, BUTTON.y)
 		level_button.toggled.connect(func(on: bool) -> void:
 			if on:
-				level = n)
+				level = n
+				if stock != null:
+					_refresh_shapes())  # the prices
 		_shape_row.add_child(level_button)
 
 
@@ -160,6 +185,8 @@ func _weapon_row() -> void:
 		swatch.caption = weapons.weapon(weapon_id)["name"]
 		swatch.tooltip_text = String(weapon_id)
 		swatch.disabled = not weapons.allows(weapon_id, mount_type)
+		if stock != null:
+			swatch.corner = "%d GC" % weapons.weapon(weapon_id)["price_gc"]
 		swatch.gui_input.connect(func(event: InputEvent) -> void:
 			if _is_press(event) and weapons.allows(weapon_id, mount_type):
 				weapon_drag_started.emit(weapon_id, mount_type, weapons.mode_for(mount_type, mode))
@@ -181,6 +208,96 @@ func _weapon_row() -> void:
 		button.toggled.connect(func(on: bool) -> void:
 			if on:
 				mode = each)
+
+
+## Shows the stock now (after an edit); the Inventory tab is redrawn if it's open.
+func show_stock(new_stock: Inventory, new_ship: Blueprint) -> void:
+	stock = new_stock
+	ship = new_ship
+	if type == INVENTORY:
+		_refresh_shapes()
+
+
+func _stock_row() -> void:
+	var cards: Array[Control] = []
+	for item in stock.loose_guns(ship):
+		var gun := weapons.weapon(item.weapon)
+		if gun.is_empty():
+			continue
+		var swatch := _swatch(PackedVector2Array(GUN), Color(0.35, 0.38, 0.42),
+				"%s L%d" % [gun["name"], weapons.xp.level_for(item.xp)])
+		swatch.bar = weapons.xp.progress(item.xp)
+		swatch.corner = weapons.mount_type(item.mount).get("name", "")
+		swatch.name = item.id
+		swatch.gui_input.connect(func(event: InputEvent) -> void:
+			if _is_press(event):
+				var on := refit_to if refit_to != &"" and weapons.allows(item.weapon, refit_to) else item.mount
+				stock_drag_started.emit({"part": WeaponLib.part_id(item.weapon), "mount": String(on),
+						"mode": String(weapons.mode_for(on, mode)), "gun": item.id})
+				accept_event())
+		cards.append(swatch)
+	var tints: Dictionary = Assets.meta(ShipMesh.ATLAS_ID).get("thruster_tints", {})
+	var keys: Array = stock.thrusters.keys()
+	keys.sort()
+	for key: String in keys:
+		var parts := Inventory.thruster_parts(key)
+		var swatch := _swatch(PackedVector2Array(NOZZLE), Color.from_string(str(tints.get(String(parts[0]), "#888888")), Color.GRAY),
+				"%s %s L%d" % [thrusters.display_name(parts[0]), parts[1], parts[2]])
+		swatch.scale_hint = {&"S": 0.45, &"M": 0.7, &"L": 1.0}[parts[1]]
+		swatch.corner = "×%d" % stock.thrusters[key]
+		swatch.name = key.replace(":", "_")
+		swatch.gui_input.connect(func(event: InputEvent) -> void:
+			if _is_press(event):
+				stock_drag_started.emit({"part": ThrusterLib.part_id(parts[0]), "size": String(parts[1]),
+						"level": parts[2], "stock": true})
+				accept_event())
+		cards.append(swatch)
+	if cards.is_empty():
+		var empty := Label.new()
+		empty.text = "Nothing loose. Guns and thrusters you take off the ship land here."
+		empty.custom_minimum_size = Vector2(0, BUTTON.y)
+		empty.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		_shape_row.add_child(empty)
+	var pages := maxi(ceili(cards.size() / float(CARDS_PER_PAGE)), 1)
+	_page = clampi(_page, 0, pages - 1)
+	if pages > 1:
+		_page_button("◂", -1, pages)
+	for i in range(_page * CARDS_PER_PAGE, mini((_page + 1) * CARDS_PER_PAGE, cards.size())):
+		_shape_row.add_child(cards[i])
+	for i in cards.size():
+		if cards[i].get_parent() == null:
+			cards[i].free()
+	if pages > 1:
+		_page_button("▸", 1, pages)
+	_shape_row.add_child(_spacer())
+	var refit := Button.new()
+	refit.text = "Mount: %s ▸" % ("as was" if refit_to == &"" else weapons.mount_type(refit_to)["name"])
+	refit.custom_minimum_size = Vector2(170, BUTTON.y)
+	refit.pressed.connect(func() -> void:
+		var options: Array[StringName] = [&""]
+		options.append_array(WeaponLib.MOUNT_TYPES)
+		refit_to = options[(options.find(refit_to) + 1) % options.size()]
+		_refresh_shapes())
+	_shape_row.add_child(refit)
+
+
+func _swatch(polygon: PackedVector2Array, fill: Color, caption: String) -> _ShapeSwatch:
+	var swatch := _ShapeSwatch.new()
+	swatch.custom_minimum_size = Vector2(96, BUTTON.y)
+	swatch.polygon = polygon
+	swatch.fill = fill
+	swatch.caption = caption
+	return swatch
+
+
+func _page_button(text: String, step: int, pages: int) -> void:
+	var button := Button.new()
+	button.text = text
+	button.custom_minimum_size = Vector2(48, BUTTON.y)
+	button.pressed.connect(func() -> void:
+		_page = posmod(_page + step, pages)
+		_refresh_shapes())
+	_shape_row.add_child(button)
 
 
 func _toggle(text: String, on: bool, group: ButtonGroup) -> Button:
@@ -213,6 +330,10 @@ class _ShapeSwatch extends PanelContainer:
 	var fill: Color
 	var scale_hint: float = 1.0
 	var caption: String = ""
+	## Small text in the top-left corner (a price, a mount type, a count).
+	var corner: String = ""
+	## An XP bar along the top (0..1), or none when negative.
+	var bar := -1.0
 	var disabled := false
 
 	func _draw() -> void:
@@ -232,3 +353,9 @@ class _ShapeSwatch extends PanelContainer:
 			while font_size > 9 and font.get_string_size(caption, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x > size.x - 4:
 				font_size -= 1
 			draw_string(font, Vector2(0, size.y - 6), caption, HORIZONTAL_ALIGNMENT_CENTER, size.x, font_size)
+		if not corner.is_empty():
+			draw_string(get_theme_default_font(), Vector2(4, 16), corner, HORIZONTAL_ALIGNMENT_LEFT, size.x - 8, 12,
+					Color(1, 0.85, 0.5))
+		if bar >= 0.0:
+			draw_rect(Rect2(4, 20, size.x - 8, 4), Color(1, 1, 1, 0.15))
+			draw_rect(Rect2(4, 20, (size.x - 8) * clampf(bar, 0.0, 1.0), 4), Color(0.45, 0.85, 1.0))

@@ -38,8 +38,13 @@ var stats: ShipStats
 var envelope: ThrustEnvelope
 ## Where the guns are and where they can shoot (4.3); the WeaponController fires them.
 var guns: GunLayout
-## The level every gun is at, until guns are items with their own (4.8).
+## The level a gun is at unless it's an inventory gun named in `gun_levels` (item id -> level,
+## PLAN.md 4.8b); `gun_level` is the sandbox's Guns button and enemies' encounter level.
 var gun_level := 1
+var gun_levels := {}
+## The damage each gun item has dealt this ship (item id -> shield + hull), for splitting the
+## XP its kill is worth (4.8b).
+var damage_by := {}
 ## Which side it's on (0 is the player's). Shots only hit the other teams.
 var team := 0:
 	set(value):
@@ -106,7 +111,7 @@ func build(bp: Blueprint, placement_rules: Placement) -> void:
 
 	stats = ShipStats.compute(bp, placement)
 	envelope = ThrustEnvelope.compute(bp, placement, stats)
-	guns = GunLayout.compute(bp, placement, gun_level)
+	guns = GunLayout.compute(bp, placement, gun_level, gun_levels)
 	mass = maxf(stats.mass, 0.001)
 	center_of_mass = stats.center_of_mass * PX
 	inertia = maxf(stats.inertia * PX * PX, 0.001)
@@ -141,22 +146,30 @@ func enable_damage(table: DamageTable) -> void:
 	damage = ShipDamage.create(blueprint, placement, table)
 
 
-## `raw` damage of `type_id` striking `tile_id` (from `tile_at_shape`).
-func take_hit(tile_id: int, raw: float, type_id: StringName, pierce := 0.0) -> ShipDamage.Result:
+## `raw` damage of `type_id` striking `tile_id` (from `tile_at_shape`), credited to `source`.
+func take_hit(tile_id: int, raw: float, type_id: StringName, pierce := 0.0, source := &"") -> ShipDamage.Result:
 	if damage == null or damage.dead or is_wreck():
 		return ShipDamage.Result.new()
 	var result := damage.hit(tile_id, raw, type_id, pierce)
+	_credit(source, result)
 	_after_hit(result)
 	return result
 
 
 ## An explosion at `world_point` reaching `radius_u`.
-func take_splash(world_point: Vector2, radius_u: float, raw: float, type_id: StringName) -> ShipDamage.Result:
+func take_splash(world_point: Vector2, radius_u: float, raw: float, type_id: StringName,
+		source := &"") -> ShipDamage.Result:
 	if damage == null or damage.dead or is_wreck():
 		return ShipDamage.Result.new()
 	var result := damage.splash(to_local(world_point) / PX, radius_u, raw, type_id)
+	_credit(source, result)
 	_after_hit(result)
 	return result
+
+
+func _credit(source: StringName, result: ShipDamage.Result) -> void:
+	if source != &"":
+		damage_by[source] = float(damage_by.get(source, 0.0)) + result.shield + result.hull
 
 
 func is_wreck() -> bool:

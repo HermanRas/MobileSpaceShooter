@@ -9,12 +9,18 @@ extends Node
 ##   one finger taps (select) or pans, two fingers pinch-zoom and pan. Dragging a selected
 ##   tile starts moving it.
 ## Snap searches are throttled to once per frame; the latest finger position wins.
+##
+## Stocked (PLAN.md 4.8a): with an active profile, the hangar builds that profile's ship from its
+## stock, and every edit is paid for (HangarEditor). Delete becomes Remove, Sell sells the
+## selected part (or a part dropped on it), a part dragged off the ship onto the palette goes in
+## the inventory, and the Inventory tab holds what's loose. Without a profile it's Creative.
 
 const PX := ShipMesh.PX_PER_U
 const GHOST_LIFT_PX := 90.0
 const SNAP_REACH_U := 1.0
 const TAP_SLOP_PX := 14.0
 const VARIANT_SPREAD_U := 0.75
+const NOTICE_S := 2.5
 
 var editor: HangarEditor
 var placement: Placement
@@ -38,6 +44,12 @@ var _mode_button: Button
 var _rotate_button: Button
 var _duplicate_button: Button
 var _sandbox: FlightSandbox
+## The profile's hangar while stocked, or null in Creative.
+var _store: StockStore
+var _sell_button: Button
+var _wallet: Label
+var _notice: Label
+var _notice_left := 0.0
 
 var _selected: int = -1
 var _selected_mount: int = -1
@@ -62,8 +74,15 @@ func _ready() -> void:
 	placement = Placement.create(ShapeLib.from_table(Data.table(&"shapes")),
 			TileLib.from_table(tiles_table), tiles_table)
 	placement.thrusters = ThrusterLib.from_table(Data.table(&"thrusters"))
-	placement.weapons = WeaponLib.from_table(Data.table(&"weapons"))
+	placement.weapons = WeaponLib.from_table(Data.table(&"weapons"), Data.table(&"weapon_xp"))
 	editor = HangarEditor.create(placement)
+	if not Profiles.active_id.is_empty():
+		_store = StockStore.open(Profiles.profile_dir(Profiles.active_id), Data.table(&"economy").get("dev_profile", {}),
+				Data.json_dir("blueprints"))
+	if _store != null:
+		editor.economy = Economy.from_table(Data.table(&"economy"))
+		editor.stock = _store.inventory
+		editor.load_blueprint(_store.ship)
 	editor.changed.connect(_on_changed)
 
 	_world = Node2D.new()
@@ -94,6 +113,11 @@ func _seed_samples() -> void:
 		if bp != null:
 			await renderer.render(bp, placement, _library.thumbnail_path(id))
 	renderer.queue_free()
+
+
+## Whether building pays from a profile's stock (not Creative).
+func stocked() -> bool:
+	return _store != null
 
 
 ## Loads a ship into the hangar (from the library, or a test).
@@ -144,6 +168,7 @@ func fly() -> FlightSandbox:
 	_set_hangar_active(false)
 	_sandbox = FlightSandbox.new()
 	_sandbox.name = "FlightSandbox"
+	_sandbox.stock = editor.stock
 	add_child(_sandbox)
 	_sandbox.open(copy, placement)
 	_sandbox.closed.connect(land)
@@ -158,6 +183,8 @@ func land() -> void:
 	_sandbox = null
 	_set_hangar_active(true)
 	_camera.make_current()
+	if stocked():
+		_on_changed()  # saves the XP the flight earned, and shows it
 
 
 func _set_hangar_active(on: bool) -> void:
@@ -295,6 +322,11 @@ func _start_carry_weapon(weapon_id: StringName, mount_type: StringName, mode: St
 	_start_carry_part({"part": WeaponLib.part_id(weapon_id), "mount": String(mount_type), "mode": String(mode)})
 
 
+## Carrying a loose part from the Inventory tab (`part` as `stock_drag_started` gives it).
+func _start_carry_stock(part: Dictionary) -> void:
+	_start_carry_part(part)
+
+
 ## Carrying a new thruster or gun (`part`: its mount without a place) toward a free slot.
 func _start_carry_part(part: Dictionary) -> void:
 	_select(-1)
@@ -337,7 +369,10 @@ func _start_move(tile_id: int, finger: int, screen: Vector2) -> void:
 	_carry_dirty = true
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
+	if _notice_left > 0.0:
+		_notice_left -= delta
+		_notice.modulate.a = clampf(_notice_left / 0.5, 0.0, 1.0)
 	if _carry_dirty:
 		_carry_dirty = false
 		_update_ghost()
@@ -467,17 +502,22 @@ func _cycle_carry_rotation() -> void:
 
 func _commit_carry() -> void:
 	if _carry.has("part"):
-		if not _mount_slot.is_empty():
-			var part: Dictionary = _carry["part"]
+		var part: Dictionary = _carry["part"]
+		if stocked() and _sell_button.get_global_rect().has_point(_carry_screen):
+			_sell_carried(part)
+		elif stocked() and _carry["moving_mount"] >= 0 and _palette.get_global_rect().has_point(_carry_screen):
+			editor.remove_mount(_carry["moving_mount"])  # into the inventory
+			_select(-1)
+		elif not _mount_slot.is_empty():
 			var done: bool
 			if _carry["moving_mount"] >= 0:
 				done = editor.move_mount(_carry["moving_mount"], _mount_slot)
 			elif Mounting.is_weapon(part):
 				done = not editor.add_weapon(WeaponLib.type_of_part(str(part["part"])), StringName(part["mount"]),
-						StringName(part["mode"]), _mount_slot).is_empty()
+						StringName(part["mode"]), _mount_slot, str(part.get("gun", ""))).is_empty()
 			else:
 				done = not editor.add_thruster(ThrusterLib.type_of_part(str(part["part"])), StringName(part["size"]),
-						int(part["level"]), _mount_slot).is_empty()
+						int(part["level"]), _mount_slot, bool(part.get("stock", false))).is_empty()
 			if done:
 				_select_mount(editor.mount_index(_mount_slot))
 		_end_carry()
@@ -492,6 +532,18 @@ func _commit_carry() -> void:
 			if not ids.is_empty():
 				_select(ids[0])
 	_end_carry()
+
+
+## A part dropped on Sell: one being moved off the ship, or a loose one from the Inventory tab.
+## A new one from a shop tab isn't anyone's yet, so nothing happens.
+func _sell_carried(part: Dictionary) -> void:
+	if _carry["moving_mount"] >= 0:
+		editor.sell_mount(_carry["moving_mount"])
+		_select(-1)
+	elif part.has("gun"):
+		editor.sell_gun(str(part["gun"]))
+	elif part.get("stock", false):
+		editor.sell_thruster(Inventory.key_of(part))
 
 
 func _end_carry() -> void:
@@ -545,6 +597,11 @@ func _select(tile_id: int) -> void:
 			ids.append(twin)
 	_view.set_selected(ids)
 	_refresh_buttons()
+
+
+func _sell_selected() -> void:
+	if _selected_mount >= 0 and editor.sell_mount(_selected_mount):
+		_select(-1)
 
 
 func _delete_selected() -> void:
@@ -627,18 +684,78 @@ func _on_changed() -> void:
 		_fly_button.disabled = not problems.is_empty()
 		var stats := ShipStats.compute(editor.blueprint, placement)
 		var envelope := ThrustEnvelope.compute(editor.blueprint, placement, stats)
-		var guns := GunLayout.compute(editor.blueprint, placement)
+		var guns := GunLayout.compute(editor.blueprint, placement, 1, gun_levels())
 		_view.set_envelope(envelope, stats.center_of_mass)
 		_view.set_guns(guns)
 		_stats.show_stats(stats, problems, placement.max_tiles, envelope, guns)
+	if stocked():
+		_store.inventory = editor.stock
+		_store.ship = editor.blueprint
+		_store.save()
+		_palette.show_stock(editor.stock, editor.blueprint)
+		if _wallet != null:
+			_show_wallet()
+		if not editor.refusal.is_empty():
+			_show_notice(editor.refusal)
+			editor.refusal = ""
 	last_refresh_usec = Time.get_ticks_usec() - started
 	last_refresh_parts = {"analyze": analyzed - started, "view": drawn - analyzed,
 			"stats": started + last_refresh_usec - drawn}
 
 
+## The selected part, for the stats panel: "Gatling L3 · 40% to L4 · sells for 60 GC".
+func _part_text() -> String:
+	if _selected_mount < 0 or _selected_mount >= editor.blueprint.mounts.size():
+		return ""
+	var mount := editor.blueprint.mounts[_selected_mount]
+	var parts: PackedStringArray = []
+	if Mounting.is_weapon(mount):
+		var gun := placement.weapons.weapon(WeaponLib.type_of_part(str(mount["part"])))
+		var item: Inventory.GunItem = editor.stock.guns.get(str(mount.get("gun", ""))) if editor.stock != null else null
+		if item == null:
+			parts.append(str(gun.get("name", "?")))
+		else:
+			var xp := placement.weapons.xp
+			var level := xp.level_for(item.xp)
+			parts.append("%s L%d" % [gun.get("name", "?"), level])
+			parts.append("top level" if level >= xp.max_level else "%d%% to L%d" % [floori(xp.progress(item.xp) * 100.0), level + 1])
+	elif Mounting.is_thruster(mount):
+		parts.append("%s %s L%d" % [placement.thrusters.display_name(ThrusterLib.type_of_part(str(mount["part"]))),
+				mount["size"], int(mount["level"])])
+	if stocked():
+		parts.append("sells for %d GC" % editor.economy.sell_value(Economy.part_price(placement, mount))[Inventory.GC])
+	return "  ·  ".join(parts)
+
+
+## Each fitted inventory gun's level (item id -> level); empty in Creative.
+func gun_levels() -> Dictionary:
+	var out := {}
+	if editor.stock != null:
+		for id: String in editor.stock.guns:
+			out[id] = placement.weapons.xp.level_for((editor.stock.guns[id] as Inventory.GunItem).xp)
+	return out
+
+
+func _show_wallet() -> void:
+	var parts: PackedStringArray = []
+	for material in Inventory.MATERIALS:
+		parts.append("%s %d" % [String(material).capitalize(), editor.stock.amount(material)])
+	parts.append("%d GC" % editor.stock.amount(Inventory.GC))
+	_wallet.text = "  ·  ".join(parts)
+
+
+func _show_notice(text: String) -> void:
+	_notice.text = text
+	_notice_left = NOTICE_S
+	_notice.modulate.a = 1.0
+
+
 func _refresh_buttons() -> void:
 	if _undo_button == null:
 		return
+	if _sell_button != null:
+		_sell_button.disabled = _selected_mount < 0
+	_stats.show_part(_part_text())
 	_undo_button.disabled = not editor.can_undo()
 	_redo_button.disabled = not editor.can_redo()
 	var mount := editor.blueprint.mounts[_selected_mount] if _selected_mount >= 0 \
@@ -705,6 +822,9 @@ func _build_ui() -> void:
 	_palette.thruster_drag_started.connect(_start_carry_thruster)
 	_palette.weapons = placement.weapons
 	_palette.weapon_drag_started.connect(_start_carry_weapon)
+	_palette.stock = editor.stock
+	_palette.ship = editor.blueprint
+	_palette.stock_drag_started.connect(_start_carry_stock)
 	root.add_child(_palette)
 
 	var tools := VBoxContainer.new()
@@ -719,7 +839,10 @@ func _build_ui() -> void:
 	# Shown in place of Rotate and Duplicate while a gun is selected; the column is full.
 	_mode_button = _tool_button(tools, "Mode: Auto", _toggle_selected_mode)
 	_mode_button.visible = false
-	_tool_button(tools, "Delete", _delete_selected)
+	# Outside Creative a removed tile is refunded and a removed part goes in the inventory.
+	_tool_button(tools, "Remove" if stocked() else "Delete", _delete_selected)
+	if stocked():
+		_sell_button = _tool_button(tools, "Sell", _sell_selected)
 	_mirror_button = _tool_button(tools, "Mirror", func() -> void: pass)
 	_mirror_button.toggle_mode = true
 	_mirror_button.toggled.connect(func(on: bool) -> void:
@@ -749,7 +872,27 @@ func _build_ui() -> void:
 	_stats.self_modulate = Color(1, 1, 1, 0.85)
 	root.add_child(_stats)
 
-	_tool_button(tools, "Ships", _open_library.bind(true))
+	# The stocked hangar builds the profile's own ship; buying library ships comes with shops (7.3).
+	_tool_button(tools, "Ships", _open_library.bind(true)).visible = not stocked()
+
+	_wallet = Label.new()
+	_wallet.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
+	_wallet.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_wallet.position.y = 12
+	_wallet.add_theme_font_size_override(&"font_size", 18)
+	_wallet.add_theme_color_override(&"font_color", Color(1, 0.85, 0.5))
+	_wallet.visible = stocked()
+	root.add_child(_wallet)
+	_notice = Label.new()
+	_notice.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
+	_notice.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	_notice.position.y = 40
+	_notice.add_theme_font_size_override(&"font_size", 20)
+	_notice.add_theme_color_override(&"font_color", Color(1.0, 0.45, 0.45))
+	_notice.modulate.a = 0.0
+	root.add_child(_notice)
+	if stocked():
+		_show_wallet()
 	_fly_button = _tool_button(tools, "Fly", func() -> void: fly())
 	_thumbs = ThumbnailRenderer.new()
 	add_child(_thumbs)

@@ -220,7 +220,8 @@ How the flight controller uses whatever thrusters a ship has:
 | **Turret 360°** | Hardpoint face | Full circle | **Always auto** |
 
 **Refit:** at a hangar, a gun can be refitted between the mounts its type allows, for a small
-Alloy + Tech cost. It keeps its XP `[D8]`.
+Alloy + Tech cost. It keeps its XP `[D8]`. A gun taken off the ship remembers its mount type;
+reinstalling it from the Inventory tab on another type is the refit (4.8a).
 
 | Weapon | Damage type | Mounts | Role |
 |---|---|---|---|
@@ -303,6 +304,15 @@ gone, shown as ghost outlines, until a hangar restores them.
 - **Removing a tile in the hangar refunds 100%** of its cost. Experimenting must be free.
 - **Inventory** (per profile) holds materials, GC, guns (each one an item with its type, mount
   and XP), thrusters (type × size × level counts) and owned ships.
+- **Building in the hangar (owner, 2026-10-26).** Outside Creative, every palette tab is a
+  shop: placing a tile pays its materials, and placing a gun or thruster pays its GC price.
+  Removing a tile (Hull, Armor, Shield, Hardpoint) gives its materials back 1:1. Removing or
+  picking up a gun or thruster puts it in the **Inventory** tab (after Weapons), and placing it
+  from there just reinstalls it, free. The Delete button becomes **Remove**, and **Sell** sells
+  a gun or thruster (on the ship or in the Inventory tab) for **75% of its price, rounded
+  down**. Creative has no inventory, no costs, and keeps Delete.
+  - *v2, factions:* the sell rate rises above the flat 75% with your reputation with the
+    station's faction.
 
 ### 4.7 Controls
 
@@ -458,9 +468,10 @@ The player's ships, enemies, VIPs, bosses, shop ships and station hulls are all 
 The cost, stats and validity are always **computed** from the blueprint and never stored.
 A stored number would drift out of date.
 
-**A blueprint names part types, not gun items.** A player's built ship is a blueprint plus a
-`fitted` map from each weapon mount to the inventory gun in it, which carries its own XP (§4.4).
-Enemy guns get their level from the encounter (§4.8).
+**A blueprint names part types, not gun items.** On a player's ship, a weapon mount also
+carries `"gun": "<item id>"`, the inventory gun in it, which holds its own XP (§4.4). Publishing
+or sharing a ship (7.3, 7.4) strips those ids. Enemy guns get their level from the encounter
+(§4.8).
 
 ### 5.5 Performance budget (verified on the reference phone `[D15]` in 0.9 and 15.1)
 
@@ -929,9 +940,9 @@ has one gun of each mount type. Tested in `tests/model/test_weapons.gd` (23 test
 flies the gunboat: auto guns hit the barge alone, the manual nose gun waits for FIRE, no shot
 touches our ship, and with the target abeam the swivels stop while both turrets fire. ⚠️ Lead from the
 **muzzle**, not the pivot: half a unit of barrel was enough to miss.
-Accuracy by level (§4.4) came in from the owner's first test: until guns are items (4.8) every
-gun on a ship shares `ShipBody.gun_level`, and the sandbox's **Guns L1** button steps it through
-`gun_levels` in `flight.json`.
+Accuracy by level (§4.4) came in from the owner's first test. A Creative ship's guns share
+`ShipBody.gun_level`, which the sandbox's **Guns L1** button steps through `gun_levels` in
+`flight.json`; a stocked ship's guns have their own levels (4.8b).
 Owner, on the phone, 2026-10-26: guns "look and feel good"; spread by level "feels good".
 
 #### 4.4 Projectile pool
@@ -1028,12 +1039,50 @@ step never reads its spec dictionary: that kept 600 shots at 1.1 ms on the PC.
 game paused.
 - [ ] Owner, on the phone: the weapon test ships; SWITCH between manual weapons; hit feedback
 
-#### 4.8 Gun XP and levels `[D8]`
-- [ ] `model/weapon_xp.gd`: the L1–L999 XP curve and the per-level stat scaling, from `data/weapon_xp.json` (move `weapons.json` → `levels.max` there; spread already scales, `WeaponLib.spread_for`)
-- [ ] Guns as items (type, mount, XP); a kill's XP split between guns by the damage each dealt (§4.4)
-- [ ] Hangar refit between a gun's allowed mounts for Alloy + Tech, keeping its XP
-- [ ] Tests: the curve rises monotonically and reaches L999; the split adds up to the kill's XP; uninstalling and refitting keep XP
-- **Done when:** the tests pass and the hangar shows each gun's level and XP bar.
+#### 4.8a Inventory and the stocked hangar (owner, 2026-10-26; §4.6)
+✅ 2026-10-26.
+- **Model:** `Inventory` (`src/model/inventory.gd`) holds the wallet, every gun item (fitted
+  or loose) and the loose thruster counts. A fitted gun is named by its mount's `"gun"` id.
+  `Economy` holds the prices: tiles cost their materials, parts their `price_gc`, Sell pays
+  `sell_rate` (75%, rounded down), and the refit cost is in `data/economy.json`.
+- **Editor:** `HangarEditor.stock` turns the costs on; Creative leaves it null. After each edit,
+  `_settle()` diffs the blueprint against the last undo checkpoint and pays or refunds the
+  difference. New parts come from the shop or the inventory (a mirror twin with no spare left is
+  left off). An edit that can't be paid for is undone, with the reason in `refusal`. Undo
+  snapshots hold the stock too.
+- **Hangar:** an Inventory tab (gun cards with level, XP bar and mount type; thrusters with a
+  count; a "Mount:" button for refits) and a wallet line. Delete becomes Remove, and Sell
+  appears (tap it, or drop a part on it). A part dragged off the ship onto the palette goes in
+  the inventory. Shop swatches show their GC price.
+- **Dev profile:** the main menu's debug **Hangar (stocked)** opens `user://profiles/dev/hangar.json`
+  (`StockStore`), and **Reset stocked hangar** starts it over from `economy.json` → `dev_profile`.
+  The library is hidden while stocked; buying ships comes with shops (7.3).
+- **Tests:** `tests/model/test_inventory.gd`, and `dev_preview/drive_stocked.tscn` plays it with
+  touches.
+
+⚠️ Sell is offered for guns and thrusters only: Remove already refunds a tile 100%, so selling
+one for 75% would never make sense. Settling diffs whole blueprints, so any new kind of edit is
+paid for without extra code.
+- [ ] Owner, on the phone: Hangar (stocked): build, Remove, Sell, the Inventory tab, refit
+
+#### 4.8b Gun XP and levels `[D8]`
+✅ 2026-10-26.
+- **Curve and kills:** `WeaponXp` (`src/model/weapon_xp.gd`, from `data/weapon_xp.json`, which
+  now owns `max_level`). XP to reach level L is 10 × (L − 1)²; damage and splash damage gain
+  +1% per level. A kill is worth tiles × encounter level², split by damage with
+  largest-remainder rounding (`split`).
+- **Levels in play:** `GunLayout.compute(bp, placement, level, levels)` puts a fitted gun at its
+  item's level. A shot's source is part of the pool's per-weapon spec key, so tagging costs
+  nothing per shot. `ShipBody.damage_by` tallies the damage each item deals, and on a kill the
+  sandbox awards the XP (`flight.json` → `sandbox.encounter_level` 3 until Phase 5). The HUD
+  shows "+N XP · Gatling L5!", and the guns step up mid-flight.
+- **Creative** keeps the Guns L button; a stocked ship hides it.
+- **Tests:** `tests/model/test_weapon_xp.gd`; drive_stocked checks the whole path, from turret
+  hits to the save.
+
+⚠️ Undo keeps the XP guns have now: XP is earned in flight, so an undo snapshot taken before a
+flight must not take it back.
+- [ ] Owner, on the phone: kill practice targets with a stocked ship and see the guns level
 
 ---
 

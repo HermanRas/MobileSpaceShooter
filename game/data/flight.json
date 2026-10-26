@@ -22,14 +22,15 @@
 		"zoom_rate": 2.0
 	},
 	"sandbox": {
-		"_doc": "Flight sandbox extras (4.2): a practice target (a blueprint from data/enemies) parked at target_at_u turned target_rotation_deg (ahead of the ship, which faces +x); the Target button steps through `targets`, and one with guns shoots back (4.6a). A tap on any ship's tile highlights it, and hits it for test_hit raw damage of test_hit_type (0 since the guns arrived in 4.3). A destroyed ship comes back after respawn_s. The Guns button steps the player's guns through gun_levels (4.3, until guns are items in 4.8).",
+		"_doc": "Flight sandbox extras (4.2): a practice target (a blueprint from data/enemies) parked at target_at_u turned target_rotation_deg (ahead of the ship, which faces +x); the Target button steps through `targets`, and one with guns shoots back (4.6a). A tap on any ship's tile highlights it, and hits it for test_hit raw damage of test_hit_type (0 since the guns arrived in 4.3). A destroyed ship comes back after respawn_s. The Guns button steps a Creative ship's guns through gun_levels (4.3); a stocked ship's guns are inventory items at their own levels, and a kill earns them XP as an encounter_level enemy would (4.8b, until encounters, Phase 5).",
 		"targets": ["target_barge", "rocket_pod", "shield_block"],
 		"target_at_u": [10, 0],
 		"target_rotation_deg": 90,
 		"test_hit": 0,
 		"test_hit_type": "kinetic",
 		"respawn_s": 3.0,
-		"gun_levels": [1, 10, 100, 999]
+		"gun_levels": [1, 10, 100, 999],
+		"encounter_level": 3
 	},
 	"combat_hud": {
 		"_doc": "Phase 4.7. A hit on the player flashes the screen (red for hull, blue for shield only) for flash_s, at up to flash_alpha. Screen shake jolts the view by shake_px_per_damage per point of damage, up to shake_max_px, settling at shake_decay per second. A hull hit of at least vibrate_min_damage buzzes the phone for vibrate_ms. Both obey the Controls settings.",

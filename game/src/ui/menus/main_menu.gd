@@ -3,6 +3,8 @@ extends Control
 ##
 ## Built in code rather than authored in the editor, so the editor cannot silently reformat it.
 
+const DEV_PROFILE := "dev"
+
 
 func _ready() -> void:
 	set_anchors_preset(Control.PRESET_FULL_RECT)
@@ -24,10 +26,30 @@ func _ready() -> void:
 	hangar.text = "Hangar"
 	hangar.custom_minimum_size = Vector2(260, 72)
 	hangar.add_theme_font_size_override(&"font_size", 28)
-	hangar.pressed.connect(func() -> void: Router.goto("res://scenes/hangar/hangar.tscn"))
+	hangar.pressed.connect(func() -> void:
+		Profiles.active_id = ""  # Creative until the mode buttons arrive (6.1)
+		Router.goto("res://scenes/hangar/hangar.tscn"))
 	column.add_child(hangar)
 
 	if OS.is_debug_build():
+		# Building that pays from a dev profile's stock (PLAN.md 4.8a), until profiles (6.2).
+		var stocked := Button.new()
+		stocked.text = "Hangar (stocked)"
+		stocked.custom_minimum_size = Vector2(260, 56)
+		stocked.pressed.connect(func() -> void:
+			Profiles.active_id = DEV_PROFILE
+			Router.goto("res://scenes/hangar/hangar.tscn"))
+		column.add_child(stocked)
+		var reset := Button.new()
+		reset.text = "Reset stocked hangar"
+		reset.custom_minimum_size = Vector2(260, 56)
+		reset.pressed.connect(func() -> void:
+			var path := Profiles.profile_dir(DEV_PROFILE).path_join(StockStore.FILE)
+			for file in [path, path + Save.BAK_SUFFIX]:
+				if FileAccess.file_exists(file):
+					DirAccess.remove_absolute(file)
+			reset.text = "Stocked hangar reset")
+		column.add_child(reset)
 		var stress := Button.new()
 		stress.text = "Shot stress test"
 		stress.custom_minimum_size = Vector2(260, 56)

@@ -58,7 +58,8 @@ func _physics_process(delta: float) -> void:
 			_beam_pulse(shot, gun, beam_hits.get(shot["gun"], {}))
 			continue
 		var aimed: int = shot["target"]
-		_pool.fire(shot, _ship.team, gun.weapon, bodies[aimed] if aimed >= 0 and aimed < bodies.size() else null)
+		_pool.fire(shot, _ship.team, gun.weapon, bodies[aimed] if aimed >= 0 and aimed < bodies.size() else null,
+				StringName(gun.item))
 
 
 ## A ray down every beam that's on: fills `beam_ends` and returns gun index -> the ray's hit.
@@ -93,4 +94,4 @@ func _beam_pulse(shot: Dictionary, gun: GunLayout.Gun, found: Dictionary) -> voi
 	if tile_id < 0:
 		return
 	_pool.hit.emit(body, tile_id, found["position"], (found["along"] as Vector2) * 1000.0, gun.weapon)
-	body.take_hit(tile_id, shot["damage"], shot["type"], shot["pierce"])
+	body.take_hit(tile_id, shot["damage"], shot["type"], shot["pierce"], StringName(gun.item))

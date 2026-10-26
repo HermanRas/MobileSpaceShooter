@@ -1,0 +1,8 @@
+{
+	"format": 1,
+	"_doc": "PLAN.md 4.4, Phase 4.8b (D8). Guns level from L1 to max_level on XP from kills. curve: the total XP to reach level L is base x (L - 1)^power. per_level: a gun's damage (and splash damage) is x (1 + damage x (L - 1)), so +1% a level makes L999 about x11; its spread narrows with level too (weapons.json spread_deg). kill: a kill is worth per_tile x the enemy's tiles x its encounter level^level_power, split between the guns that hurt it by the damage each dealt.",
+	"max_level": 999,
+	"curve": {"base": 10, "power": 2.0},
+	"per_level": {"damage": 0.01},
+	"kill": {"per_tile": 1.0, "level_power": 2.0}
+}

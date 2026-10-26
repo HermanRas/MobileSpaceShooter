@@ -1,0 +1,10 @@
+{
+	"format": 1,
+	"_doc": "PLAN.md 4.6, 4.8a (owner, 2026-10-26). Outside Creative, placing a tile pays its materials and placing a gun or thruster pays its price_gc (weapons.json, thrusters.json). Removing a tile gives its materials back 1:1; removing a part puts it in the inventory, and reinstalling it is free, except that a gun reinstalled on another mount type than it last had pays refit. Sell pays sell_rate of a part's price, rounded down (v2: higher with faction reputation). dev_profile is the stock a new dev profile starts with (until profiles, Phase 6.2): its ship is a data/blueprints id, and its guns become items.",
+	"sell_rate": 0.75,
+	"refit": {"alloy": 4, "tech": 2},
+	"dev_profile": {
+		"ship": "starter",
+		"wallet": {"hull": 600, "alloy": 300, "crystal": 200, "tech": 120, "gc": 4000}
+	}
+}

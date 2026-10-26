@@ -26,8 +26,10 @@ class Gun:
 	var turn_rate: float
 	## Pivot to muzzle, in U.
 	var muzzle: float
-	## The weapon's numbers (WeaponLib.weapon()).
+	## The weapon's numbers (WeaponLib.weapon()) at its level.
 	var stats: Dictionary
+	## The inventory gun fitted here (`"gun"` on the mount, PLAN.md 5.4), or "" (Creative, enemies).
+	var item := ""
 	## Its level (L1-L999), and the scatter that gives it (rad either side of the aim).
 	var level := 1
 	var spread := 0.0
@@ -68,16 +70,19 @@ var guns: Array[Gun] = []
 var warnings: Array[Dictionary] = []
 
 
-## Every gun at `level` until guns are items with their own (Phase 4.8).
-static func compute(bp: Blueprint, placement: Placement, level := 1) -> GunLayout:
+## Every gun at `level`, except a fitted inventory gun named in `levels` (item id -> level),
+## which is at its own (Phase 4.8b).
+static func compute(bp: Blueprint, placement: Placement, level := 1, levels := {}) -> GunLayout:
 	var layout := GunLayout.new()
 	if placement.weapons == null:
 		return layout
 	for i in bp.mounts.size():
 		var gun := _gun(bp, placement, i)
 		if gun != null:
-			gun.level = level
-			gun.spread = WeaponLib.spread_for(gun.stats, level)
+			gun.item = str(bp.mounts[i].get("gun", ""))
+			gun.level = int(levels.get(gun.item, level))
+			gun.stats = placement.weapons.xp.scaled(gun.stats, gun.level)
+			gun.spread = WeaponLib.spread_for(gun.stats, gun.level)
 			layout.guns.append(gun)
 	for gun in layout.guns:
 		if gun.clear_share() <= 0.0:

@@ -15,6 +15,7 @@ const MAX_PROBLEMS := 3
 
 var _rows := {}  # key -> [value Label, delta Label]
 var _problems := VBoxContainer.new()
+var _part := Label.new()
 
 
 func _ready() -> void:
@@ -36,6 +37,10 @@ func _ready() -> void:
 		grid.add_child(value)
 		grid.add_child(delta)
 		_rows[entry[0]] = [value, delta]
+	_part.add_theme_color_override(&"font_color", Color(0.6, 0.85, 1.0))
+	_part.add_theme_font_size_override(&"font_size", 18)
+	_part.visible = false
+	column.add_child(_part)
 	_problems.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	column.add_child(_problems)
 
@@ -70,6 +75,12 @@ func show_stats(stats: ShipStats, problems: Array[Placement.Problem], max_tiles:
 		warnings.append_array(guns.warnings)
 	for warning in warnings:
 		_problems.add_child(_label("• " + str(warning["text"]), WARN))
+
+
+## A line about the selected gun or thruster (its level, XP, what it sells for), or none for "".
+func show_part(text: String) -> void:
+	_part.text = text
+	_part.visible = not text.is_empty()
 
 
 ## Shows what one tile of `def` at `size` would add, or clears the preview when `def` is null.

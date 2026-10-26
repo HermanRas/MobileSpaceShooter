@@ -14,16 +14,21 @@ const NUMBERS := ["damage", "rate", "speed_u", "range_u", "edge_u", "length_u", 
 var fire_within := deg_to_rad(3.0)
 ## The top gun level; a gun's spread narrows from L1 to here.
 var max_level := 999
+## Levels from XP, and what they do (Phase 4.8b).
+var xp := WeaponXp.new()
 var errors: PackedStringArray = []
 
 var _mounts: Dictionary = {}  # mount type -> read-only {"name", "face", "arc", "turn_rate", "modes"}
 var _weapons: Dictionary = {}  # weapon id -> read-only def
 
 
-static func from_table(table: Dictionary) -> WeaponLib:
+## `xp_table`: `data/weapon_xp.json` (its defaults when left out).
+static func from_table(table: Dictionary, xp_table := {}) -> WeaponLib:
 	var lib := WeaponLib.new()
 	lib.fire_within = deg_to_rad(float(table.get("aim", {}).get("fire_within_deg", 3.0)))
-	lib.max_level = maxi(int(table.get("levels", {}).get("max", 999)), 2)
+	lib.xp = WeaponXp.from_table(xp_table)
+	lib.errors.append_array(lib.xp.errors)
+	lib.max_level = lib.xp.max_level
 	for mount_type: String in table.get("mounts", {}):
 		var raw: Dictionary = table["mounts"][mount_type]
 		if not MOUNT_TYPES.has(StringName(mount_type)):

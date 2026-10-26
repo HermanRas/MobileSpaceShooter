@@ -98,8 +98,9 @@ func _ready() -> void:
 
 
 ## Launches a shot from Gunnery.step() (world U and U/s) for `team`; a homing one steers for
-## `homing_target`.
-func fire(shot: Dictionary, team: int, weapon_id: StringName, homing_target: Node2D = null) -> void:
+## `homing_target`. `source`: the gun item that fired it, credited with the damage it deals
+## (PLAN.md 4.8b), or &"".
+func fire(shot: Dictionary, team: int, weapon_id: StringName, homing_target: Node2D = null, source := &"") -> void:
 	if count >= CAPACITY:
 		dropped += 1
 		return
@@ -109,7 +110,7 @@ func fire(shot: Dictionary, team: int, weapon_id: StringName, homing_target: Nod
 	_life[i] = shot["life"]
 	_mask[i] = ShipBody.enemy_mask(team)
 	_team[i] = team
-	_spec[i] = _spec_for(shot, weapon_id)
+	_spec[i] = _spec_for(shot, weapon_id, source)
 	var spec := _specs[_spec[i]]
 	_flags[i] = (HOMES if spec["homing"] > 0.0 and homing_target != null else 0) \
 			| (DRAGS if spec["drag"] > 0.0 else 0) | (FUSED if spec["proximity"] > 0.0 else 0)
@@ -171,7 +172,7 @@ func _physics_process(delta: float) -> void:
 			_remove(i)
 			if tile_id >= 0:
 				hit.emit(body, tile_id, found["position"], velocity, spec["weapon"])
-				body.take_hit(tile_id, spec["damage"], spec["type"], spec["pierce"])
+				body.take_hit(tile_id, spec["damage"], spec["type"], spec["pierce"], spec["source"])
 			if spec["splash"] > 0.0:
 				_explode(space, found["position"], spec, team)
 			continue
@@ -237,7 +238,7 @@ func _explode(space: PhysicsDirectSpaceState2D, point: Vector2, spec: Dictionary
 			struck[body] = true
 	for body: ShipBody in struck:
 		if is_instance_valid(body):
-			body.take_splash(point, spec["splash_u"], spec["splash_damage"], spec["splash_type"])
+			body.take_splash(point, spec["splash_u"], spec["splash_damage"], spec["splash_type"], spec["source"])
 	for j in count:
 		if _team[j] != team and _specs[_spec[j]]["rocket"] and _pos[j].distance_to(point) <= radius:
 			_life[j] = DOWNED - 1.0
@@ -261,12 +262,13 @@ func _remove(i: int) -> void:
 	_target[count] = null
 
 
-func _spec_for(shot: Dictionary, weapon_id: StringName) -> int:
-	var key := "%s|%s" % [weapon_id, shot["damage"]]
+## The shots of one gun share a spec (its damage changes with its level, and its source is the gun).
+func _spec_for(shot: Dictionary, weapon_id: StringName, source: StringName) -> int:
+	var key := "%s|%s|%s" % [weapon_id, shot["damage"], source]
 	if _spec_of.has(key):
 		return _spec_of[key]
 	_specs.append({
-		"weapon": weapon_id, "damage": float(shot["damage"]), "type": StringName(shot["type"]),
+		"weapon": weapon_id, "source": source, "damage": float(shot["damage"]), "type": StringName(shot["type"]),
 		"pierce": float(shot.get("pierce", 0.0)), "splash_u": float(shot.get("splash_u", 0.0)),
 		"splash": float(shot.get("splash_u", 0.0)) * PX, "splash_damage": float(shot.get("splash_damage", 0.0)),
 		"splash_type": StringName(shot.get("splash_type", "explosive")), "airburst": bool(shot.get("airburst", false)),
