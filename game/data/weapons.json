@@ -1,6 +1,6 @@
 {
 	"format": 1,
-	"_doc": "PLAN.md 4.4, Phase 4.3. Guns and the mounts they sit on. Distances in U, angles in degrees, time in seconds. An edge gun covers edge_u of a hardpoint edge (edge_u / port_pitch ports) and its barrel sticks out length_u, which is also the space it blocks. A turret sits on a hardpoint's face, which must hold a circle of turret_radius_u. over_hull: the gun sits on top of the ship and fires over its own tiles (owner, 2026-10-26: top-mounted guns can, side-mounted can't). rate is shots per second; a shot flies at speed_u U/s on top of the ship's own velocity and goes range_u. spread_deg is [at L1, at the top level]: the random scatter either side of the aim, which narrows as the gun levels up, on a log curve (owner, 2026-10-26: accuracy comes with level). Gun XP and the other stats' level scaling arrive in 4.8; those numbers are L1.",
+	"_doc": "PLAN.md 4.4, Phase 4.3. Guns and the mounts they sit on. Distances in U, angles in degrees, time in seconds. An edge gun covers edge_u of a hardpoint edge (edge_u / port_pitch ports) and its barrel sticks out length_u, which is also the space it blocks. A turret sits on a hardpoint's face, which must hold a circle of turret_radius_u. over_hull: the gun sits on top of the ship and fires over its own tiles (owner, 2026-10-26: top-mounted guns can, side-mounted can't). rate is shots per second; a shot flies at speed_u U/s on top of the ship's own velocity and goes range_u. spread_deg is [at L1, at the top level]: the random scatter either side of the aim, which narrows as the gun levels up, on a log curve (owner, 2026-10-26: accuracy comes with level). A gun with spin_up_s (the multi gatling) starts at rate_start and reaches rate after firing that long; it winds down over spin_down_s when it stops. pierce is the share of armor a shot ignores (PLAN.md 4.5). Gun XP and the other stats' level scaling arrive in 4.8; those numbers are L1.",
 	"levels": {"_doc": "The top gun level (PLAN.md 4.4, D8).", "max": 999},
 	"mounts": {
 		"fixed": {"name": "Fixed", "on": "edge", "arc_deg": 0, "turn_deg_s": 0, "over_hull": false, "modes": ["manual", "auto"]},
@@ -27,6 +27,41 @@
 			"turret_radius_u": 0.25,
 			"mass": 0.3,
 			"price_gc": 80
+		},
+		"gatling_multi": {
+			"name": "Multi gatling",
+			"damage_type": "kinetic",
+			"mounts": ["fixed", "swivel", "turret"],
+			"damage": 7,
+			"rate": 24,
+			"rate_start": 4,
+			"spin_up_s": 1.5,
+			"spin_down_s": 1.0,
+			"speed_u": 42,
+			"range_u": 22,
+			"spread_deg": [7.0, 1.0],
+			"pierce": 0,
+			"edge_u": 0.5,
+			"length_u": 0.6,
+			"turret_radius_u": 0.3,
+			"mass": 0.7,
+			"price_gc": 320
+		},
+		"cannon": {
+			"name": "Cannon",
+			"damage_type": "kinetic",
+			"mounts": ["fixed", "swivel", "turret"],
+			"damage": 60,
+			"rate": 0.8,
+			"speed_u": 28,
+			"range_u": 30,
+			"spread_deg": [3.0, 0.3],
+			"pierce": 0.6,
+			"edge_u": 0.5,
+			"length_u": 0.85,
+			"turret_radius_u": 0.32,
+			"mass": 1.4,
+			"price_gc": 420
 		}
 	}
 }

@@ -22,8 +22,9 @@ const PX := ShipMesh.PX_PER_U
 var ship: ShipBody
 var pilot: FlightController
 var weapons: WeaponController
-## Every shot in flight.
+## Every shot in flight, and the sparks where they strike.
 var pool := ProjectilePool.new()
+var impacts := ImpactFx.new()
 ## How long building the ship body took, for the debug Perf log.
 var last_spawn_usec: int = 0
 
@@ -79,6 +80,11 @@ func open(bp: Blueprint, placement: Placement) -> void:
 	pool.name = "Shots"
 	pool.z_index = 2
 	_world.add_child(pool)
+	impacts.name = "Impacts"
+	impacts.z_index = 3
+	_world.add_child(impacts)
+	pool.hit.connect(func(_body: ShipBody, _tile: int, point: Vector2, velocity: Vector2, weapon_id: StringName) -> void:
+		impacts.burst(point, velocity, weapon_id))
 	_spawn_player()
 	_camera.make_current()
 	_spawn_target()

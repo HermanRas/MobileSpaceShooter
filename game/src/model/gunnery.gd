@@ -14,10 +14,12 @@ var layout: GunLayout
 ## A gun fires once it's within this of its aim (radians).
 var fire_within: float = deg_to_rad(3.0)
 var all_auto := false
-## Per gun, in layout order: its ship-local angle, seconds until it may fire again, the index of
-## the target it's aiming at (-1 for none), and the shots it has fired.
+## Per gun, in layout order: its ship-local angle, seconds until it may fire again, how far a
+## multi gatling has spun up (0..1), the index of the target it's aiming at (-1 for none), and
+## the shots it has fired.
 var angles := PackedFloat32Array()
 var cooldowns := PackedFloat32Array()
+var spins := PackedFloat32Array()
 var aims := PackedInt32Array()
 var fired := PackedInt32Array()
 var rng := RandomNumberGenerator.new()
@@ -36,19 +38,21 @@ func set_layout(gun_layout: GunLayout) -> void:
 	var before := {}
 	if layout != null:
 		for i in layout.guns.size():
-			before[layout.guns[i].key] = [angles[i], cooldowns[i], fired[i]]
+			before[layout.guns[i].key] = [angles[i], cooldowns[i], fired[i], spins[i]]
 	layout = gun_layout
 	var count := layout.guns.size()
 	angles.resize(count)
 	cooldowns.resize(count)
+	spins.resize(count)
 	aims.resize(count)
 	fired.resize(count)
 	aims.fill(-1)
 	for i in count:
-		var kept: Array = before.get(layout.guns[i].key, [layout.guns[i].facing, 0.0, 0])
+		var kept: Array = before.get(layout.guns[i].key, [layout.guns[i].facing, 0.0, 0, 0.0])
 		angles[i] = kept[0]
 		cooldowns[i] = kept[1]
 		fired[i] = kept[2]
+		spins[i] = kept[3]
 
 
 ## One tick. The ship's position (U), rotation and velocity (U/s) are in world space, and so are
@@ -72,12 +76,13 @@ func step(delta: float, ship_pos: Vector2, ship_rotation: float, ship_vel: Vecto
 		else:
 			firing = fire_held
 		firing = firing and gun.clear(angles[i])
+		var rate := _spin(i, gun, firing, delta)
 		if not firing:
 			cooldowns[i] = maxf(cooldowns[i], 0.0)
 			continue
 		while cooldowns[i] <= 0.0:
 			shots.append(_shot(i, gun, pivot, ship_rotation, ship_vel))
-			cooldowns[i] += 1.0 / float(gun.stats["rate"])
+			cooldowns[i] += 1.0 / rate
 	return shots
 
 
@@ -120,6 +125,16 @@ func _choose(gun: GunLayout.Gun, muzzle: Vector2, ship_rotation: float, ship_vel
 			best_d = rel_pos.length_squared()
 			best = [t, angle]
 	return best
+
+
+## Spins a multi gatling up while it fires and down while it doesn't; returns its rate now.
+func _spin(index: int, gun: GunLayout.Gun, firing: bool, delta: float) -> float:
+	var spin_up := float(gun.stats["spin_up_s"])
+	if spin_up <= 0.0:
+		return gun.stats["rate"]
+	var change := delta / spin_up if firing else -delta / float(gun.stats["spin_down_s"])
+	spins[index] = clampf(spins[index] + change, 0.0, 1.0)
+	return lerpf(gun.stats["rate_start"], gun.stats["rate"], spins[index])
 
 
 ## `from` turned toward `to` by at most one tick's worth, staying in the gun's arc.

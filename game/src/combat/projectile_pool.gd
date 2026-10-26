@@ -8,8 +8,9 @@ extends Node2D
 ## Brought forward from Phase 4.4 so the guns of 4.3 have something to fire; 4.4 stress-tests
 ## it at 600 shots on the phone.
 
-## A shot struck `tile_id` of `body` at `point` (world pixels). Emitted before the damage lands.
-signal hit(body: ShipBody, tile_id: int, point: Vector2)
+## A shot from `weapon_id` moving at `velocity` struck `tile_id` of `body` at `point` (world
+## pixels and pixels per second). Emitted before the damage lands.
+signal hit(body: ShipBody, tile_id: int, point: Vector2, velocity: Vector2, weapon_id: StringName)
 
 const CAPACITY := 1024
 const PX := ShipMesh.PX_PER_U
@@ -31,6 +32,7 @@ var _pierce := PackedFloat32Array()
 var _mask := PackedInt32Array()
 var _look := PackedInt32Array()
 var _type: Array[StringName] = []
+var _weapon: Array[StringName] = []
 ## [{"color", "length", "width"}] in pixels, and weapon id -> index there.
 var _looks: Array[Dictionary] = []
 var _look_of := {}
@@ -47,6 +49,7 @@ func _ready() -> void:
 	_mask.resize(CAPACITY)
 	_look.resize(CAPACITY)
 	_type.resize(CAPACITY)
+	_weapon.resize(CAPACITY)
 	var quad := QuadMesh.new()
 	quad.size = Vector2.ONE
 	var multimesh := MultiMesh.new()
@@ -56,6 +59,7 @@ func _ready() -> void:
 	multimesh.instance_count = CAPACITY
 	multimesh.visible_instance_count = 0
 	_view.multimesh = multimesh
+	_view.texture = _streak()
 	var additive := CanvasItemMaterial.new()
 	additive.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
 	_view.material = additive
@@ -79,6 +83,7 @@ func fire(from_u: Vector2, vel_u: Vector2, life: float, damage: float, type: Str
 	_pierce[i] = pierce
 	_mask[i] = mask
 	_type[i] = type
+	_weapon[i] = weapon_id
 	_look[i] = _look_for(weapon_id)
 	count += 1
 
@@ -104,9 +109,11 @@ func _physics_process(delta: float) -> void:
 			var damage := _damage[i]
 			var type := _type[i]
 			var pierce := _pierce[i]
+			var velocity := _vel[i]
+			var weapon_id := _weapon[i]
 			_remove(i)
 			if tile_id >= 0:
-				hit.emit(body, tile_id, found["position"])
+				hit.emit(body, tile_id, found["position"], velocity, weapon_id)
 				body.take_hit(tile_id, damage, type, pierce)
 			continue
 		_pos[i] = to
@@ -145,7 +152,24 @@ func _remove(i: int) -> void:
 	_pierce[i] = _pierce[count]
 	_mask[i] = _mask[count]
 	_type[i] = _type[count]
+	_weapon[i] = _weapon[count]
 	_look[i] = _look[count]
+
+
+static var _streak_texture: GradientTexture2D
+
+
+## A streak that fades in from its tail (u = 0) to a bright head (u = 1).
+static func _streak() -> GradientTexture2D:
+	if _streak_texture == null:
+		var gradient := Gradient.new()
+		gradient.offsets = PackedFloat32Array([0.0, 0.75, 1.0])
+		gradient.colors = PackedColorArray([Color(1, 1, 1, 0), Color(1, 1, 1, 0.8), Color(1, 1, 1, 1)])
+		_streak_texture = GradientTexture2D.new()
+		_streak_texture.gradient = gradient
+		_streak_texture.width = 32
+		_streak_texture.height = 4
+	return _streak_texture
 
 
 func _look_for(weapon_id: StringName) -> int:

@@ -82,6 +82,12 @@ static func from_table(table: Dictionary) -> WeaponLib:
 				"max_level": lib.max_level, "pierce": float(raw["pierce"])}
 		for key: String in NUMBERS:
 			def[key] = float(raw[key])
+		def["rate_start"] = float(raw.get("rate_start", raw["rate"]))
+		def["spin_up_s"] = maxf(float(raw.get("spin_up_s", 0.0)), 0.0)
+		def["spin_down_s"] = maxf(float(raw.get("spin_down_s", def["spin_up_s"])), 0.001)
+		if def["rate_start"] <= 0.0 or def["rate_start"] > def["rate"]:
+			lib.errors.append("%s: rate_start must be > 0 and no more than rate" % weapon_id)
+			continue
 		def.make_read_only()
 		lib._weapons[StringName(weapon_id)] = def
 	return lib
@@ -101,7 +107,8 @@ func has_weapon(weapon_id: StringName) -> bool:
 ## One gun's numbers, or {} if unknown. Read-only.
 ##   name, damage_type, mounts (allowed mount types), damage (per shot), rate (shots/s),
 ##   speed_u, range_u, spread and spread_best (rad either side, at L1 and at max_level),
-##   pierce (0-1), edge_u, length_u, turret_radius_u, mass, price_gc
+##   pierce (0-1), edge_u, length_u, turret_radius_u, mass, price_gc, and for a gun that spins
+##   up: rate_start (shots/s when it starts), spin_up_s, spin_down_s (spin_up_s 0 if it doesn't)
 func weapon(weapon_id: StringName) -> Dictionary:
 	return _weapons.get(weapon_id, {})
 

@@ -932,7 +932,7 @@ touches our ship, and with the target abeam the swivels stop while both turrets 
 Accuracy by level (§4.4) came in from the owner's first test: until guns are items (4.8) every
 gun on a ship shares `ShipBody.gun_level`, and the sandbox's **Guns L1** button steps it through
 `gun_levels` in `flight.json`.
-- [ ] Owner, on the phone: mount guns in the hangar, fly the gunboat, FIRE, try Guns L1 → L999
+Owner, on the phone, 2026-10-26: guns "look and feel good"; spread by level "feels good".
 
 #### 4.4 Projectile pool
 ✅ 2026-10-26. `ProjectilePool` (`src/combat/projectile_pool.gd`, built in 4.3): packed arrays,
@@ -945,9 +945,21 @@ runs one ramp on the PC. Hits in the test are on undamageable barges, so the cos
 `ShipDamage` per hit isn't in these numbers.
 
 #### 4.5 Weapons batch A: kinetic
-- [ ] Single gatling, multi gatling (spin-up), cannon (armour-piercing, on every mount, so the turret version is the "cannon turret")
-- [ ] Muzzle flash, tracer and impact sparks (procedural)
-- **Done when:** all three are usable from the hangar on each of their mounts.
+✅ 2026-10-26. `weapons.json` adds the **multi gatling** (`rate_start` 4 → `rate` 24 shots/s over
+`spin_up_s` 1.5, winding down over `spin_down_s`; `Gunnery.spins`) and the **cannon** (60 a shell
+at 0.8/s, `pierce` 0.6, slower shells). All three kinetic guns go on all three mounts.
+- **Effects, all procedural:** tracers fade from tail to a bright head (a gradient texture on
+  the pool's MultiMesh). `GunView` flashes the muzzle per shot and draws per-weapon barrels.
+  `ImpactFx` (`src/combat/`) throws sparks back from each hit, in one more MultiMesh.
+- **Looks:** `vis.weapons.guns`, `vis.fx.projectiles` and `vis.fx.impacts`.
+- **Samples:** the gunboat now carries a manual nose cannon, auto multi-gatling swivels and
+  gatling turrets.
+- **Tests:** `tests/model/test_kinetic_guns.gd` mounts and fires every gun on every mount, and
+  checks the spin-up and that the cannon is the armour breaker.
+
+⚠️ The suite only loads the scripts a test touches, so an effect's parse error got through until
+a drive ran. `tests/core/test_scripts_compile.gd` now compiles everything in `src/` and
+`dev_preview/`.
 
 #### 4.6 Weapons batch B: specials
 - [ ] Flak (spread and airburst; can shoot down rockets), rockets (homing and splash)

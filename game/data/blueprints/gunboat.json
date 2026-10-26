@@ -4,7 +4,7 @@
 	"name": "Gunboat",
 	"author": "mss",
 	"tags": ["sample"],
-	"_doc": "Phase 4.3: one gun of each mount type. A manual fixed gatling on the nose (tile 6), auto swivels on the inner front ports of tiles 4 and 5, and auto turrets on the wing tips (7, 8). Square edge 1 is the front, 3 the rear. Rear Large pulses push, Medium pulses on the outer front ports brake.",
+	"_doc": "Phase 4.3/4.5: one gun of each mount type and each kinetic gun. A manual fixed cannon on the nose (tile 6), auto multi-gatling swivels on the inner front ports of tiles 4 and 5, and auto gatling turrets on the wing tips (7, 8). Square edge 1 is the front, 3 the rear. Rear Large pulses push, Medium pulses on the outer front ports brake.",
 	"tiles": [
 		{"id": 0, "type": "core", "shape": "square", "size": "L", "pos": [0, 0], "rot": 0, "paint": "#d8d8d8"},
 		{"id": 1, "type": "hull", "shape": "square", "size": "L", "pos": [-1, 0], "rot": 0, "paint": "#7d8a96"},
@@ -21,9 +21,9 @@
 		{"tile": 3, "edge": 3, "port": 0, "part": "thruster.pulse", "size": "L", "level": 1},
 		{"tile": 4, "edge": 1, "port": 0, "part": "thruster.pulse", "size": "M", "level": 1},
 		{"tile": 5, "edge": 1, "port": 2, "part": "thruster.pulse", "size": "M", "level": 1},
-		{"tile": 6, "edge": 1, "port": 1, "part": "weapon.gatling_single", "mount": "fixed", "mode": "manual"},
-		{"tile": 4, "edge": 1, "port": 2, "part": "weapon.gatling_single", "mount": "swivel", "mode": "auto"},
-		{"tile": 5, "edge": 1, "port": 0, "part": "weapon.gatling_single", "mount": "swivel", "mode": "auto"},
+		{"tile": 6, "edge": 1, "port": 1, "part": "weapon.cannon", "mount": "fixed", "mode": "manual"},
+		{"tile": 4, "edge": 1, "port": 2, "part": "weapon.gatling_multi", "mount": "swivel", "mode": "auto"},
+		{"tile": 5, "edge": 1, "port": 0, "part": "weapon.gatling_multi", "mount": "swivel", "mode": "auto"},
 		{"tile": 7, "face": true, "part": "weapon.gatling_single", "mount": "turret", "mode": "auto"},
 		{"tile": 8, "face": true, "part": "weapon.gatling_single", "mount": "turret", "mode": "auto"}
 	]

@@ -16,19 +16,33 @@
 			"ion": ["#ffffff", "#9fe8ff", "#3a8bff", "#1030c0"]
 		},
 		"vis.weapons": {
-			"_doc": "Guns (PLAN.md 4.4), drawn in code until their art lands; no files. A turret is a round base with a barrel, an edge gun a mounting block with one. Sizes in U. The hangar marks each gun's mode with a dot: manual or auto.",
+			"_doc": "Guns (PLAN.md 4.4), drawn in code until their art lands; no files. A turret is a round base with barrels, an edge gun a mounting block with them. Sizes in U. Each shot shows a muzzle flash flash_u across for flash_s. `guns` overrides barrels, barrel_width_u and flash_u per weapon. The hangar marks each gun's mode with a dot: manual or auto.",
 			"base": "#59616b",
 			"barrel": "#2a2e34",
 			"rim": "#9aa3ad",
 			"barrel_width_u": 0.12,
 			"block_depth_u": 0.14,
 			"manual_mark": "#ffb040",
-			"auto_mark": "#5ad0ff"
+			"auto_mark": "#5ad0ff",
+			"flash": "#fff2c0",
+			"flash_u": 0.28,
+			"flash_s": 0.05,
+			"guns": {
+				"gatling_multi": {"barrels": 3, "barrel_width_u": 0.05},
+				"cannon": {"barrel_width_u": 0.2, "flash_u": 0.6}
+			}
 		},
 		"vis.fx.projectiles": {
 			"_doc": "Shots in flight (Phase 4.3), drawn as additive tracer streaks in one MultiMesh; no files. Per weapon id, else default. length_u and width_u are the streak's size.",
 			"default": {"color": "#ffd27a", "length_u": 0.5, "width_u": 0.07},
-			"gatling_single": {"color": "#ffd890", "length_u": 0.55, "width_u": 0.07}
+			"gatling_single": {"color": "#ffd890", "length_u": 0.55, "width_u": 0.07},
+			"gatling_multi": {"color": "#ffe6a8", "length_u": 0.45, "width_u": 0.06},
+			"cannon": {"color": "#ffb060", "length_u": 0.7, "width_u": 0.2}
+		},
+		"vis.fx.impacts": {
+			"_doc": "Where a shot strikes (Phase 4.5), drawn in code with one MultiMesh of soft dots; no files. A hit flashes flash_u across and throws `sparks` back the way the shot came, at up to speed_u U/s, shrinking out over life_s. Per weapon id, else default.",
+			"default": {"color": "#ffd890", "sparks": 4, "size_u": 0.1, "speed_u": 5, "life_s": 0.18, "flash_u": 0.3},
+			"cannon": {"color": "#ffb060", "sparks": 12, "size_u": 0.16, "speed_u": 7, "life_s": 0.32, "flash_u": 0.8}
 		},
 		"vis.fx.explosion": {
 			"_doc": "A ship's death (PLAN.md 4.2), drawn in code; no files. A white flash, an expanding ring and a burst of sparks (fireballs), sized by the ship: spark_size is [min, max] as a share of the ship's length. Colours run hot -> cooling.",
