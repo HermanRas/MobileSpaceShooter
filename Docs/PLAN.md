@@ -583,7 +583,7 @@ in place before any gameplay code is written.
 #### 0.1 Repository `[D1]`
 ✅ 2026-10-25. git in the project folder, branch `main`. `insperationPictures/` is **gitignored**,
 because some of the images are third-party screenshots and the repo will be public.
-- [ ] Owner: create the GitHub remote (`gh` isn't installed), then `git remote add origin … && git push -u origin main`
+- [x] Owner: create the GitHub remote (`gh` isn't installed), then `git remote add origin … && git push -u origin main` (done: `HermanRas/MobileSpaceShooter`, v0.0.5 pushed 2026-10-26)
 
 #### 0.2 Folder layout
 ✅ 2026-10-25. `mobile-space-game/` → `game/`, with the §5.1 tree. Empty folders hold `.gitkeep`;
@@ -1026,7 +1026,7 @@ from whichever pod is alive.
 ⚠️ Beam damage comes in pulses because a per-frame sliver (1 HP) is cut to the 20% floor by
 any armour. The rare shot extras (homing, drag, proximity) are bit flags, so a plain bullet's
 step never reads its spec dictionary: that kept 600 shots at 1.1 ms on the PC.
-- [ ] Owner, on the phone: skirmisher vs barge and rocket pod; specialist vs shield block
+- [x] Owner, on the phone: skirmisher vs barge and rocket pod; specialist vs shield block (confirmed with the weapon test ships, 2026-10-26)
 
 #### 4.7 Combat HUD and weapon switch
 ✅ 2026-10-26.
@@ -1048,7 +1048,7 @@ step never reads its spec dictionary: that kept 600 shots at 1.1 ms on the PC.
 
 ⚠️ The sandbox unpauses in `close()` and `_exit_tree()`, so leaving mid-SWITCH can't strand the
 game paused.
-- [ ] Owner, on the phone: the weapon test ships; SWITCH between manual weapons; hit feedback
+- [x] Owner, on the phone: the weapon test ships; SWITCH between manual weapons; hit feedback (confirmed 2026-10-26)
 
 #### 4.8a Inventory and the stocked hangar (owner, 2026-10-26; §4.6)
 ✅ 2026-10-26.
@@ -1074,7 +1074,7 @@ game paused.
 ⚠️ Sell is offered for guns and thrusters only: Remove already refunds a tile 100%, so selling
 one for 75% would never make sense. Settling diffs whole blueprints, so any new kind of edit is
 paid for without extra code.
-- [ ] Owner, on the phone: Hangar (stocked): build, Remove, Sell, the Inventory tab, refit
+- [x] Owner, on the phone: Hangar (stocked): build, Remove, Sell, the Inventory tab, refit (confirmed 2026-10-26)
 
 #### 4.8b Gun XP and levels `[D8]`
 ✅ 2026-10-26.
@@ -1093,7 +1093,7 @@ paid for without extra code.
 
 ⚠️ Undo keeps the XP guns have now: XP is earned in flight, so an undo snapshot taken before a
 flight must not take it back.
-- [ ] Owner, on the phone: kill practice targets with a stocked ship and see the guns level
+- [x] Owner, on the phone: kill practice targets with a stocked ship and see the guns level (confirmed 2026-10-26: every playtest flew from the stocked hangar)
 
 #### 4.8c Market, kill pay and the price pass (owner, 2026-10-26)
 ✅ 2026-10-26.
@@ -1112,7 +1112,7 @@ flight must not take it back.
 ⚠️ Landing in the stocked hangar clears undo: an undo from before the flight would take back
 what it earned. An old dev profile on a device keeps its old wallet until **Reset stocked
 hangar**.
-- [ ] Owner, on the phone: does building feel earned now? Prices, market spread and kill pay are all in `economy.json`
+- [x] Owner, on the phone: does building feel earned now? Prices, market spread and kill pay are all in `economy.json` (yes, 2026-10-26: four runs at level 1 to afford two more gatlings; the market may want tuning later, 8.7)
 
 ---
 
@@ -1145,7 +1145,7 @@ levels, faction, boss, `flee_below`) and loaded by `EnemyRoster` (`src/model/ene
 thrust. The owner accepted this for the MVP (2026-10-26). The AI (5.2) turns and burns rather
 than counting on reverse thrust; more variety in brakes and side thrusters comes with the v2
 faction rosters (§9).
-- [ ] Owner: look over the gallery (and spawn the bosses in the sandbox)
+- [x] Owner: look over the gallery (and spawn the bosses in the sandbox) (done 2026-10-26)
 
 #### 5.2 AI pilot
 ✅ 2026-10-26.
@@ -1186,7 +1186,7 @@ that would turn it push against the stick), and most enemies brake weakly. So th
 first: it holds the stick at most 90° off the nose. A ship closing too fast while nose-on lets
 go of the stick instead, so the auto-brake slows it without turning. Debris avoidance is left
 to physics, since wrecks fade in seconds.
-- [ ] Owner, on the phone: Spawn → fight Wasp (strafe), the bosses and your own ships; spawn the Pike carrier and keep it alive. Bosses hit hard at L1 (the Marauder is about 500 dmg/s against the starter's 1,160 HP); enemy gun levels and the balance come with 5.3
+- [x] Owner, on the phone: Spawn → fight Wasp (strafe), the bosses and your own ships; spawn the Pike carrier and keep it alive (confirmed 2026-10-26: the AI feels good; the Spinner's mines suit groups). Bosses hit hard at L1 (the Marauder is about 500 dmg/s against the starter's 1,160 HP); enemy gun levels and the balance come with 5.3
 
 #### 5.3 Level scaling 1–100
 ✅ 2026-10-26.
@@ -1215,7 +1215,7 @@ to physics, since wrecks fade in seconds.
 
 ⚠️ drive_flight keeps the old 6 U spawn gap in memory: its gun checks assume targets inside a
 laser's 18 U reach.
-- [ ] Owner, on the phone: Spawn → Level 1/10/25 with the starter, and a boss fight; is the damage share right?
+- [x] Owner, on the phone: Spawn → Level 1/10/25 with the starter, and a boss fight; is the damage share right? (played 2026-10-26; the notes are in 8.7)
 
 #### 5.4 Drops and pickups
 ✅ 2026-10-26.
