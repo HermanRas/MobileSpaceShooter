@@ -27,6 +27,13 @@ func _ready() -> void:
 	hangar.pressed.connect(func() -> void: Router.goto("res://scenes/hangar/hangar.tscn"))
 	column.add_child(hangar)
 
+	if OS.is_debug_build():
+		var stress := Button.new()
+		stress.text = "Shot stress test"
+		stress.custom_minimum_size = Vector2(260, 56)
+		stress.pressed.connect(func() -> void: Router.goto("res://scenes/debug/shot_stress.tscn"))
+		column.add_child(stress)
+
 
 func _label(text: String, size: int) -> Label:
 	var label := Label.new()

@@ -146,6 +146,11 @@ func _step_guns() -> void:
 	Input.action_release(&"fire")
 	_check(fired[0] >= 3, "FIRE fires the manual nose gun (%d)" % fired[0])
 	_check(health.call(ship) == ours_before, "not one shot touched our own ship")
+	sandbox._level_button.pressed.emit()
+	await _physics_frames(2)
+	_check(ship.guns.guns[0].level == 10 and sandbox.weapons.gunnery.layout == ship.guns
+			and ship.guns.guns[0].spread < WeaponLib.spread_for(ship.guns.guns[0].stats, 1),
+			"the Guns button levels the guns to L10, and they tighten up")
 
 	# Turn so the target is off the right wing: the swivels can't reach it; both turrets can, the
 	# left one over the hull.

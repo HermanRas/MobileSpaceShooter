@@ -134,7 +134,7 @@ static func _turn(gun: GunLayout.Gun, from: float, to: float, delta: float) -> f
 func _shot(index: int, gun: GunLayout.Gun, pivot: Vector2, ship_rotation: float, ship_vel: Vector2) -> Dictionary:
 	fired[index] += 1
 	var barrel := Vector2.from_angle(angles[index] + ship_rotation)
-	var spread := float(gun.stats["spread"])
+	var spread := gun.spread
 	var heading := Vector2.from_angle(angles[index] + ship_rotation + rng.randf_range(-spread, spread))
 	var speed := float(gun.stats["speed_u"])
 	return {

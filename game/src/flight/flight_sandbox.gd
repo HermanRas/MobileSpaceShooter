@@ -54,6 +54,9 @@ var _sandbox: Dictionary
 ## Which ship _picked is on.
 var _picked_ship: ShipBody
 var _last_hit := ""
+## The level the player's guns are at (the Guns button steps through `gun_levels`).
+var gun_level := 1
+var _level_button := Button.new()
 
 
 ## Spawns `bp` (already validated) at the origin, and the practice target ahead of it.
@@ -89,6 +92,9 @@ func open(bp: Blueprint, placement: Placement) -> void:
 func _spawn_player() -> void:
 	var started := Time.get_ticks_usec()
 	ship = ShipBody.create(_bp, _placement)
+	if gun_level != ship.gun_level:
+		ship.gun_level = gun_level
+		ship.build(_bp, _placement)
 	last_spawn_usec = Time.get_ticks_usec() - started
 	ship.enable_damage(damage_table)
 	_world.add_child(ship)
@@ -310,10 +316,28 @@ func _build_ui() -> void:
 	settings.position.y += 64
 	settings.pressed.connect(_open_controls_panel.bind(true))
 	ui.add_child(settings)
+	_level_button.text = "Guns L%d" % gun_level
+	_level_button.size = Vector2(132, 56)
+	_level_button.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT, Control.PRESET_MODE_KEEP_SIZE, 16)
+	_level_button.position.y += 128
+	_level_button.pressed.connect(_next_gun_level)
+	ui.add_child(_level_button)
 	_controls_panel = ControlsPanel.new()
 	_controls_panel.visible = false
 	_controls_panel.closed.connect(_open_controls_panel.bind(false))
 	ui.add_child(_controls_panel)
+
+
+## Steps the player's guns to the next test level (a stand-in for Creative's level slider, 7.x),
+## so accuracy by level can be felt before guns are items (4.8).
+func _next_gun_level() -> void:
+	var levels: Array = (_sandbox.get("gun_levels", [1, 10, 100, 999]) as Array).map(func(v: Variant) -> int: return int(v))
+	gun_level = levels[(levels.find(gun_level) + 1) % levels.size()]
+	_level_button.text = "Guns L%d" % gun_level
+	if ship != null:
+		ship.gun_level = gun_level
+		ship.guns = GunLayout.compute(ship.blueprint, ship.placement, gun_level)
+		weapons.gunnery.set_layout(ship.guns)
 
 
 func _open_controls_panel(open: bool) -> void:

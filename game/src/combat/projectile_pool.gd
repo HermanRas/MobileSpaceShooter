@@ -19,6 +19,9 @@ const LOOK_ID := &"vis.fx.projectiles"
 var count := 0
 ## Shots dropped because the pool was full (4.4 watches this).
 var dropped := 0
+## Microseconds the last physics step (moves and rays) and the last draw update took.
+var step_usec := 0
+var draw_usec := 0
 
 var _pos := PackedVector2Array()  # pixels
 var _vel := PackedVector2Array()  # pixels per second
@@ -86,6 +89,7 @@ func clear() -> void:
 
 
 func _physics_process(delta: float) -> void:
+	var started := Time.get_ticks_usec()
 	var space := get_world_2d().direct_space_state
 	var i := 0
 	while i < count:
@@ -111,9 +115,11 @@ func _physics_process(delta: float) -> void:
 			_remove(i)
 			continue
 		i += 1
+	step_usec = Time.get_ticks_usec() - started
 
 
 func _process(_delta: float) -> void:
+	var started := Time.get_ticks_usec()
 	var multimesh := _view.multimesh
 	multimesh.visible_instance_count = count
 	for i in count:
@@ -124,6 +130,7 @@ func _process(_delta: float) -> void:
 		multimesh.set_instance_transform_2d(i, Transform2D(along * length, along.orthogonal() * float(look["width"]),
 				_pos[i] - along * length * 0.5))
 		multimesh.set_instance_color(i, look["color"])
+	draw_usec = Time.get_ticks_usec() - started
 
 
 ## Swap-remove: the last live shot takes slot `i`.

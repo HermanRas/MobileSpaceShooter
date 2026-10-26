@@ -12,6 +12,8 @@ const NUMBERS := ["damage", "rate", "speed_u", "range_u", "edge_u", "length_u", 
 
 ## A gun fires once its barrel is within this of its aim (radians).
 var fire_within := deg_to_rad(3.0)
+## The top gun level; a gun's spread narrows from L1 to here.
+var max_level := 999
 var errors: PackedStringArray = []
 
 var _mounts: Dictionary = {}  # mount type -> read-only {"name", "face", "arc", "turn_rate", "modes"}
@@ -21,6 +23,7 @@ var _weapons: Dictionary = {}  # weapon id -> read-only def
 static func from_table(table: Dictionary) -> WeaponLib:
 	var lib := WeaponLib.new()
 	lib.fire_within = deg_to_rad(float(table.get("aim", {}).get("fire_within_deg", 3.0)))
+	lib.max_level = maxi(int(table.get("levels", {}).get("max", 999)), 2)
 	for mount_type: String in table.get("mounts", {}):
 		var raw: Dictionary = table["mounts"][mount_type]
 		if not MOUNT_TYPES.has(StringName(mount_type)):
@@ -52,10 +55,16 @@ static func from_table(table: Dictionary) -> WeaponLib:
 			if typeof(raw.get(key)) not in [TYPE_INT, TYPE_FLOAT] or float(raw[key]) <= 0.0:
 				lib.errors.append("%s: %s must be > 0" % [weapon_id, key])
 				ok = false
-		for key: String in ["spread_deg", "pierce"]:
-			if typeof(raw.get(key)) not in [TYPE_INT, TYPE_FLOAT] or float(raw[key]) < 0.0:
-				lib.errors.append("%s: %s must be >= 0" % [weapon_id, key])
-				ok = false
+		if typeof(raw.get("pierce")) not in [TYPE_INT, TYPE_FLOAT] or float(raw["pierce"]) < 0.0:
+			lib.errors.append("%s: pierce must be >= 0" % weapon_id)
+			ok = false
+		var spread: Variant = raw.get("spread_deg")
+		if typeof(spread) in [TYPE_INT, TYPE_FLOAT]:
+			spread = [spread, spread]
+		if typeof(spread) != TYPE_ARRAY or spread.size() != 2 or spread.any(func(v: Variant) -> bool:
+				return typeof(v) not in [TYPE_INT, TYPE_FLOAT] or float(v) < 0.0) or float(spread[1]) > float(spread[0]):
+			lib.errors.append("%s: spread_deg must be [at L1, at the top level], both >= 0, narrowing" % weapon_id)
+			ok = false
 		var mounts: Array[StringName] = []
 		for mount: Variant in raw.get("mounts", []):
 			if lib._mounts.has(StringName(str(mount))):
@@ -69,7 +78,8 @@ static func from_table(table: Dictionary) -> WeaponLib:
 		if not ok:
 			continue
 		var def := {"name": str(raw.get("name", weapon_id)), "damage_type": StringName(raw["damage_type"]), "mounts": mounts,
-				"spread": deg_to_rad(float(raw["spread_deg"])), "pierce": float(raw["pierce"])}
+				"spread": deg_to_rad(float(spread[0])), "spread_best": deg_to_rad(float(spread[1])),
+				"max_level": lib.max_level, "pierce": float(raw["pierce"])}
 		for key: String in NUMBERS:
 			def[key] = float(raw[key])
 		def.make_read_only()
@@ -90,8 +100,8 @@ func has_weapon(weapon_id: StringName) -> bool:
 
 ## One gun's numbers, or {} if unknown. Read-only.
 ##   name, damage_type, mounts (allowed mount types), damage (per shot), rate (shots/s),
-##   speed_u, range_u, spread (rad, either side), pierce (0-1), edge_u, length_u,
-##   turret_radius_u, mass, price_gc
+##   speed_u, range_u, spread and spread_best (rad either side, at L1 and at max_level),
+##   pierce (0-1), edge_u, length_u, turret_radius_u, mass, price_gc
 func weapon(weapon_id: StringName) -> Dictionary:
 	return _weapons.get(weapon_id, {})
 
@@ -110,6 +120,13 @@ func allows(weapon_id: StringName, type: StringName) -> bool:
 func mode_for(type: StringName, wanted: StringName) -> StringName:
 	var modes: Array = mount_type(type).get("modes", [])
 	return wanted if modes.has(wanted) or modes.is_empty() else modes[0]
+
+
+## A gun's scatter (rad either side of its aim) at `level`: from `spread` at L1 to `spread_best`
+## at max_level, on a log curve, so the early levels count the most.
+static func spread_for(stats: Dictionary, level: int) -> float:
+	var share := clampf(log(float(maxi(level, 1))) / log(float(stats["max_level"])), 0.0, 1.0)
+	return lerpf(stats["spread"], stats["spread_best"], share)
 
 
 ## &"gatling_single" from "weapon.gatling_single"; &"" if `part` isn't a weapon.

@@ -241,6 +241,9 @@ Alloy + Tech cost. It keeps its XP `[D8]`.
   your guns by the damage each one dealt to that enemy.
 - Level scales the gun's main stats. The starting curve is +1% per level, so L999 is about ×11,
   and the curve is tuned in data.
+- **Level brings accuracy** (owner, 2026-10-26): a gun's scatter narrows from `spread_deg[0]` at
+  L1 to `spread_deg[1]` at the top level on a log curve, so the early levels count most. The
+  gatling goes from ±5° to ±0.5° (±2° at L100).
 - A gun keeps its XP when an enemy drops it, when it's uninstalled in the hangar, and when it's
   refitted between mounts.
 - Enemy guns are around **10 × the encounter level** (§4.8), so the guns you find get better
@@ -926,7 +929,10 @@ has one gun of each mount type. Tested in `tests/model/test_weapons.gd` (23 test
 flies the gunboat: auto guns hit the barge alone, the manual nose gun waits for FIRE, no shot
 touches our ship, and with the target abeam the swivels stop while both turrets fire. ⚠️ Lead from the
 **muzzle**, not the pivot: half a unit of barrel was enough to miss.
-- [ ] Owner, on the phone: mount guns in the hangar, fly the gunboat, FIRE
+Accuracy by level (§4.4) came in from the owner's first test: until guns are items (4.8) every
+gun on a ship shares `ShipBody.gun_level`, and the sandbox's **Guns L1** button steps it through
+`gun_levels` in `flight.json`.
+- [ ] Owner, on the phone: mount guns in the hangar, fly the gunboat, FIRE, try Guns L1 → L999
 
 #### 4.4 Projectile pool
 - [x] `combat/projectile_pool.gd`: struct-of-arrays, `MultiMeshInstance2D` draw, `intersect_ray` hits per tick (pulled into 4.3; 1024 slots, counts `dropped`)
@@ -949,7 +955,7 @@ touches our ship, and with the target abeam the swivels stop while both turrets 
 - **Done when:** in 2-stick mode the fire button fires only the active manual weapon, and auto weapons keep firing on their own.
 
 #### 4.8 Gun XP and levels `[D8]`
-- [ ] `model/weapon_xp.gd`: the L1–L999 XP curve and the per-level stat scaling, from `data/weapon_xp.json`
+- [ ] `model/weapon_xp.gd`: the L1–L999 XP curve and the per-level stat scaling, from `data/weapon_xp.json` (move `weapons.json` → `levels.max` there; spread already scales, `WeaponLib.spread_for`)
 - [ ] Guns as items (type, mount, XP); a kill's XP split between guns by the damage each dealt (§4.4)
 - [ ] Hangar refit between a gun's allowed mounts for Alloy + Tech, keeping its XP
 - [ ] Tests: the curve rises monotonically and reaches L999; the split adds up to the kill's XP; uninstalling and refitting keep XP

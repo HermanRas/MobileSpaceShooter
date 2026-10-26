@@ -36,6 +36,8 @@ var stats: ShipStats
 var envelope: ThrustEnvelope
 ## Where the guns are and where they can shoot (4.3); the WeaponController fires them.
 var guns: GunLayout
+## The level every gun is at, until guns are items with their own (4.8).
+var gun_level := 1
 ## Which side it's on (0 is the player's). Shots only hit the other teams.
 var team := 0:
 	set(value):
@@ -102,7 +104,7 @@ func build(bp: Blueprint, placement_rules: Placement) -> void:
 
 	stats = ShipStats.compute(bp, placement)
 	envelope = ThrustEnvelope.compute(bp, placement, stats)
-	guns = GunLayout.compute(bp, placement)
+	guns = GunLayout.compute(bp, placement, gun_level)
 	mass = maxf(stats.mass, 0.001)
 	center_of_mass = stats.center_of_mass * PX
 	inertia = maxf(stats.inertia * PX * PX, 0.001)

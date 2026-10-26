@@ -22,6 +22,14 @@ func _ready() -> void:
 	_log = FileAccess.open(LOG_PATH, FileAccess.WRITE)
 
 
+## Writes a line of the caller's own to the log (and stdout), e.g. a stress test's summary.
+func log_line(text: String) -> void:
+	print(text)
+	if _log:
+		_log.store_line(Time.get_time_string_from_system() + " " + text)
+		_log.flush()
+
+
 func _process(delta: float) -> void:
 	_elapsed += delta
 	# Wall clock, not delta: Godot smooths delta, which hid a 29 ms hangar refresh as 16.7 ms.

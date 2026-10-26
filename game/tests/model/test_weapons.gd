@@ -32,6 +32,31 @@ func test_the_table_loads_clean() -> void:
 	assert_eq(lib.mode_for(&"swivel", &"manual"), &"manual")
 
 
+func test_accuracy_comes_with_level() -> void:
+	var stats := lib.weapon(&"gatling_single")
+	assert_almost_eq(WeaponLib.spread_for(stats, 1), deg_to_rad(5.0), 0.0001, "L1 sprays")
+	assert_almost_eq(WeaponLib.spread_for(stats, lib.max_level), deg_to_rad(0.5), 0.0001, "the top level is near-perfect")
+	var last := INF
+	for level in [1, 2, 10, 50, 100, 400, 999]:
+		var spread := WeaponLib.spread_for(stats, level)
+		assert_true(spread < last or level == 1, "L%d is tighter than the level before (%.2f°)" % [level, rad_to_deg(spread)])
+		last = spread
+	assert_true(WeaponLib.spread_for(stats, 100) < deg_to_rad(2.75), "a log curve: the early levels count the most")
+
+
+func test_a_low_level_gun_scatters_and_a_high_one_doesnt() -> void:
+	for row: Array in [[1, 5.0], [999, 0.5]]:
+		var layout := GunLayout.compute(_nose_gun(&"fixed", &"manual"), placement, row[0])
+		var gunnery := Gunnery.create(layout, lib)
+		gunnery.rng.seed = 7
+		var widest := 0.0
+		for i in 120:
+			for shot in gunnery.step(DT, Vector2.ZERO, 0.0, Vector2.ZERO, [], true):
+				widest = maxf(widest, absf(rad_to_deg((shot["vel"] as Vector2).angle())))
+		assert_true(widest <= row[1] + 0.001 and widest > row[1] * 0.7,
+				"L%d strays up to %.1f° (limit %.1f°)" % [row[0], widest, row[1]])
+
+
 func test_every_gun_deals_a_known_damage_type() -> void:
 	var damage := DamageTable.from_table(Data.table(&"damage_types"))
 	for weapon_id in lib.weapon_ids():
@@ -45,6 +70,8 @@ func test_bad_rows_are_reported_and_left_out() -> void:
 	assert_true(bad.errors.size() > 0)
 	assert_false(bad.has_weapon(&"broken"))
 	assert_true(bad.has_weapon(&"gatling_single"), "the good rows still load")
+	table["weapons"]["gatling_single"]["spread_deg"] = [1, 4]
+	assert_false(WeaponLib.from_table(table).has_weapon(&"gatling_single"), "spread can't widen with level")
 
 
 # ── mounting ──────────────────────────────────────────────────────────────────
@@ -286,7 +313,7 @@ func test_a_gun_keeps_its_aim_when_the_ship_loses_other_tiles() -> void:
 func _gunnery(bp: Blueprint) -> Gunnery:
 	var table: Dictionary = Data.table(&"weapons").duplicate(true)
 	for weapon_id: String in table["weapons"]:
-		table["weapons"][weapon_id]["spread_deg"] = 0
+		table["weapons"][weapon_id]["spread_deg"] = [0, 0]
 	placement.weapons = WeaponLib.from_table(table)
 	return Gunnery.create(GunLayout.compute(bp, placement), placement.weapons)
 
