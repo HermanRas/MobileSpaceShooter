@@ -1,6 +1,18 @@
 class_name MenuKit
 extends RefCounted
-## The menus' placeholder chrome (PLAN.md 6.1), shared by the main menu and its screens.
+## The menus' chrome (PLAN.md 6.1), shared by the main menu and its screens.
+
+## The title face (§6.4): Orbitron, OFL, at its heaviest weight.
+const TITLE_FONT := preload("res://assets/fonts/Orbitron.ttf")
+const TITLE_WEIGHT := 900
+
+
+static func title_font() -> Font:
+	var font := FontVariation.new()
+	font.base_font = TITLE_FONT
+	font.variation_opentype = {TextServerManager.get_primary_interface().name_to_tag("wght"): TITLE_WEIGHT}
+	return font
+
 
 ## A big tile: a title over a line of text. Disabled and dimmed when `action` is empty.
 static func tile(title: String, note: String, action: Callable, node_name: String, tile_size: Vector2,

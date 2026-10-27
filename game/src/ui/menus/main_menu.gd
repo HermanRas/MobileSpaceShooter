@@ -21,7 +21,10 @@ const SETTINGS := "res://scenes/menu/settings.tscn"
 const CREDITS := "res://scenes/menu/credits.tscn"
 const CHARACTER := "res://scenes/menu/character.tscn"
 ## Heading sizes: the title (H1), the pilot's name on the card (H3, ProfileCard), the modes (H4).
-const TITLE_SIZE := 72
+const TITLE_SIZE := 64
+const TITLE_GOLD := Color("#f3cd37")
+## The title plate's height: the menu is tall already (the card and the mode tiles under it).
+const TITLE_PLATE_H := 124.0
 const MODE_TITLE_SIZE := 32
 const MODE_SIZE := Vector2(250, 120)
 const MODE_GAP := 16
@@ -42,7 +45,7 @@ func _ready() -> void:
 	column.add_theme_constant_override(&"separation", 14)
 	center.add_child(column)
 
-	column.add_child(MenuKit.label("MSS", TITLE_SIZE))
+	column.add_child(_title())
 	column.add_child(MenuKit.label("Mobile Space Shooter  v%s" % ProjectSettings.get_setting("application/config/version"),
 			20, Color(1, 1, 1, 0.6)))
 	if not Data.errors.is_empty():
@@ -93,6 +96,29 @@ func _wave_time() -> void:
 func _enter(profile_id: String) -> void:
 	Profiles.active_id = profile_id
 	Router.goto(HANGAR)
+
+
+## "MSS" in the title face, on the gold title plate (A.11) when its art is in.
+func _title() -> Control:
+	var label := MenuKit.label("MSS", TITLE_SIZE, TITLE_GOLD)
+	label.name = "Title"
+	label.add_theme_font_override(&"font", MenuKit.title_font())
+	label.add_theme_color_override(&"font_outline_color", Color("#3a1606"))
+	label.add_theme_constant_override(&"outline_size", 10)
+	if not Assets.has_real_art(&"vis.ui.title_plate"):
+		return label
+	var plate := TextureRect.new()
+	plate.texture = Assets.tex(&"vis.ui.title_plate")
+	plate.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	plate.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	var art := Vector2(plate.texture.get_size())
+	plate.custom_minimum_size = Vector2(art.x / art.y, 1.0) * TITLE_PLATE_H
+	label.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	plate.add_child(label)
+	var center := CenterContainer.new()
+	center.add_child(plate)
+	return center
 
 
 func _row(parent: Control, gap: int) -> HBoxContainer:

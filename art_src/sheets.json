@@ -272,6 +272,298 @@
 				"3": ["npc_ally_sad", "portrait", {"inset": 4, "px": 512}],
 				"4": ["npc_ally_angry", "portrait", {"inset": 4, "px": 512}]
 			}
+		},
+		"icons_map_2": {
+			"file": "icons/icons_map_2.jpeg",
+			"grid": [4, 4],
+			"_doc": "Generated 2026-10-27, run 2 of 3: on black like icons_main (run 1 came back on white, run 3 on square plates).",
+			"cells": {
+				"1": ["map_asteroids", "sprite"],
+				"2": ["map_beacon", "sprite"],
+				"3": ["map_station", "sprite", {"holes": true}],
+				"4": ["map_story", "sprite", {"holes": true}],
+				"5": ["map_hangar", "sprite"],
+				"6": ["map_shop", "sprite"],
+				"7": ["map_bar", "sprite", {"holes": true}],
+				"8": ["map_danger", "sprite"],
+				"9": ["map_job_kill", "sprite", {"holes": true}],
+				"10": ["map_job_protect", "sprite"],
+				"11": ["map_job_mine", "sprite"],
+				"12": ["map_job_hold", "sprite"],
+				"13": ["map_done", "sprite"],
+				"14": ["map_here", "sprite", {"holes": true}],
+				"15": ["map_compass", "sprite", {"holes": true}]
+			}
+		},
+		"world_asteroids_1": {
+			"file": "parts/world_asteroids_1.jpeg",
+			"grid": [4, 4],
+			"_doc": "Generated 2026-10-27, run 1 of 3: the clearest L-M-S rows (run 2's rows run small to large).",
+			"cells": {
+				"1": ["asteroid_stone_l", "sprite", {"key": "green", "px": 256}],
+				"2": ["asteroid_stone_m", "sprite", {"key": "green", "px": 256}],
+				"3": ["asteroid_stone_s", "sprite", {"key": "green", "px": 256}],
+				"4": ["asteroid_stone_frag", "sprite", {"key": "green", "px": 256}],
+				"5": ["asteroid_metal_l", "sprite", {"key": "green", "px": 256}],
+				"6": ["asteroid_metal_m", "sprite", {"key": "green", "px": 256}],
+				"7": ["asteroid_metal_s", "sprite", {"key": "green", "px": 256}],
+				"8": ["asteroid_metal_frag", "sprite", {"key": "green", "px": 256}],
+				"9": ["asteroid_crystal_l", "sprite", {"key": "green", "px": 256}],
+				"10": ["asteroid_crystal_m", "sprite", {"key": "green", "px": 256}],
+				"11": ["asteroid_crystal_s", "sprite", {"key": "green", "px": 256}],
+				"12": ["asteroid_crystal_frag", "sprite", {"key": "green", "px": 256}],
+				"13": ["asteroid_stone_frag2", "sprite", {"key": "green", "px": 256}],
+				"14": ["asteroid_metal_frag2", "sprite", {"key": "green", "px": 256}],
+				"15": ["asteroid_crystal_frag2", "sprite", {"key": "green", "px": 256}]
+			}
+		},
+		"arena_nebula_1_1": {
+			"file": "backgrounds/arena_nebula_1_1.jpeg",
+			"grid": [1, 1],
+			"_doc": "Generated 2026-10-27, nebula 1, run 1 of 2.",
+			"cells": {
+				"1": ["nebula_1", "texture", {"tile": "xy", "w": 1024, "band": 64}]
+			}
+		},
+		"arena_nebula_2_1": {
+			"file": "backgrounds/arena_nebula_2_1.jpeg",
+			"grid": [1, 1],
+			"_doc": "Generated 2026-10-27, nebula 2, run 1 of 2.",
+			"cells": {
+				"1": ["nebula_2", "texture", {"tile": "xy", "w": 1024, "band": 64}]
+			}
+		},
+		"arena_nebula_3_1": {
+			"file": "backgrounds/arena_nebula_3_1.jpeg",
+			"grid": [1, 1],
+			"_doc": "Generated 2026-10-27, nebula 3, run 1 of 2.",
+			"cells": {
+				"1": ["nebula_3", "texture", {"tile": "xy", "w": 1024, "band": 64}]
+			}
+		},
+		"arena_nebula_4_2": {
+			"file": "backgrounds/arena_nebula_4_2.jpeg",
+			"grid": [1, 1],
+			"_doc": "Generated 2026-10-27, nebula 4, run 2 of 2.",
+			"cells": {
+				"1": ["nebula_4", "texture", {"tile": "xy", "w": 1024, "band": 64}]
+			}
+		},
+		"arena_nebula_5_1": {
+			"file": "backgrounds/arena_nebula_5_1.jpeg",
+			"grid": [1, 1],
+			"_doc": "Generated 2026-10-27, nebula 5, run 1 of 2.",
+			"cells": {
+				"1": ["nebula_5", "texture", {"tile": "xy", "w": 1024, "band": 64}]
+			}
+		},
+		"station_backdrop_6": {
+			"file": "stations/station_backdrop_6.jpeg",
+			"grid": [1, 1],
+			"_doc": "Generated 2026-10-27: the mining backdrop. 8, 9, 10 and 12 have stations painted in (10 a Death Star lookalike); 2, 3 and 11 are spares.",
+			"cells": {
+				"1": ["backdrop_mining", "texture", {"tile": "x", "band": 96}]
+			}
+		},
+		"station_backdrop_7": {
+			"file": "stations/station_backdrop_7.jpeg",
+			"grid": [1, 1],
+			"_doc": "Generated 2026-10-27: the military backdrop. 8, 9, 10 and 12 have stations painted in (10 a Death Star lookalike); 2, 3 and 11 are spares.",
+			"cells": {
+				"1": ["backdrop_military", "texture", {"tile": "x", "band": 96}]
+			}
+		},
+		"station_backdrop_5": {
+			"file": "stations/station_backdrop_5.jpeg",
+			"grid": [1, 1],
+			"_doc": "Generated 2026-10-27: the trade backdrop. 8, 9, 10 and 12 have stations painted in (10 a Death Star lookalike); 2, 3 and 11 are spares.",
+			"cells": {
+				"1": ["backdrop_trade", "texture", {"tile": "x", "band": 96}]
+			}
+		},
+		"station_backdrop_4": {
+			"file": "stations/station_backdrop_4.jpeg",
+			"grid": [1, 1],
+			"_doc": "Generated 2026-10-27: the frontier backdrop. 8, 9, 10 and 12 have stations painted in (10 a Death Star lookalike); 2, 3 and 11 are spares.",
+			"cells": {
+				"1": ["backdrop_frontier", "texture", {"tile": "x", "band": 96}]
+			}
+		},
+		"station_backdrop_1": {
+			"file": "stations/station_backdrop_1.jpeg",
+			"grid": [1, 1],
+			"_doc": "Generated 2026-10-27: the research backdrop. 8, 9, 10 and 12 have stations painted in (10 a Death Star lookalike); 2, 3 and 11 are spares.",
+			"cells": {
+				"1": ["backdrop_research", "texture", {"tile": "x", "band": 96}]
+			}
+		},
+		"station_exterior_trade_2": {
+			"file": "stations/station_exterior_trade_2.jpeg",
+			"grid": [1, 1],
+			"_doc": "Generated 2026-10-27, run 2 of 2.",
+			"cells": {
+				"1": ["exterior_trade", "chrome", {"key": "green", "w": 1200, "holes": true}]
+			}
+		},
+		"station_exterior_mining_1": {
+			"file": "stations/station_exterior_mining_1.jpeg",
+			"grid": [1, 1],
+			"_doc": "Generated 2026-10-27, run 1 of 2.",
+			"cells": {
+				"1": ["exterior_mining", "chrome", {"key": "green", "w": 1200, "holes": true}]
+			}
+		},
+		"station_exterior_military_2": {
+			"file": "stations/station_exterior_military_2.jpeg",
+			"grid": [1, 1],
+			"_doc": "Generated 2026-10-27, run 2 of 2.",
+			"cells": {
+				"1": ["exterior_military", "chrome", {"key": "green", "w": 1200, "holes": true}]
+			}
+		},
+		"station_exterior_frontier_1": {
+			"file": "stations/station_exterior_frontier_1.jpeg",
+			"grid": [1, 1],
+			"_doc": "Generated 2026-10-27, run 1 of 2.",
+			"cells": {
+				"1": ["exterior_frontier", "chrome", {"key": "green", "w": 1200, "holes": true}]
+			}
+		},
+		"station_exterior_research_2": {
+			"file": "stations/station_exterior_research_2.jpeg",
+			"grid": [1, 1],
+			"_doc": "Generated 2026-10-27, run 2 of 2.",
+			"cells": {
+				"1": ["exterior_research", "chrome", {"key": "green", "w": 1200, "holes": true}]
+			}
+		},
+		"station_room_frontier_bar_2": {
+			"file": "stations/station_room_frontier_bar_2.jpeg",
+			"grid": [1, 1],
+			"_doc": "Generated 2026-10-27, run 2 of 2.",
+			"cells": {
+				"1": ["room_bar_frontier", "texture", {}]
+			}
+		},
+		"station_room_frontier_shop_1": {
+			"file": "stations/station_room_frontier_shop_1.jpeg",
+			"grid": [1, 1],
+			"_doc": "Generated 2026-10-27, run 1 of 2.",
+			"cells": {
+				"1": ["room_shop_frontier", "texture", {}]
+			}
+		},
+		"station_room_frontier_hangar_2": {
+			"file": "stations/station_room_frontier_hangar_2.jpeg",
+			"grid": [1, 1],
+			"_doc": "Generated 2026-10-27, run 2 of 2.",
+			"cells": {
+				"1": ["room_hangar_frontier", "texture", {}]
+			}
+		},
+		"station_room_military_bar_2": {
+			"file": "stations/station_room_military_bar_2.jpeg",
+			"grid": [1, 1],
+			"_doc": "Generated 2026-10-27, run 2 of 2.",
+			"cells": {
+				"1": ["room_bar_military", "texture", {}]
+			}
+		},
+		"station_room_military_shop_2": {
+			"file": "stations/station_room_military_shop_2.jpeg",
+			"grid": [1, 1],
+			"_doc": "Generated 2026-10-27, run 2 of 2.",
+			"cells": {
+				"1": ["room_shop_military", "texture", {}]
+			}
+		},
+		"station_room_military_hangar_1": {
+			"file": "stations/station_room_military_hangar_1.jpeg",
+			"grid": [1, 1],
+			"_doc": "Generated 2026-10-27, run 1 of 2.",
+			"cells": {
+				"1": ["room_hangar_military", "texture", {}]
+			}
+		},
+		"station_room_mining_bar_1": {
+			"file": "stations/station_room_mining_bar_1.jpeg",
+			"grid": [1, 1],
+			"_doc": "Generated 2026-10-27, run 1 of 2.",
+			"cells": {
+				"1": ["room_bar_mining", "texture", {}]
+			}
+		},
+		"station_room_mining_shop_1": {
+			"file": "stations/station_room_mining_shop_1.jpeg",
+			"grid": [1, 1],
+			"_doc": "Generated 2026-10-27, run 1 of 2.",
+			"cells": {
+				"1": ["room_shop_mining", "texture", {}]
+			}
+		},
+		"station_room_mining_hangar_2": {
+			"file": "stations/station_room_mining_hangar_2.jpeg",
+			"grid": [1, 1],
+			"_doc": "Generated 2026-10-27, run 2 of 2.",
+			"cells": {
+				"1": ["room_hangar_mining", "texture", {}]
+			}
+		},
+		"station_room_research_bar_2": {
+			"file": "stations/station_room_research_bar_2.jpeg",
+			"grid": [1, 1],
+			"_doc": "Generated 2026-10-27, run 2 of 2.",
+			"cells": {
+				"1": ["room_bar_research", "texture", {}]
+			}
+		},
+		"station_room_research_shop_2": {
+			"file": "stations/station_room_research_shop_2.jpeg",
+			"grid": [1, 1],
+			"_doc": "Generated 2026-10-27, run 2 of 2.",
+			"cells": {
+				"1": ["room_shop_research", "texture", {}]
+			}
+		},
+		"station_room_research_hangar_2": {
+			"file": "stations/station_room_research_hangar_2.jpeg",
+			"grid": [1, 1],
+			"_doc": "Generated 2026-10-27, run 2 of 2.",
+			"cells": {
+				"1": ["room_hangar_research", "texture", {}]
+			}
+		},
+		"station_room_trade_bar_1": {
+			"file": "stations/station_room_trade_bar_1.jpeg",
+			"grid": [1, 1],
+			"_doc": "Generated 2026-10-27, run 1 of 2.",
+			"cells": {
+				"1": ["room_bar_trade", "texture", {}]
+			}
+		},
+		"station_room_trade_shop_2": {
+			"file": "stations/station_room_trade_shop_2.jpeg",
+			"grid": [1, 1],
+			"_doc": "Generated 2026-10-27, run 2 of 2.",
+			"cells": {
+				"1": ["room_shop_trade", "texture", {}]
+			}
+		},
+		"station_room_trade_hangar_2": {
+			"file": "stations/station_room_trade_hangar_2.jpeg",
+			"grid": [1, 1],
+			"_doc": "Generated 2026-10-27, run 2 of 2.",
+			"cells": {
+				"1": ["room_hangar_trade", "texture", {}]
+			}
+		},
+		"title_plate_2": {
+			"file": "ui/title_plate_2.jpeg",
+			"grid": [1, 1],
+			"_doc": "Generated 2026-10-27, run 2 of 3: riveted brackets as asked, symmetric.",
+			"cells": {
+				"1": ["title_plate", "chrome", {"w": 1100}]
+			}
 		}
 	},
 	"atlases": {
@@ -325,7 +617,8 @@
 			"files": ["ui_panel", "ui_header", "ui_frame", "btn_round", "bar_track", "bar_fill",
 				"btn_gold_normal", "btn_gold_pressed", "btn_gold_disabled", "btn_gold_selected",
 				"btn_go_normal", "btn_go_pressed", "btn_go_disabled", "btn_go_selected",
-				"btn_danger_normal", "btn_danger_pressed", "btn_danger_disabled", "btn_danger_selected"]
+				"btn_danger_normal", "btn_danger_pressed", "btn_danger_disabled", "btn_danger_selected",
+				"title_plate"]
 		},
 		"portraits": {
 			"out": "game/assets/portraits",
@@ -346,6 +639,43 @@
 				"male_suit_idle_mask", "male_suit_happy_mask", "male_suit_sad_mask", "male_suit_angry_mask",
 				"female_jacket_idle_mask", "female_jacket_happy_mask", "female_jacket_sad_mask", "female_jacket_angry_mask",
 				"female_suit_idle_mask", "female_suit_happy_mask", "female_suit_sad_mask", "female_suit_angry_mask"]
+		},
+		"map_icons": {
+			"out": "game/assets/icons",
+			"layout": "files",
+			"_doc": "A.6's map icons (visuals.json vis.icon.map_<id>), one 128 px RGBA PNG each, for the world map (9.3).",
+			"files": ["map_asteroids", "map_beacon", "map_station", "map_story",
+				"map_hangar", "map_shop", "map_bar", "map_danger",
+				"map_job_kill", "map_job_protect", "map_job_mine", "map_job_hold",
+				"map_done", "map_here", "map_compass"]
+		},
+		"world": {
+			"out": "game/assets/world",
+			"layout": "files",
+			"_doc": "A.10's asteroids (visuals.json vis.world.<id>), one 256 px RGBA PNG each, fitted to the square; the game sizes them.",
+			"files": ["asteroid_stone_l", "asteroid_stone_m", "asteroid_stone_s", "asteroid_stone_frag",
+				"asteroid_metal_l", "asteroid_metal_m", "asteroid_metal_s", "asteroid_metal_frag",
+				"asteroid_crystal_l", "asteroid_crystal_m", "asteroid_crystal_s", "asteroid_crystal_frag",
+				"asteroid_stone_frag2", "asteroid_metal_frag2", "asteroid_crystal_frag2"]
+		},
+		"space": {
+			"out": "game/assets/space",
+			"layout": "files",
+			"_doc": "A.9's arena nebulae (visuals.json vis.space.nebula_<n>): 1024 px, seamless both ways, drawn by the starfield shader as its slowest layer.",
+			"files": ["nebula_1", "nebula_2", "nebula_3", "nebula_4",
+				"nebula_5"]
+		},
+		"stations": {
+			"out": "game/assets/stations",
+			"layout": "files",
+			"_doc": "A.8's station pictures (visuals.json vis.station.<id>): backdrops (seamless sideways), exteriors (cut off green) and rooms, for the station screen (11.2), which shifts their amber accent to the station's colour scheme.",
+			"files": ["backdrop_mining", "backdrop_military", "backdrop_trade", "backdrop_frontier",
+				"backdrop_research", "exterior_trade", "exterior_mining", "exterior_military",
+				"exterior_frontier", "exterior_research", "room_bar_frontier", "room_shop_frontier",
+				"room_hangar_frontier", "room_bar_military", "room_shop_military", "room_hangar_military",
+				"room_bar_mining", "room_shop_mining", "room_hangar_mining", "room_bar_research",
+				"room_shop_research", "room_hangar_research", "room_bar_trade", "room_shop_trade",
+				"room_hangar_trade"]
 		}
 	}
 }

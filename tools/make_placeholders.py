@@ -184,6 +184,27 @@ def main() -> None:
     Image.fromarray(np.zeros((ICON, ICON, 4), dtype=np.uint8), "RGBA").save(PORTRAIT_MASK_OUT)
     print(f"wrote {PORTRAIT_OUT.relative_to(PORTRAIT_OUT.parents[3])} and portrait_mask.png")
 
+    # A.8-A.10 stand-ins: an asteroid (a lumpy grey disc), a nebula (flat deep space, so the
+    # starfield adds nothing), and a station's backdrop (navy), exterior (a grey block) and room
+    # (dark teal).
+    c = ICON / 2 - 0.5
+    lump = 0.8 + 0.12 * np.cos(np.arctan2(iy - c, ix - c) * 5)
+    rock = np.zeros((ICON, ICON, 4), dtype=np.uint8)
+    rock[..., :3] = 122
+    rock[..., 3] = (np.clip((lump - np.hypot(ix - c, iy - c) / (ICON / 2)) * ICON / 2, 0, 1) * 255).astype(np.uint8)
+    flat = {"asteroid.png": rock}
+    for name, colour in [("nebula.png", (2, 11, 21)), ("station_backdrop.png", (6, 36, 72)),
+                         ("station_room.png", (31, 51, 50))]:
+        block = np.zeros((ICON, ICON, 4), dtype=np.uint8)
+        block[...] = colour + (255,)
+        flat[name] = block
+    station = np.zeros((ICON, ICON, 4), dtype=np.uint8)
+    station[ICON // 3:2 * ICON // 3, 4:-4] = (122, 131, 141, 255)
+    flat["station.png"] = station
+    for name, pixels in flat.items():
+        Image.fromarray(pixels, "RGBA").save(OUT.with_name(name))
+    print("wrote " + ", ".join(flat))
+
 
 if __name__ == "__main__":
     main()

@@ -47,6 +47,9 @@ its height is `h` px (or its width `w`). `inset` trims the cell window first, pa
 Gemini draws between cells; `crop` keeps a fraction [x0, y0, x1, y1] of the window (a bar's fill
 out of its track). The game draws them at half size, so they stay crisp on the phone.
 
+A texture (A.8's station backdrops and rooms, A.9's nebulae) is a whole colour picture, kept as
+it is but for its size, and with `tile` its wrap seams evened out like a material's.
+
 A portrait (A.7) is a painted character on chroma green, keyed and despilled like a green sprite,
 but it keeps its whole cell (past `inset`), scaled to `px`: the prompts pin where the head sits in
 the cell, so the game can crop the head with one rect per sheet, and the body runs off the
@@ -123,17 +126,21 @@ def content_box(lum: np.ndarray) -> tuple[int, int, int, int]:
             int(cols[-1]) + 1 - INSET_PX, int(rows[-1]) + 1 - INSET_PX)
 
 
-def even_edges(a: np.ndarray, band: int = EVEN_BAND_PX) -> np.ndarray:
+def even_edges(a: np.ndarray, band: int = EVEN_BAND_PX, x: bool = True, y: bool = True) -> np.ndarray:
     """Make opposite edges match, so the texture tiles: each edge pair meets at their mean,
-    and the correction fades out over `band` px."""
+    and the correction fades out over `band` px. Greyscale or colour (H x W x C); `x` and `y`
+    pick which pairs."""
     a = a.astype(np.float32).copy()
     w = (1.0 - np.arange(band, dtype=np.float32) / band) ** 2
-    d = (a[:, 0] - a[:, -1]) * 0.5            # per row
-    a[:, :band] -= d[:, None] * w[None, :]
-    a[:, -band:] += d[:, None] * w[::-1][None, :]
-    d = (a[0, :] - a[-1, :]) * 0.5            # per column
-    a[:band, :] -= w[:, None] * d[None, :]
-    a[-band:, :] += w[::-1][:, None] * d[None, :]
+    extra = (None,) * (a.ndim - 2)            # a colour channel axis rides along
+    if x:
+        d = (a[:, 0] - a[:, -1]) * 0.5        # per row
+        a[:, :band] -= d[:, None] * w[(None, slice(None)) + extra]
+        a[:, -band:] += d[:, None] * w[::-1][(None, slice(None)) + extra]
+    if y:
+        d = (a[0, :] - a[-1, :]) * 0.5        # per column
+        a[:band, :] -= w[(slice(None), None) + extra] * d[None, :]
+        a[-band:, :] += w[::-1][(slice(None), None) + extra] * d[None, :]
     return np.clip(a, 0, 255)
 
 
@@ -214,14 +221,16 @@ def cut_keyed(rgb: np.ndarray, size: int, base: np.ndarray, fill: float,
     return np.asarray(out).astype(np.float32)
 
 
-def key_green(rgb: np.ndarray) -> np.ndarray:
-    """Coverage (0..1) of the artwork on a chroma-green cell, ignoring a ruled border."""
+def key_green(rgb: np.ndarray, enclosed: bool = False) -> np.ndarray:
+    """Coverage (0..1) of the artwork on a chroma-green cell, ignoring a ruled border. With
+    `enclosed`, green shut in by the artwork goes too (between a station's modules), which is
+    safe wherever the art itself has no green."""
     r, g, b = rgb[..., 0], rgb[..., 1], rgb[..., 2]
     green = (g - np.maximum(r, b)) > GREEN_MARGIN
     # Gemini sometimes rules a thin dark grid line on the cell border: treat it as background.
     green[:INSET_PX, :] = green[-INSET_PX:, :] = True
     green[:, :INSET_PX] = green[:, -INSET_PX:] = True
-    return box_blur3((~fill_from_border(green)).astype(np.float32))
+    return box_blur3((~(green if enclosed else fill_from_border(green))).astype(np.float32))
 
 
 def cut_gun(rgb: np.ndarray, report: list[str], ident: str, edge: bool = False) -> tuple[np.ndarray, np.ndarray]:
@@ -299,8 +308,25 @@ def key_black(rgb: np.ndarray, holes: bool) -> tuple[np.ndarray, int]:
     return box_blur3((~(dark if holes else fill_from_border(dark))).astype(np.float32)), thresh
 
 
+def cut_texture(rgb: np.ndarray, options: dict, report: list[str], ident: str) -> np.ndarray:
+    """A colour picture kept whole (a nebula, a station backdrop or room), scaled to `w` px wide,
+    its edges evened out along `tile` ("xy", "x" or none) over `band` px. RGBA, opaque."""
+    tile = str(options.get("tile", ""))
+    w = int(options.get("w", rgb.shape[1]))
+    h = round(rgb.shape[0] * w / rgb.shape[1])
+    art = np.asarray(Image.fromarray(np.clip(rgb, 0, 255).astype(np.uint8), "RGB")
+                     .resize((w, h), Image.Resampling.LANCZOS)).astype(np.float32)
+    before = (np.abs(art[:, 0] - art[:, -1]).mean(), np.abs(art[0] - art[-1]).mean())
+    if tile:
+        art = even_edges(art, int(options.get("band", 48)), "x" in tile, "y" in tile)
+    report.append(f"  {ident:20s} texture   {rgb.shape[1]}x{rgb.shape[0]} -> {w}x{h}  "
+                  f"tile {tile or '-'}  seams x {before[0]:.1f} y {before[1]:.1f}")
+    return np.dstack([art, np.full(art.shape[:2], 255.0)])
+
+
 def cut_chrome(rgb: np.ndarray, options: dict, report: list[str], ident: str) -> np.ndarray:
-    """Key a chrome piece off black, crop it tight and scale it to `h` (or `w`) px. RGBA."""
+    """Key a chrome piece off black (or with {"key": "green"}, chroma green, despilled), crop it
+    tight and scale it to `h` (or `w`) px. RGBA."""
     inset = int(options.get("inset", 0))
     if inset:
         rgb = rgb[inset:-inset, inset:-inset]
@@ -308,7 +334,12 @@ def cut_chrome(rgb: np.ndarray, options: dict, report: list[str], ident: str) ->
         x0, y0, x1, y1 = options["crop"]
         h, w = rgb.shape[:2]
         rgb = rgb[round(y0 * h):round(y1 * h), round(x0 * w):round(x1 * w)]
-    alpha, thresh = key_black(rgb, bool(options.get("holes", False)))
+    if options.get("key") == "green":
+        alpha, thresh = key_green(rgb, bool(options.get("holes", False))), "green"
+        rgb = rgb.copy()
+        rgb[..., 1] = np.minimum(rgb[..., 1], np.maximum(rgb[..., 0], rgb[..., 2]))
+    else:
+        alpha, thresh = key_black(rgb, bool(options.get("holes", False)))
     ys, xs = np.nonzero(alpha > 0.5)
     x0, y0, x1, y1 = xs.min(), ys.min(), xs.max() + 1, ys.max() + 1
     k = options["h"] / (y1 - y0) if "h" in options else options["w"] / (x1 - x0)
@@ -439,8 +470,10 @@ def slice_sheet(name: str, spec: dict, cells: dict[str, np.ndarray], kinds: dict
         elif kind == "overlay":
             cells[ident] = cut_overlay(window, size, report, ident)
         elif kind == "sprite":
-            cells[ident] = cut_sprite(window, SPRITE_PX, bool(options.get("holes", False)),
+            cells[ident] = cut_sprite(window, int(options.get("px", SPRITE_PX)), bool(options.get("holes", False)),
                                       options.get("key") == "green", report, ident)
+        elif kind == "texture":
+            cells[ident] = cut_texture(window, options, report, ident)
         elif kind == "portrait":
             cells[ident] = cut_portrait(window, options, report, ident)
             if "mask" in options:
@@ -462,7 +495,7 @@ def slice_sheet(name: str, spec: dict, cells: dict[str, np.ndarray], kinds: dict
     for number, entry in spec["cells"].items():
         cell = cells[entry[0]].astype(np.uint8)
         Image.fromarray(cell, "RGBA" if cell.ndim == 3 else "L").save(out_dir / f"{entry[0]}.png")
-    if all(entry[1] not in ("sprite", "chrome", "portrait") for entry in spec["cells"].values()):
+    if all(entry[1] not in ("sprite", "chrome", "portrait", "texture") for entry in spec["cells"].values()):
         review(name, spec, cells, out_dir / f"review_{name}.png")
 
 

@@ -155,12 +155,12 @@ band for the colour the player picked and keeps the shading. Each hue is far fro
 | A.3d | `fx_mines` | `art_src/parts/` | 4, run ×3 | ✅ in the game 2026-10-27: run 1 #2 |
 | A.4 | `icons_main` | `art_src/icons/` | 15, run ×3 | ✅ in the game 2026-10-27: pickups, FIRE, SWITCH, Pause |
 | A.5 | `chrome_panel`, `chrome_header`, `chrome_frame`, `chrome_buttons` | `art_src/ui/` | 3 canvases + 1 sheet | ✅ in the game 2026-10-27: UiTheme |
-| A.6 | `icons_map` | `art_src/icons/` | 15, run ×3 | prompt ready 2026-10-27 |
+| A.6 | `icons_map` | `art_src/icons/` | 15, run ×3 | ✅ cut 2026-10-27: run 2, waiting for the map (9.3) |
 | A.7 | `portraits_players`: 4 sheets (man, woman × jacket, suit), 2 stand-ins (villain, ally), then NPC sheets | `art_src/portraits/` | 4 × 4 cells, then ~3 sheets | ✅ in the game 2026-10-27: PortraitView, recoloured |
-| A.8 | `station_backdrop`, `station_exterior`, `station_room` × 5 themes | `art_src/stations/` | 25 canvases | prompts ready 2026-10-27 |
-| A.9 | `arena_nebula` × 5 | `art_src/backgrounds/` | 5 canvases, run ×2 | prompt ready 2026-10-27 |
-| A.10 | `world_asteroids` | `art_src/parts/` | 15, run ×3 | prompt ready 2026-10-27 |
-| A.11 | `splash`, `app_icon`, `title_plate` | `art_src/backgrounds/`, `art_src/icons/`, `art_src/ui/` | 3 canvases, run ×3 | prompts ready 2026-10-27 |
+| A.8 | `station_backdrop`, `station_exterior`, `station_room` × 5 themes | `art_src/stations/` | 25 canvases | ✅ cut 2026-10-27: waiting for the station screen (11.2) |
+| A.9 | `arena_nebula` × 5 | `art_src/backgrounds/` | 5 canvases, run ×2 | ✅ in the game 2026-10-27: behind the stars |
+| A.10 | `world_asteroids` | `art_src/parts/` | 15, run ×3 | ✅ cut 2026-10-27: run 1, waiting for the belts (10.2) |
+| A.11 | `splash`, `app_icon`, `title_plate` | `art_src/backgrounds/`, `art_src/icons/`, `art_src/ui/` | 3 canvases, run ×3 | ✅ in the game 2026-10-27: splash, icon, menu title |
 
 ---
 
@@ -1427,6 +1427,12 @@ Remember: no text, black background, one bold object per cell, and the
 bottom-right cell is empty.
 ```
 
+### Review, 2026-10-27: what came back
+
+Run 2 is used: on black like `icons_main`, one bold object per cell. Run 1 came back on white
+and run 3 on square plates. The station, story, bar, kill, pin and compass icons are keyed with
+`holes`, so their enclosed black goes too.
+
 **What happens to it.** Like `icons_main`: the slicer's `sprite` kind (the pin's hole with
 `holes`), one 128 px PNG each in `assets/icons/`, as `vis.icon.map_<id>`. The map (9.3) uses them.
 
@@ -1545,6 +1551,18 @@ ABSOLUTELY NO TEXT: no signs, no screens with writing, no posters, no logos, no
 numbers. No people, no aliens, no robots.
 ```
 
+### Review, 2026-10-27: what came back
+
+All on style, with amber the one accent as asked. The picks are in `art_src/sheets.json`.
+- **Backdrops:** 12 came back unnamed. 8, 9 and 12 have stations painted in, and **10 is a Death
+  Star lookalike** (a panelled sphere), so they're out. 6, 7, 5, 4 and 1 are mining, military,
+  trade, frontier and research; 2, 3 and 11 are spares.
+- **Exteriors:** one per theme, the clearer silhouette of each pair. Pockets of green shut in
+  between modules are keyed too (`holes` on a green `chrome` cut), or the despill turns them black.
+- **Rooms:** the run that leaves the space the game needs: an empty floor (hangar), a plain back
+  wall (shop), room behind the counter on the left (bar). Mining's hangar run 1 has a painted "H"
+  on its floor, so run 2.
+
 **What happens to them.** Backdrops get their seam evened out by the slicer (like the tile
 materials, sideways only) and stay full colour; exteriors are keyed off green; rooms are used as
 they come. All go to `assets/stations/` as `vis.station.<kind>_<theme>`. The station screen (11.2)
@@ -1586,6 +1604,12 @@ big feature that would repeat visibly when tiled. NOT a photo, NOT pixel art.
 
 ABSOLUTELY NO TEXT, no logos.
 ```
+
+### Review, 2026-10-27: what came back
+
+All ten tile almost seamlessly already (wrap seams ~2 grey levels, against ~1 between
+neighbouring pixels), and none has stars. The picks avoid the ones with an obvious repeat:
+1_1, 2_1, 3_1, 4_2, 5_1.
 
 **What happens to it.** The slicer evens out both seams (as for tile materials, in colour), and
 the starfield shader draws it as its slowest layer, darkened further if it fights the ships.
@@ -1629,6 +1653,11 @@ ABSOLUTELY NO TEXT, no labels, no numbers.
 Remember: top-down, chroma green background, nothing green on the rocks, and the
 bottom-right cell is empty.
 ```
+
+### Review, 2026-10-27: what came back
+
+Run 1 is used: each row runs large to small as asked (run 2's rows run small to large), and the
+three kinds read apart even as fragments.
 
 **What happens to it.** The slicer's `sprite` kind (with `{"key": "green"}`) cuts each rock as a
 256 px PNG in `assets/world/`, as `vis.world.asteroid_<kind>_<size>`. The belts (10.2) use them.
@@ -1732,6 +1761,16 @@ spilling onto the background.
 ABSOLUTELY NO TEXT of any kind: no letters, no title, no logo, no symbols. The
 game writes the title.
 ```
+
+### Review, 2026-10-27: what came back
+
+- **Splash run 3:** original ships built from hexagon and triangle panels like ours, the lower
+  half calm for the title. Run 1 has a wedge close to a Star Destroyer's, and run 2 is busy everywhere.
+- **App icon run 1:** the boldest at 48 px. Runs 2 and 3 are closer to our tile-built ships but
+  read flat grey when small. Its art comes as a rounded square with white corners, which
+  `make_branding.py` masks.
+- **Title plate run 2:** the riveted brackets asked for, and symmetric.
+- No text in any of them.
 
 **What happens to them.** `tools/make_branding.py` builds the project and Android icons from
 `app_icon` (the adaptive foreground inside its safe zone) and the boot splash from `splash`,

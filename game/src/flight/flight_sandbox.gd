@@ -196,6 +196,7 @@ func open(bp: Blueprint, placement: Placement) -> void:
 	var stars := Starfield.new()
 	stars.camera = _camera
 	add_child(stars)
+	stars.use_nebula(randi() if test_level <= 0 else test_level)  # a test fight keeps its sky
 	_build_ui()
 	_show_status()
 

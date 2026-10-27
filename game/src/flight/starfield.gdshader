@@ -1,13 +1,16 @@
 shader_type canvas_item;
 // A procedural starfield (PLAN.md Phase 3.5): three layers of hashed stars, each scrolling at
 // its own fraction of the camera's movement for parallax, drawn in screen space behind the
-// world. No textures, so it costs nothing to load and never shows a seam.
+// world. Behind the stars, an optional painted nebula (A.9, seamless both ways) scrolls slowest.
 
 uniform vec2 camera_position = vec2(0.0);   // world pixels
 uniform float camera_zoom = 1.0;
 uniform vec2 screen_size = vec2(1280.0, 720.0);
 uniform vec4 background : source_color = vec4(0.01, 0.015, 0.035, 1.0);
 uniform float time_scale = 1.0;
+uniform sampler2D nebula : filter_linear_mipmap, repeat_enable;
+uniform float nebula_strength = 0.0;         // 0 = no nebula (the placeholder)
+uniform float nebula_tile_px = 2048.0;       // world pixels one copy of the nebula spans
 
 float hash(vec2 p) {
 	p = fract(p * vec2(123.34, 456.21));
@@ -32,6 +35,10 @@ void fragment() {
 	vec2 screen = (SCREEN_UV - 0.5) * screen_size / camera_zoom;
 	float t = TIME * time_scale;
 	vec3 color = background.rgb;
+	// The nebula: 4% of the camera, the farthest layer. Added over the background, so the art's
+	// navy base reads as the background and only its clouds show.
+	vec2 nebula_uv = (screen + camera_position * 0.04) / nebula_tile_px;
+	color += max(texture(nebula, nebula_uv).rgb - background.rgb, vec3(0.0)) * nebula_strength;
 	// Far, middle, near: scrolling at 10%, 30% and 60% of the camera.
 	color += layer(screen + camera_position * 0.1, 90.0, 0.35, 2.0, vec3(0.55, 0.6, 0.8), t) * 0.9;
 	color += layer(screen + camera_position * 0.3, 160.0, 0.25, 3.0, vec3(0.8, 0.85, 1.0), t);
