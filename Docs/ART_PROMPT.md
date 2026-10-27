@@ -151,7 +151,7 @@ band for the colour the player picked and keeps the shading. Each hue is far fro
 | A.1b | `tiles_cores_shields` | `art_src/tiles/` | 12 | ✅ in the game 2026-10-26: core, shields, damage |
 | A.2 | `parts_thrusters` | `art_src/parts/` | 12 | ✅ in the game 2026-10-27: a nozzle per type |
 | A.3 | `parts_guns` | `art_src/parts/` | 12, run ×3 | ✅ in the game 2026-10-27: 9 gun heads (A.3b re-rolled flak and seeker) |
-| A.3c | `parts_guns_edge` | `art_src/parts/` | edit of `ref_turrets.png`, run ×3 | v2 prompt ready 2026-10-27 (v1 failed ×5) |
+| A.3c | `parts_guns_edge` | `art_src/parts/` | edit of `ref_turrets.png`, run ×3 | ✅ in the game 2026-10-27: fixed and swivel pictures (v1 failed ×5) |
 | A.4 | `icons_main` | `art_src/icons/` | 15, run ×3 | ✅ in the game 2026-10-27: pickups, FIRE, SWITCH, Pause |
 | A.5 | `chrome_*` | `art_src/ui/` | one canvas per piece | to write |
 | A.6 | `icons_map` | `art_src/icons/` | 1 sheet | to write |
@@ -718,9 +718,19 @@ in it. No text, no numbers, no letters anywhere.
 
 **What happens to it.** Each gun is cut as an `edge_gun`: keyed off green like a `gun`, with
 the pivot at the middle of the bracket's flat left side, and fitted so the barrel tip lands at
-a fixed x. It goes into the gun atlas as an `edge_*` cell. `GunView` draws an edge mount from
-its `edge_*` cell when there is one, and otherwise from the turret head as today. A swivel
-shows a small pivot cap drawn in code, so fixed and swivel stay apart too.
+a fixed x. The gun atlas has a row per mount type (turret, fixed, swivel), and `GunView` draws
+each gun from its mount's row, or from the turret row where a cell is empty.
+
+### Review, 2026-10-27: the edit worked
+
+Every run kept the guns and swapped the base, so each side gun matches its turret. And the
+runs differed in a useful way:
+- **Run 1** dropped the disc for a narrow bracket: **the fixed mounts.** Its mine dropper grew a
+  second mine on a chain, off-centre, so it's a spare.
+- **Run 2** kept half the disc on a tall bracket, which reads as a pivot: **the swivel mounts**,
+  and the fixed mine dropper (mines never swivel). So fixed and swivel are told apart by their
+  art, and the planned code-drawn pivot cap wasn't needed.
+- **Run 3** is like run 2 on wide plates: bulkier, all spares.
 
 ### Review, 2026-10-27: the first prompt failed (×5)
 

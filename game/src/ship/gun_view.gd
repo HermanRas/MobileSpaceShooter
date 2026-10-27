@@ -1,7 +1,8 @@
 class_name GunView
 extends Node2D
-## Draws a ship's guns (PLAN.md 4.4). With the gun atlas (A.3), each gun is its painted head
-## (housing and barrels) turning about the housing's centre, scaled so the barrel tip meets the
+## Draws a ship's guns (PLAN.md 4.4). With the gun atlas (A.3), each gun is its painted picture
+## for its mount type (a turret on its round base, a fixed gun on a flat bracket, a swivel on a
+## bracket with a pivot; A.3c) turning about its pivot, scaled so the barrel tip meets the
 ## muzzle; the trim band is tinted per weapon. Without it (the placeholder), a turret's round
 ## base, an edge gun's mounting block, and each barrel at its current angle, drawn in code.
 ## Turrets and swivels turn, so guns can't be part of the ship's one static mesh; they're one
@@ -103,9 +104,10 @@ static func draw_gun(canvas: CanvasItem, gun: GunLayout.Gun, angle: float, look:
 	var width := float(own.get("barrel_width_u", look.get("barrel_width_u", 0.12))) * PX
 	var barrels := int(own.get("barrels", 1))
 	var pivot := gun.pivot * PX
-	var cell := (look.get("atlas_cells", []) as Array).find(str(own.get("art", gun.weapon)))
+	var art := str(own.get("art", gun.weapon))
+	var cell := (look.get("atlas_cells", []) as Array).find(art)
 	if cell >= 0 and Assets.has_real_art(ATLAS_ID):
-		_draw_head(canvas, pivot, angle, gun.muzzle * PX, cell,
+		_draw_head(canvas, pivot, angle, gun.muzzle * PX, cell, _art_mount(gun.mount_type, art),
 				Color.from_string(str(own.get("trim", look.get("trim", "#c3cad2"))), Color.WHITE))
 		return
 	var dir := Vector2.from_angle(angle)
@@ -128,23 +130,37 @@ static func draw_gun(canvas: CanvasItem, gun: GunLayout.Gun, angle: float, look:
 	canvas.draw_line(tip - dir * width, tip, rim, width * (barrels + 0.2))
 
 
-## A gun's painted head from the atlas: turned to `angle` about `pivot` (pixels), scaled so its
-## barrel tip is `muzzle_px` out, with its trim band drawn over it in `trim`. The atlas geometry
-## comes from tools/slice_sheets.py, via the atlas's entry in visuals.json.
-static func _draw_head(canvas: CanvasItem, pivot: Vector2, angle: float, muzzle_px: float, cell: int, trim: Color) -> void:
+## The atlas row a gun of `art` on a `mount_type` mount is drawn from: its own, or the turret's
+## when that cell is empty (`empty` in the atlas's visuals.json entry) or the type has no row.
+static func _art_mount(mount_type: StringName, art: String) -> String:
 	var meta := Assets.meta(ATLAS_ID)
+	var mounts: Dictionary = meta.get("mounts", {})
+	if not mounts.has(String(mount_type)) or "%s:%s" % [mount_type, art] in (meta.get("empty", []) as Array):
+		return "turret"
+	return String(mount_type)
+
+
+## A gun's painted picture from the atlas, in `mount`'s row: turned to `angle` about `pivot`
+## (pixels), scaled so its barrel tip is `muzzle_px` out, with its trim band drawn over it in
+## `trim`. The atlas geometry comes from tools/slice_sheets.py, via the atlas's entry in
+## visuals.json.
+static func _draw_head(canvas: CanvasItem, pivot: Vector2, angle: float, muzzle_px: float, cell: int, mount: String,
+		trim: Color) -> void:
+	var meta := Assets.meta(ATLAS_ID)
+	var mounts: Dictionary = meta.get("mounts", {})
+	var row_info: Dictionary = mounts.get(mount, {"row": 0, "pivot_px": [96, 128]})
 	var size := float(meta.get("cell_px", 256))
 	var pad := float(meta.get("pad_px", 16))
-	var at: Array = meta.get("pivot_px", [96, 128])
+	var at: Array = row_info["pivot_px"]
 	var cell_pivot := Vector2(float(at[0]), float(at[1]))
 	var k := muzzle_px / (float(meta.get("tip_x_px", 248)) - cell_pivot.x)
 	var stride := size + 2.0 * pad
-	var art := Rect2(cell * stride + pad, pad, size, size)
+	var art := Rect2(cell * stride + pad, int(row_info["row"]) * stride + pad, size, size)
 	var drawn := Rect2(-cell_pivot * k, Vector2(size, size) * k)
 	var atlas := Assets.tex(ATLAS_ID)
 	canvas.draw_set_transform(pivot, angle, Vector2.ONE)
 	canvas.draw_texture_rect_region(atlas, drawn, art)
-	canvas.draw_texture_rect_region(atlas, drawn, Rect2(art.position + Vector2(0, stride), art.size), trim)
+	canvas.draw_texture_rect_region(atlas, drawn, Rect2(art.position + Vector2(0, stride * mounts.size()), art.size), trim)
 	canvas.draw_set_transform_matrix(Transform2D.IDENTITY)
 
 

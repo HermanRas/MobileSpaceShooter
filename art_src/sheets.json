@@ -93,6 +93,44 @@
 			},
 			"spares": {"2": "twin flak, plated", "5": "triple seeker, angled", "8": "twin seeker, angled"}
 		},
+		"parts_guns_edge_v2_1": {
+			"file": "parts/parts_guns_edge_v2_1.jpeg",
+			"grid": [4, 4],
+			"_doc": "Generated 2026-10-27, run 1 of 3 of the A.3c edit of ref_turrets.png: each turret's round base swapped for a narrow hull bracket, the gun unchanged. The fixed mounts. Its mine dropper grew a second mine on a chain, off-centre, so run 2's is used.",
+			"cells": {
+				"1": ["fixed_gatling_single", "edge_gun"],
+				"2": ["fixed_gatling_multi", "edge_gun"],
+				"3": ["fixed_cannon", "edge_gun"],
+				"4": ["fixed_flak", "edge_gun"],
+				"5": ["fixed_rocket", "edge_gun"],
+				"6": ["fixed_seeker", "edge_gun"],
+				"9": ["fixed_laser", "edge_gun"],
+				"10": ["fixed_emp", "edge_gun"]
+			},
+			"spares": {"7": "mine dropper with a chained second mine"}
+		},
+		"parts_guns_edge_v2_2": {
+			"file": "parts/parts_guns_edge_v2_2.jpeg",
+			"grid": [4, 4],
+			"_doc": "Run 2 of 3 of the A.3c edit. Gemini kept half the disc on a tall bracket, which reads as a pivot: the swivel mounts. Mines and EMP can't swivel; its mine dropper is the fixed one.",
+			"cells": {
+				"1": ["swivel_gatling_single", "edge_gun"],
+				"2": ["swivel_gatling_multi", "edge_gun"],
+				"3": ["swivel_cannon", "edge_gun"],
+				"4": ["swivel_flak", "edge_gun"],
+				"5": ["swivel_rocket", "edge_gun"],
+				"6": ["swivel_seeker", "edge_gun"],
+				"7": ["fixed_mines", "edge_gun"],
+				"9": ["swivel_laser", "edge_gun"]
+			},
+			"spares": {"10": "EMP on a pivot"}
+		},
+		"parts_guns_edge_v2_3": {
+			"file": "parts/parts_guns_edge_v2_3.jpeg",
+			"grid": [4, 4],
+			"_doc": "Run 3 of 3 of the A.3c edit: like run 2 on wide plates with a white stripe. Bulkier; all spares.",
+			"cells": {}
+		},
 		"icons_main_2": {
 			"file": "icons/icons_main_2.jpeg",
 			"grid": [4, 4],
@@ -130,9 +168,11 @@
 		"gun_atlas": {
 			"out": "game/assets/parts/gun_atlas.png",
 			"layout": "guns",
-			"_doc": "GunView's gun heads (A.3), in visuals.json vis.weapons `atlas_cells` order: a row of 256 x 256 cells (RGB grey, A coverage; the housing's centre at 96, 128 and the barrel tip at x 248), over a row of trim masks.",
+			"_doc": "GunView's guns (A.3, A.3c): a row per mount type (visuals.json vis.weapons.atlas `mounts`), a column per gun in vis.weapons `atlas_cells` order, 256 x 256 cells (RGB grey, A coverage; the pivot at 96, 128 for a turret and 8, 128 for an edge gun, the barrel tip at x 248), then a trim-mask row per art row. Mines and EMP can't swivel, so those cells are empty.",
 			"rows": [
-				["gun_gatling", "gun_gatling_multi", "gun_cannon", "gun_flak", "gun_rocket", "gun_seeker", "gun_mines", "gun_laser", "gun_emp"]
+				["gun_gatling", "gun_gatling_multi", "gun_cannon", "gun_flak", "gun_rocket", "gun_seeker", "gun_mines", "gun_laser", "gun_emp"],
+				["fixed_gatling_single", "fixed_gatling_multi", "fixed_cannon", "fixed_flak", "fixed_rocket", "fixed_seeker", "fixed_mines", "fixed_laser", "fixed_emp"],
+				["swivel_gatling_single", "swivel_gatling_multi", "swivel_cannon", "swivel_flak", "swivel_rocket", "swivel_seeker", "", "swivel_laser", ""]
 			]
 		},
 		"icons": {

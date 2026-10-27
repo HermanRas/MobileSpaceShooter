@@ -30,8 +30,11 @@ A gun (A.3) is a part too, but it turns about its round housing's centre, so it 
 shape: the slicer finds the housing from the art's left edge (a circle's chord grows as
 2 * sqrt(2 R d - d^2) in from its edge), puts its centre at GUN_PIVOT in a GUN_CELL and scales
 the gun so its barrel tip lands on GUN_TIP_X. The game then scales a cell so the tip meets the
-weapon's muzzle (data), and the housing is whatever size the art gives it. A "guns" atlas is a row of those, RGB = grey and
-A = coverage, over a second row holding the trim mask (the white band) for the game to tint.
+weapon's muzzle (data), and the housing is whatever size the art gives it. An `edge_gun` (A.3c,
+a side-mounted gun on a flat bracket) is cut the same way, but its pivot is the middle of the
+bracket's flat left side, where it meets the hull, placed at EDGE_PIVOT. A "guns" atlas has a
+row of those per mount type (RGB = grey, A = coverage), then a trim-mask row (the white band,
+for the game to tint) per art row; "" leaves a cell empty.
 
 A sprite (A.4's icons) is colour artwork on black: keyed like `keyed` (a flood fill from the
 border, so a dark badge centre ringed by gold survives), kept in colour with its alpha, and
@@ -65,6 +68,7 @@ SPRITE_PX = 128           # an icon file's size
 SPRITE_FILL = 0.94        # how much of it the artwork spans
 GUN_CELL = (256, 256)     # a gun's atlas cell, w x h
 GUN_PIVOT = (96, 128)     # where the housing's centre lands in it
+EDGE_PIVOT = (8, 128)     # where an edge gun's bracket meets the hull
 GUN_TIP_X = 248           # and the barrel's tip
 
 
@@ -184,24 +188,26 @@ def key_green(rgb: np.ndarray) -> np.ndarray:
     return box_blur3((~fill_from_border(green)).astype(np.float32))
 
 
-def cut_gun(rgb: np.ndarray, report: list[str], ident: str) -> tuple[np.ndarray, np.ndarray]:
-    """Key a gun head off green, find its housing and place it in a GUN_CELL. Returns
-    (grey, coverage 0..1), both GUN_CELL sized."""
+def cut_gun(rgb: np.ndarray, report: list[str], ident: str, edge: bool = False) -> tuple[np.ndarray, np.ndarray]:
+    """Key a gun off green, find its pivot (a turret's housing centre, or with `edge` the middle
+    of its bracket's flat left side) and place it in a GUN_CELL. Returns (grey, coverage 0..1),
+    both GUN_CELL sized."""
     cover = key_green(rgb)
     solid = cover > 0.5
     cols = np.nonzero(solid.sum(axis=0) >= 3)[0]
     x0 = cols.min()
     estimates, middles = [], []
-    for d in range(4, 40):
+    for d in range(2, 12) if edge else range(4, 40):
         ys = np.nonzero(solid[:, x0 + d])[0]
         if ys.size:
             h = ys.max() - ys.min() + 1
             estimates.append((h * h / 4 + d * d) / (2 * d))
             middles.append((ys.max() + ys.min()) / 2)
     radius, cy = float(np.median(estimates)), float(np.median(middles))
-    cx = x0 + radius
+    cx = x0 if edge else x0 + radius
+    pivot = EDGE_PIVOT if edge else GUN_PIVOT
     tip_x = np.nonzero(solid.sum(axis=0) >= 1)[0].max()
-    k = (GUN_TIP_X - GUN_PIVOT[0]) / (tip_x - cx)
+    k = (GUN_TIP_X - pivot[0]) / (tip_x - cx)
     grey = (rgb[..., 0] + rgb[..., 2]) / 2.0
     w, h = round(rgb.shape[1] * k), round(rgb.shape[0] * k)
     scale = lambda a: np.asarray(Image.fromarray(np.clip(a, 0, 255).astype(np.uint8), "L")
@@ -209,14 +215,18 @@ def cut_gun(rgb: np.ndarray, report: list[str], ident: str) -> tuple[np.ndarray,
     big_grey, big_cover = scale(grey), scale(cover * 255) / 255
     out_grey = np.zeros((GUN_CELL[1], GUN_CELL[0]), np.float32)
     out_cover = np.zeros_like(out_grey)
-    ox, oy = round(GUN_PIVOT[0] - cx * k), round(GUN_PIVOT[1] - cy * k)
+    ox, oy = round(pivot[0] - cx * k), round(pivot[1] - cy * k)
     sx0, sy0 = max(0, -ox), max(0, -oy)
     sx1, sy1 = min(w, GUN_CELL[0] - ox), min(h, GUN_CELL[1] - oy)
     out_grey[sy0 + oy:sy1 + oy, sx0 + ox:sx1 + ox] = big_grey[sy0:sy1, sx0:sx1]
     out_cover[sy0 + oy:sy1 + oy, sx0 + ox:sx1 + ox] = big_cover[sy0:sy1, sx0:sx1]
     lost = 1 - out_cover.sum() / max(big_cover.sum(), 1e-3)
-    report.append(f"  {ident:16s} gun       housing r {radius:5.1f} px at ({cx:5.1f}, {cy:5.1f}), "
-                  f"tip {(tip_x - cx) / radius:4.2f} r -> r {radius * k:5.1f} px in the cell  clipped {lost:.1%}")
+    if edge:
+        report.append(f"  {ident:16s} edge gun  pivot at ({cx:5.1f}, {cy:5.1f}), length {tip_x - cx} px "
+                      f"-> {GUN_TIP_X - pivot[0]}  clipped {lost:.1%}")
+    else:
+        report.append(f"  {ident:16s} gun       housing r {radius:5.1f} px at ({cx:5.1f}, {cy:5.1f}), "
+                      f"tip {(tip_x - cx) / radius:4.2f} r -> r {radius * k:5.1f} px in the cell  clipped {lost:.1%}")
     return out_grey, out_cover
 
 
@@ -276,8 +286,8 @@ def slice_sheet(name: str, spec: dict, cells: dict[str, np.ndarray], kinds: dict
             cells[ident] = cut_overlay(window, size, report, ident)
         elif kind == "sprite":
             cells[ident] = cut_sprite(window, SPRITE_PX, bool(options.get("holes", False)), report, ident)
-        elif kind == "gun":
-            cells[ident], covers[ident] = cut_gun(window, report, ident)
+        elif kind in ("gun", "edge_gun"):
+            cells[ident], covers[ident] = cut_gun(window, report, ident, kind == "edge_gun")
         elif kind == "part":
             cells[ident], covers[ident] = cut_part(window, size, report, ident)
         elif kind == "keyed":
@@ -322,28 +332,31 @@ def write_files(name: str, spec: dict, cells: dict[str, np.ndarray], report: lis
 
 def pack_guns(name: str, spec: dict, cells: dict[str, np.ndarray], covers: dict[str, np.ndarray],
               report: list[str]) -> None:
-    """A row of gun cells (RGB = grey, A = coverage) over a row of their trim masks (white,
-    A = the near-white band), each padded by GUN_CELL[1] / 16."""
+    """Rows of gun cells (RGB = grey, A = coverage), then a row of trim masks (white, A = the
+    near-white band) for each, every cell padded by GUN_CELL[1] / 16. "" is an empty cell."""
     w, h = GUN_CELL
     pad = h // 16
-    row = spec["rows"][0]
-    out = np.zeros((2 * (h + 2 * pad), len(row) * (w + 2 * pad), 4), dtype=np.uint8)
-    for c, ident in enumerate(row):
-        grey = np.pad(cells[ident], pad, mode="edge")
-        cover = np.pad(covers[ident], pad, mode="constant")
-        trim = np.clip((grey - TRIM_FROM) / (TRIM_TO - TRIM_FROM), 0, 1) * cover
-        x = c * (w + 2 * pad)
-        art = out[:h + 2 * pad, x:x + w + 2 * pad]
-        art[..., 0] = art[..., 1] = art[..., 2] = np.clip(grey, 0, 255).astype(np.uint8)
-        art[..., 3] = (cover * 255).astype(np.uint8)
-        band = out[h + 2 * pad:, x:x + w + 2 * pad]
-        band[..., :3] = 255
-        band[..., 3] = (trim * 255).astype(np.uint8)
+    rows = spec["rows"]
+    sw, sh = w + 2 * pad, h + 2 * pad
+    out = np.zeros((2 * len(rows) * sh, max(len(row) for row in rows) * sw, 4), dtype=np.uint8)
+    for r, row in enumerate(rows):
+        for c, ident in enumerate(row):
+            if not ident:
+                continue
+            grey = np.pad(cells[ident], pad, mode="edge")
+            cover = np.pad(covers[ident], pad, mode="constant")
+            trim = np.clip((grey - TRIM_FROM) / (TRIM_TO - TRIM_FROM), 0, 1) * cover
+            art = out[r * sh:(r + 1) * sh, c * sw:(c + 1) * sw]
+            art[..., 0] = art[..., 1] = art[..., 2] = np.clip(grey, 0, 255).astype(np.uint8)
+            art[..., 3] = (cover * 255).astype(np.uint8)
+            band = out[(len(rows) + r) * sh:(len(rows) + r + 1) * sh, c * sw:(c + 1) * sw]
+            band[..., :3] = 255
+            band[..., 3] = (trim * 255).astype(np.uint8)
     path = ROOT / spec["out"]
     path.parent.mkdir(parents=True, exist_ok=True)
     Image.fromarray(out, "RGBA").save(path)
     report.append(f"{name} -> {path.relative_to(ROOT)}  ({out.shape[1]}x{out.shape[0]}, "
-                  f"{len(row)} guns of {w}x{h} px + {pad} px pad, trim row below)")
+                  f"{len(rows)} rows of {w}x{h} px cells + {pad} px pad, trim rows below)")
 
 
 def pack(name: str, spec: dict, cells: dict[str, np.ndarray], kinds: dict[str, str],
@@ -387,7 +400,7 @@ def main() -> int:
     for name, spec in config["sheets"].items():
         slice_sheet(name, spec, cells, kinds, covers, size, report)
     for name, spec in config["atlases"].items():
-        missing = [i for row in spec.get("rows", [spec.get("files", [])]) for i in row if i not in cells]
+        missing = [i for row in spec.get("rows", [spec.get("files", [])]) for i in row if i and i not in cells]
         if missing:
             print(f"{name}: no cell called {', '.join(sorted(set(missing)))}", file=sys.stderr)
             return 1
