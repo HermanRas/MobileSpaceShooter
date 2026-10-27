@@ -37,6 +37,7 @@ func _ready() -> void:
 	_portrait.custom_minimum_size = Vector2(320, 320)
 	_portrait.character = _character
 	_portrait.cycle_s = 1.2
+	_portrait.framing = PortraitView.Framing.FULL
 	left.add_child(_portrait)
 	_mood.add_theme_font_size_override(&"font_size", 18)
 	_mood.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER

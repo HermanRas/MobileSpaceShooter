@@ -156,7 +156,7 @@ band for the colour the player picked and keeps the shading. Each hue is far fro
 | A.4 | `icons_main` | `art_src/icons/` | 15, run ×3 | ✅ in the game 2026-10-27: pickups, FIRE, SWITCH, Pause |
 | A.5 | `chrome_panel`, `chrome_header`, `chrome_frame`, `chrome_buttons` | `art_src/ui/` | 3 canvases + 1 sheet | ✅ in the game 2026-10-27: UiTheme |
 | A.6 | `icons_map` | `art_src/icons/` | 1 sheet | to write |
-| A.7 | `portraits_players`: 4 sheets (man, woman × jacket, suit), 2 stand-ins (villain, ally), then NPC sheets | `art_src/portraits/` | 4 × 4 cells, then ~3 sheets | generated 2026-10-27: all 6 sheets in, to cut |
+| A.7 | `portraits_players`: 4 sheets (man, woman × jacket, suit), 2 stand-ins (villain, ally), then NPC sheets | `art_src/portraits/` | 4 × 4 cells, then ~3 sheets | ✅ in the game 2026-10-27: PortraitView, recoloured |
 | A.8 | `station_*` | `art_src/stations/` | ~25 canvases | to write |
 | A.9 | `backdrop_arena_*` | `art_src/backgrounds/` | 5 canvases | to write |
 | A.10 | `world_asteroids` | `art_src/parts/` | 1 sheet | to write |
@@ -1083,9 +1083,9 @@ over its lower body, the player on the left and the other speaker mirrored on th
 the HUD show a head crop, so **every cell must put the head in the same place at the same size**. They're
 painted in the **key hues** (A.0) so the game can recolour hair, eyes, outfit and trim.
 
-**Step 1: the jackets.** Run `portraits_man_jacket` and `portraits_woman_jacket` ×3 each, uploading
-`art_src/portraits/ref_man.png` or `ref_woman.png` (run 1's faces) so the face carries over. Leave
-the upload out if you'd rather have new faces.
+**Step 1: the jackets.** Run `portraits_man_jacket` and `portraits_woman_jacket` ×3 each. To keep
+a face, upload a crop of it (the sheets in `art_src/portraits/` are the faces in the game); leave
+the upload out for a new face.
 **Step 2: the suits.** Pick the best jacket sheet of each, then run `portraits_man_suit` and
 `portraits_woman_suit` ×3 each **as edits of that pick**: upload it and ask for one change, the
 outfit. Editing worked for the side guns (A.3c) where a fresh prompt didn't, and it keeps the face,
@@ -1353,8 +1353,8 @@ and the same face, pose and position in all four cells.
 Run 1 was usable: the same face across each row, the key hues right, at 1024 px. Runs 2 and 3
 filled the "empty" rows with extra characters (a second woman, a third pilot), hence 2×2 sheets
 with every cell filled. The owner then asked for elbow-height framing for story mode, a muscular
-man, a curvy woman and a space-suit outfit, so v1 is replaced. Its faces are kept as
-`ref_man.png` and `ref_woman.png`.
+man, a curvy woman and a space-suit outfit, so v1 was replaced and then deleted, with the face
+crops (`ref_man.png`, `ref_woman.png`) cut from it.
 
 ---
 

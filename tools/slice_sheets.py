@@ -50,7 +50,13 @@ out of its track). The game draws them at half size, so they stay crisp on the p
 A portrait (A.7) is a painted character on chroma green, keyed and despilled like a green sprite,
 but it keeps its whole cell (past `inset`), scaled to `px`: the prompts pin where the head sits in
 the cell, so the game can crop the head with one rect per sheet, and the body runs off the
-bottom edge, where a dialog stands it on the screen's.
+bottom edge, where a dialog stands it on the screen's. With `mask`, it also gets a recolour mask
+(`<id>_mask`): R = hair, G = eyes, B = outfit, A = trim, each the pixels whose hue falls in that
+key hue's band (MASK_BANDS; the hair's also takes the pale strands next to it), grown by a pixel and softened so no key-coloured fringe survives at
+an edge. The eyes are only looked for inside `mask.eyes` (a box, in fractions of the cell),
+because a suit's cyan rim light is the irises' hue (and outside it, that hue is the outfit's);
+the box also takes in the brows, which are redder than the hair but share the lips' hue. The report gives each region's mean value,
+which the game's shader needs to keep the shading (visuals.json vis.portraits `ref_v`).
 
 Atlas layout (the ship shader's contract): a column per entry of a row, a row per variant, every
 cell padded by cell_px / 16 on each side (wrapped for materials, edge-extended otherwise), so
@@ -82,6 +88,11 @@ GUN_CELL = (256, 256)     # a gun's atlas cell, w x h
 GUN_PIVOT = (96, 128)     # where the housing's centre lands in it
 EDGE_PIVOT = (8, 128)     # where an edge gun's bracket meets the hull
 GUN_TIP_X = 248           # and the barrel's tip
+# A portrait's key hue bands: (hue from, hue to in degrees, min saturation), in mask channel order.
+MASK_BANDS = {"hair": (285, 340, 0.35), "eyes": (160, 215, 0.15), "outfit": (185, 255, 0.30),
+              "trim": (40, 68, 0.55)}
+BROW_HUE = 360            # inside the eye box the hair band reaches this far: the brows are redder
+HAIR_PALE = (0.08, 6)     # pale strands in the hair's hue join it: min saturation, within this many px
 
 
 def luma(rgb: np.ndarray) -> np.ndarray:
@@ -295,6 +306,47 @@ def cut_chrome(rgb: np.ndarray, options: dict, report: list[str], ident: str) ->
     return np.asarray(art).astype(np.float32)
 
 
+def hsv(rgb: np.ndarray) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """Hue in degrees, saturation and value (0..1) of 0..255 RGB."""
+    a = rgb / 255.0
+    r, g, b = a[..., 0], a[..., 1], a[..., 2]
+    mx, mn = a.max(-1), a.min(-1)
+    d = mx - mn + 1e-6
+    h = np.where(mx == r, ((g - b) / d) % 6, np.where(mx == g, (b - r) / d + 2, (r - g) / d + 4)) * 60
+    return h, np.where(mx > 0, (mx - mn) / (mx + 1e-6), 0), mx
+
+
+def grow(m: np.ndarray) -> np.ndarray:
+    """`m` dilated by one pixel (8-connected)."""
+    p = np.pad(m, 1)
+    return np.max([p[dy:dy + m.shape[0], dx:dx + m.shape[1]] for dy in range(3) for dx in range(3)], axis=0)
+
+
+def portrait_mask(rgba: np.ndarray, eyes: list[float], report: list[str], ident: str) -> np.ndarray:
+    """The recolour mask of a cut portrait (RGBA 0..255): a channel per MASK_BANDS region."""
+    h, s, v = hsv(rgba[..., :3])
+    solid = rgba[..., 3] > 127
+    size = rgba.shape[0]
+    x0, y0, x1, y1 = (round(f * size) for f in eyes)
+    in_eyes = np.zeros_like(solid)
+    in_eyes[y0:y1, x0:x1] = True
+    channels, means = [], []
+    for region, (h0, h1, smin) in MASK_BANDS.items():
+        hard = (h >= h0) & (h <= h1) & (s >= smin) & (v > 0.1) & solid
+        if region == "hair":
+            hard |= in_eyes & (h > h1) & (h <= BROW_HUE) & (s >= smin) & (v > 0.1) & solid
+            near = hard.astype(np.float32)
+            for _ in range(HAIR_PALE[1]):
+                near = grow(near)
+            hard |= (near > 0) & (h >= h0) & (h <= h1) & (s >= HAIR_PALE[0]) & solid
+        # The irises' band overlaps the outfit's cyan rim light, so the eye box decides which.
+        hard &= in_eyes if region == "eyes" else ~in_eyes if region == "outfit" else True
+        means.append(float(v[hard].mean()) if hard.any() else 0.0)
+        channels.append(box_blur3(grow(hard.astype(np.float32))) * solid)
+    report.append(f"  {ident + '_mask':20s} mask      ref_v [{', '.join(f'{m:.2f}' for m in means)}]")
+    return np.dstack(channels) * 255
+
+
 def cut_portrait(rgb: np.ndarray, options: dict, report: list[str], ident: str) -> np.ndarray:
     """Key a portrait cell off chroma green, despill it, and keep the whole cell at `px`. RGBA."""
     inset = int(options.get("inset", 0))
@@ -348,6 +400,8 @@ def slice_sheet(name: str, spec: dict, cells: dict[str, np.ndarray], kinds: dict
                                       options.get("key") == "green", report, ident)
         elif kind == "portrait":
             cells[ident] = cut_portrait(window, options, report, ident)
+            if "mask" in options:
+                cells[ident + "_mask"] = portrait_mask(cells[ident], options["mask"]["eyes"], report, ident)
         elif kind == "chrome":
             cells[ident] = cut_chrome(window, options, report, ident)
         elif kind in ("gun", "edge_gun"):
@@ -390,7 +444,9 @@ def write_files(name: str, spec: dict, cells: dict[str, np.ndarray], report: lis
     out = ROOT / spec["out"]
     out.mkdir(parents=True, exist_ok=True)
     for ident in spec["files"]:
-        Image.fromarray(cells[ident].astype(np.uint8), "RGBA").save(out / f"{ident}.png")
+        path = out / f"{ident}.png"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        Image.fromarray(np.clip(cells[ident], 0, 255).astype(np.uint8), "RGBA").save(path)
     report.append(f"{name} -> {out.relative_to(ROOT)}/  ({len(spec['files'])} files)")
 
 

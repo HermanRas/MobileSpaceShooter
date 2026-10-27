@@ -567,7 +567,9 @@ Orbitron for titles, Exo 2 or Rajdhani for body). `tools/licence_audit.py` fails
   other speaker mirrored on the right. Menus and the HUD show a fixed head crop, so every mood
   keeps the head in the same place.
 - **Player characters:** one male (heavily muscled) and one female (curvy) base, each in two
-  outfits, a **flight jacket** and a **space suit** (helmet off), which the player recolours. One
+  outfits, a **flight jacket** and a **space suit** (helmet off), which the player recolours. Menus
+  and the profile screens show the **jacket**; story mode shows the **suit** during missions (owner,
+  2026-10-27), so the outfit isn't the player's choice. One
   sheet per base per outfit, its 4 moods in a 2×2 grid; the suit sheets are image edits of the
   jacket picks, so face, pose and crop match. The
   recolourable regions (hair, eyes, outfit, outfit trim) are painted in distinct **key hues** that
@@ -1322,9 +1324,9 @@ scene of its own.
     outfit and trim swatches from `data/characters.json`, with a preview cycling the 4 moods.
   - **Main menu:** the card shows the selected pilot, and its Pilots button opens the list.
     WaveTime with no pilot goes to the character screen first.
-- **`PortraitView`** is a placeholder bust drawn in the chosen colours, with brows and mouth
-  for the mood, until the painted portraits and their recolour shader (A.7) replace it behind
-  the same API. With no pilot it shows a helmet.
+- **`PortraitView`** shows the painted portrait (A.7) recoloured in the chosen colours, as a head
+  crop on the cards and whole on the character screen; without the art it draws a placeholder
+  bust. With no pilot it shows a helmet.
 - New pilots start from `economy.json` → `new_pilot`. `drive_profiles` makes 3 pilots, checks
   each one's stock is separate, switches between them, and deletes one after the confirmation.
 
@@ -1708,7 +1710,7 @@ off, or note what broke). Everything here passed on the PC in previews and drive
 | A.4 | ✅ 2026-10-27. **Icons**: one sheet (`ART_PROMPT.md` `icons_main`, run 2 of 3): resources and GC, the HUD symbols (fire, switch, pause, boost) and the ×2–×5 power-up badges, one 128 px PNG each in `assets/icons/` (the slicer's `sprite` kind and `files` layout), as `vis.icon.<id>`. In use: pickups in flight, FIRE, SWITCH and Pause; boost and the badges wait for 8.3. **Tile-type, weapon and thruster icons reuse the part art** instead of their own sheet. ⚠️ The flood-fill key keeps enclosed black on purpose (a badge's centre); a crosshair's or coil's hole needs `holes`. | 1 sheet, run ×3 | 4.7, 8.3 |
 | A.5 | ✅ 2026-10-27. **Flashy arcade chrome** (`ART_PROMPT.md` A.5: panel run 2, header run 3, frame run 2, buttons run 1): 18 RGBA PNGs in `assets/ui/` (the slicer's `chrome` kind, cut tight at 2× the drawn size), as `vis.ui.<id>` with their 9-slice `slice`/`content` margins in screen units. `UiTheme` (`src/ui/ui_theme.gd`) makes them StyleBoxTextures: gold Buttons everywhere, `GoButton`/`DangerButton` (Fly, Test fight, Fly again / confirm), `ChromePanel` for the dialogs and pickers, `HeaderPanel`, `FramePanel`, sliders and progress bars. Preview: `dev_preview/art_chrome.tscn`. ⚠️ Assets merges it into `ThemeDB.get_default_theme()`, because a theme on the root window doesn't reach past a CanvasLayer; and the art draws through `ImageTexture.set_size_override`, so 2× pixels sit in 1× margins. The LED rims tile (`tile`), since stretching smears the dots. Header and frame are in the theme but not yet on a screen. | 3 canvases + 1 sheet, run ×3 | 6.1 |
 | A.6 | Map icons: asteroid, beacon, station, shop, bar, hangar, 4 job types, story, skull, tick, you-are-here | 1 sheet | 9.3 |
-| A.7 | Portraits `[D3]` (§6.5), high-quality painted, elbow height, **4 moods each**: the male and female player bases in a jacket and a space suit (2×2 sheets in recolour key hues), a generic villain and ally as stand-ins, then NPCs (bartender ×3, job givers, wife, bandit boss, allies) | 6 sheets, then ~3 | 6.2, 11.5 |
+| A.7 | ✅ players and stand-ins 2026-10-27; NPCs to come. **Portraits** `[D3]` (§6.5), elbow height, 4 moods each: the male and female bases in a jacket and a space suit, and a generic villain and ally (`ART_PROMPT.md` A.7, one run each; the suits are image edits of the jackets). 512 px cells in `assets/portraits/` (the slicer's `portrait` kind keeps the whole cell, so `vis.portraits` gives one head crop per sheet), and for the players recolour masks in `masks/` (R hair, G eyes, B outfit, A trim, from hue bands). `PortraitView` draws them through `portrait_recolour.gdshader`, which takes each region's hue from the chosen colour and scales its value by the paint's over the region's mean (`ref_v`, reported by the slicer); `outfit` picks jacket or suit, `framing` the head crop or the whole picture, and `{"npc": id}` a stand-in. Preview: `dev_preview/art_portraits.tscn`. ⚠️ The masks' `.import` must keep `fix_alpha_border=false` (`tests/ui/test_portraits.gd`). The irises are only looked for in an eye box per sheet, because the suit's cyan rim light is their hue. White hair keeps a faint warm edge on the woman's left strands; a hand mask if it shows. Then NPCs (bartender ×3, job givers, wife, bandit boss, allies) | 6 sheets, then ~3 | 6.2, 11.5 |
 | A.8 | Stations `[D9]`: 5 backdrops (wide, horizontally seamless), 5 exteriors (chroma green), interiors for hangar, shop and bar × 5 | 1 canvas each (~25) | 11.2 |
 | A.9 | Arena space backgrounds: nebula layers, tileable | 5 canvases | 3.5 (procedural first) |
 | A.10 | Asteroids: 3 kinds × 3 sizes + fragments, on chroma green | 1 sheet | 10.2 |

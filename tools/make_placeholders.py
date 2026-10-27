@@ -29,6 +29,8 @@ DAMAGE_OUT = OUT.with_name("tile_damage.png")
 ICON_OUT = OUT.with_name("icon.png")
 MINE_OUT = OUT.with_name("mine.png")
 CHROME_OUT = OUT.with_name("chrome.png")
+PORTRAIT_OUT = OUT.with_name("portrait.png")
+PORTRAIT_MASK_OUT = OUT.with_name("portrait_mask.png")
 ICON = 64
 
 yy, xx = np.mgrid[0:CELL, 0:CELL].astype(np.float32)
@@ -170,6 +172,17 @@ def main() -> None:
     chrome[4:-4, 4:-4, :3] = (20, 24, 32)
     Image.fromarray(chrome, "RGBA").save(CHROME_OUT)
     print(f"wrote {CHROME_OUT.relative_to(CHROME_OUT.parents[3])}")
+
+    # Every vis.portrait.*: a grey bust (head and shoulders) on transparent, and an empty mask
+    # (nothing recoloured). PortraitView draws its own bust until the real art is in.
+    head = np.hypot(ix - ICON / 2, iy - ICON * 0.34) < ICON * 0.18
+    shoulders = np.hypot((ix - ICON / 2) / 1.6, iy - ICON * 1.02) < ICON * 0.3
+    bust = np.zeros((ICON, ICON, 4), dtype=np.uint8)
+    bust[..., :3] = 150
+    bust[..., 3] = ((head | shoulders) * 255).astype(np.uint8)
+    Image.fromarray(bust, "RGBA").save(PORTRAIT_OUT)
+    Image.fromarray(np.zeros((ICON, ICON, 4), dtype=np.uint8), "RGBA").save(PORTRAIT_MASK_OUT)
+    print(f"wrote {PORTRAIT_OUT.relative_to(PORTRAIT_OUT.parents[3])} and portrait_mask.png")
 
 
 if __name__ == "__main__":

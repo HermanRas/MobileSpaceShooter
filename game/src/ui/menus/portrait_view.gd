@@ -1,29 +1,62 @@
 class_name PortraitView
 extends Control
-## A pilot's portrait (PLAN.md 6.2, §6.5, D3): their character in one of four moods. Until
-## the painted portraits and their recolour shader (A.7) it draws a placeholder bust in the
-## chosen colours: hair (short for the male base, long for the female), eyes, outfit and its
-## trim, with brows and mouth for the mood. With no character it's a helmet (no pilot yet).
-## `cycle_s` > 0 steps through the moods (the character screen's preview).
+## A character's portrait (PLAN.md 6.2, §6.5, D3) in one of four moods: the painted art (A.7)
+## when it's in, recoloured in the player's colours by a shader, else a placeholder bust drawn in
+## them: hair (short for the male base, long for the female), eyes, outfit and its trim, with
+## brows and mouth for the mood. With no character it's a helmet (no pilot yet). `cycle_s` > 0
+## steps through the moods (the character screen's preview).
+##
+## `character` is a ProfileRecord.character for a player ({"base", "hair", "eyes", "outfit",
+## "trim"}), or {"npc": id} for a story stand-in (not recoloured). `outfit` picks the player's
+## jacket (menus) or space suit (story missions), and `framing` the head crop (menus, the HUD) or
+## the whole elbow-height picture (the character screen, story dialogs).
+
+enum Framing { HEAD, FULL }
 
 const MOODS: Array[StringName] = [&"idle", &"happy", &"sad", &"angry"]
 const SKIN := Color("#e2b48c")
 const BACK := Color(0.1, 0.16, 0.26)
+const RECOLOUR := preload("res://src/ui/menus/portrait_recolour.gdshader")
+const REGIONS: Array[StringName] = [&"hair", &"eyes", &"outfit", &"trim"]
 
-## {"base", "hair", "eyes", "outfit", "trim"} (ProfileRecord.character), or {} for a helmet.
+## {"base", "hair", "eyes", "outfit", "trim"} (ProfileRecord.character), {"npc": id}, or {} for a helmet.
 var character := {}:
 	set(value):
 		character = value
-		queue_redraw()
+		_refresh()
 var mood: StringName = &"idle":
 	set(value):
 		mood = value
-		queue_redraw()
+		_refresh()
+var outfit: StringName = &"jacket":
+	set(value):
+		outfit = value
+		_refresh()
+var framing := Framing.HEAD:
+	set(value):
+		framing = value
+		_refresh()
 var cycle_s := 0.0
 ## The frame round it, or transparent for none.
 var frame := Color(1.0, 0.62, 0.25)
 
 var _clock := 0.0
+var _art := TextureRect.new()
+## Draws the frame over the art (a Control draws before its children).
+var _overlay := Control.new()
+
+
+func _ready() -> void:
+	for child: Control in [_art, _overlay]:
+		child.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		add_child(child)
+	_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	_overlay.draw.connect(_draw_frame)
+	resized.connect(_place_art)
+	_place_art()
+	_refresh()
 
 
 func _process(delta: float) -> void:
@@ -35,16 +68,75 @@ func _process(delta: float) -> void:
 		mood = MOODS[(MOODS.find(mood) + 1) % MOODS.size()]
 
 
-func _draw() -> void:
+## The sheet this character is painted on ("male_jacket", "npc_villain"), or "" for none.
+func sheet() -> String:
+	if character.has("npc"):
+		return "npc_%s" % character["npc"]
+	if character.has("base"):
+		return "%s_%s" % [character["base"], outfit]
+	return ""
+
+
+## True when the painted art is showing (not the placeholder bust or the helmet).
+func has_art() -> bool:
+	return _art.visible
+
+
+func _refresh() -> void:
+	var id := sheet()
+	var art_id := StringName("vis.portrait.%s_%s" % [id, mood])
+	_art.visible = not id.is_empty() and Assets.has_real_art(art_id)
+	if _art.visible:
+		var meta: Dictionary = Assets.meta(&"vis.portraits").get("sheets", {}).get(id, {})
+		var picture := AtlasTexture.new()
+		picture.atlas = Assets.tex(art_id)
+		var full := Vector2(picture.atlas.get_size())
+		var head: Array = meta.get("head", [0.0, 0.0, 1.0])
+		picture.region = Rect2(Vector2(head[0], head[1]) * full, Vector2.ONE * float(head[2]) * full) \
+				if framing == Framing.HEAD else Rect2(Vector2.ZERO, full)
+		_art.texture = picture
+		_art.material = _recolour(id, meta) if character.has("base") else null
+	queue_redraw()
+	_overlay.queue_redraw()
+
+
+func _recolour(id: String, meta: Dictionary) -> ShaderMaterial:
+	var material := ShaderMaterial.new()
+	material.shader = RECOLOUR
+	material.set_shader_parameter(&"mask", Assets.tex(StringName("vis.portrait_mask.%s_%s" % [id, mood])))
+	var ref: Array = meta.get("ref_v", [0.55, 0.55, 0.55, 0.55])
+	material.set_shader_parameter(&"ref_v", Vector4(ref[0], ref[1], ref[2], ref[3]))
+	for region in REGIONS:
+		if character.has(region):
+			material.set_shader_parameter(region, Color(str(character[region])))
+	return material
+
+
+func _box() -> Rect2:
 	var side := minf(size.x, size.y)
-	var box := Rect2((size - Vector2.ONE * side) * 0.5 + Vector2.ONE * 6.0, Vector2.ONE * (side - 12.0))
+	return Rect2((size - Vector2.ONE * side) * 0.5 + Vector2.ONE * 6.0, Vector2.ONE * (side - 12.0))
+
+
+func _place_art() -> void:
+	var box := _box()
+	_art.position = box.position
+	_art.size = box.size
+
+
+func _draw_frame() -> void:
+	if frame.a > 0.0:
+		_overlay.draw_rect(_box(), frame, false, 3.0)
+
+
+func _draw() -> void:
+	var box := _box()
 	draw_rect(box, BACK)
-	if character.is_empty():
+	if _art.visible:
+		return
+	if character.is_empty() or character.has("npc"):
 		_helmet(box)
 	else:
 		_bust(box)
-	if frame.a > 0.0:
-		draw_rect(box, frame, false, 3.0)
 
 
 ## A point in the box from unit coordinates (0..1 across and down).

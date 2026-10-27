@@ -212,10 +212,10 @@
 			"grid": [2, 2],
 			"_doc": "Generated 2026-10-27 (A.7), the moods in reading order. Gemini made the jacket a sleeveless vest; head ~27% of the cell.",
 			"cells": {
-				"1": ["male_jacket_idle", "portrait", {"inset": 4, "px": 512}],
-				"2": ["male_jacket_happy", "portrait", {"inset": 4, "px": 512}],
-				"3": ["male_jacket_sad", "portrait", {"inset": 4, "px": 512}],
-				"4": ["male_jacket_angry", "portrait", {"inset": 4, "px": 512}]
+				"1": ["male_jacket_idle", "portrait", {"inset": 4, "px": 512, "mask": {"eyes": [0.35, 0.18, 0.7, 0.29]}}],
+				"2": ["male_jacket_happy", "portrait", {"inset": 4, "px": 512, "mask": {"eyes": [0.35, 0.18, 0.7, 0.29]}}],
+				"3": ["male_jacket_sad", "portrait", {"inset": 4, "px": 512, "mask": {"eyes": [0.35, 0.18, 0.7, 0.29]}}],
+				"4": ["male_jacket_angry", "portrait", {"inset": 4, "px": 512, "mask": {"eyes": [0.35, 0.18, 0.7, 0.29]}}]
 			}
 		},
 		"portraits_man_suit_1": {
@@ -223,10 +223,10 @@
 			"grid": [2, 2],
 			"_doc": "Generated 2026-10-27 (A.7), the moods in reading order. An image edit of portraits_man_jacket_1: the same man, pose and crop in the space suit.",
 			"cells": {
-				"1": ["male_suit_idle", "portrait", {"inset": 4, "px": 512}],
-				"2": ["male_suit_happy", "portrait", {"inset": 4, "px": 512}],
-				"3": ["male_suit_sad", "portrait", {"inset": 4, "px": 512}],
-				"4": ["male_suit_angry", "portrait", {"inset": 4, "px": 512}]
+				"1": ["male_suit_idle", "portrait", {"inset": 4, "px": 512, "mask": {"eyes": [0.35, 0.18, 0.7, 0.29]}}],
+				"2": ["male_suit_happy", "portrait", {"inset": 4, "px": 512, "mask": {"eyes": [0.35, 0.18, 0.7, 0.29]}}],
+				"3": ["male_suit_sad", "portrait", {"inset": 4, "px": 512, "mask": {"eyes": [0.35, 0.18, 0.7, 0.29]}}],
+				"4": ["male_suit_angry", "portrait", {"inset": 4, "px": 512, "mask": {"eyes": [0.35, 0.18, 0.7, 0.29]}}]
 			}
 		},
 		"portraits_woman_jacket_1": {
@@ -234,10 +234,10 @@
 			"grid": [2, 2],
 			"_doc": "Generated 2026-10-27 (A.7), the moods in reading order. Head ~33% of the cell, cut at the ribs; thin black grid lines (inset).",
 			"cells": {
-				"1": ["female_jacket_idle", "portrait", {"inset": 4, "px": 512}],
-				"2": ["female_jacket_happy", "portrait", {"inset": 4, "px": 512}],
-				"3": ["female_jacket_sad", "portrait", {"inset": 4, "px": 512}],
-				"4": ["female_jacket_angry", "portrait", {"inset": 4, "px": 512}]
+				"1": ["female_jacket_idle", "portrait", {"inset": 4, "px": 512, "mask": {"eyes": [0.32, 0.17, 0.62, 0.36]}}],
+				"2": ["female_jacket_happy", "portrait", {"inset": 4, "px": 512, "mask": {"eyes": [0.32, 0.17, 0.62, 0.36]}}],
+				"3": ["female_jacket_sad", "portrait", {"inset": 4, "px": 512, "mask": {"eyes": [0.32, 0.17, 0.62, 0.36]}}],
+				"4": ["female_jacket_angry", "portrait", {"inset": 4, "px": 512, "mask": {"eyes": [0.32, 0.17, 0.62, 0.36]}}]
 			}
 		},
 		"portraits_woman_suit_1": {
@@ -245,10 +245,10 @@
 			"grid": [2, 2],
 			"_doc": "Generated 2026-10-27 (A.7), the moods in reading order. An image edit of portraits_woman_jacket_1.",
 			"cells": {
-				"1": ["female_suit_idle", "portrait", {"inset": 4, "px": 512}],
-				"2": ["female_suit_happy", "portrait", {"inset": 4, "px": 512}],
-				"3": ["female_suit_sad", "portrait", {"inset": 4, "px": 512}],
-				"4": ["female_suit_angry", "portrait", {"inset": 4, "px": 512}]
+				"1": ["female_suit_idle", "portrait", {"inset": 4, "px": 512, "mask": {"eyes": [0.32, 0.17, 0.62, 0.36]}}],
+				"2": ["female_suit_happy", "portrait", {"inset": 4, "px": 512, "mask": {"eyes": [0.32, 0.17, 0.62, 0.36]}}],
+				"3": ["female_suit_sad", "portrait", {"inset": 4, "px": 512, "mask": {"eyes": [0.32, 0.17, 0.62, 0.36]}}],
+				"4": ["female_suit_angry", "portrait", {"inset": 4, "px": 512, "mask": {"eyes": [0.32, 0.17, 0.62, 0.36]}}]
 			}
 		},
 		"portraits_npc_villain_1": {
@@ -337,6 +337,15 @@
 				"female_suit_idle", "female_suit_happy", "female_suit_sad", "female_suit_angry",
 				"npc_villain_idle", "npc_villain_happy", "npc_villain_sad", "npc_villain_angry",
 				"npc_ally_idle", "npc_ally_happy", "npc_ally_sad", "npc_ally_angry"]
+		},
+		"portrait_masks": {
+			"out": "game/assets/portraits/masks",
+			"layout": "files",
+			"_doc": "The player portraits' recolour masks (R hair, G eyes, B outfit, A trim). Their .import files must keep process/fix_alpha_border=false, or Godot overwrites RGB where A is 0 (tests/test_portrait_masks.gd).",
+			"files": ["male_jacket_idle_mask", "male_jacket_happy_mask", "male_jacket_sad_mask", "male_jacket_angry_mask",
+				"male_suit_idle_mask", "male_suit_happy_mask", "male_suit_sad_mask", "male_suit_angry_mask",
+				"female_jacket_idle_mask", "female_jacket_happy_mask", "female_jacket_sad_mask", "female_jacket_angry_mask",
+				"female_suit_idle_mask", "female_suit_happy_mask", "female_suit_sad_mask", "female_suit_angry_mask"]
 		}
 	}
 }

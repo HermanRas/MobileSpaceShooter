@@ -982,7 +982,7 @@ func _build_ui() -> void:
 		root.add_child(corner)
 		_reset_button = _tool_button(corner, "Reset", _reset_stock)
 		_reset_button.name = "ResetStock"
-		_reset_button.add_theme_color_override(&"font_color", Color(1.0, 0.5, 0.45))
+		_reset_button.theme_type_variation = &"DangerButton"
 	_thumbs = ThumbnailRenderer.new()
 	add_child(_thumbs)
 	_library_panel = LibraryPanel.new()

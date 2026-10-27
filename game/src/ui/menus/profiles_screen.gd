@@ -92,7 +92,7 @@ func _card(pilot: ProfileRecord) -> Control:
 	buttons.add_child(select)
 	buttons.add_child(MenuKit.button("Edit", _edit.bind(pilot.id), Vector2(70, 52), 18))
 	var delete := MenuKit.button("Delete", _ask_delete.bind(pilot.id), Vector2(80, 52), 18)
-	delete.add_theme_color_override(&"font_color", Color(1.0, 0.5, 0.45))
+	delete.theme_type_variation = &"DangerButton"
 	buttons.add_child(delete)
 	return panel
 

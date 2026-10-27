@@ -1,6 +1,6 @@
 {
 	"format": 1,
-	"_doc": "PLAN.md 6.2, §6.5 (D3): the player's character. A male or female base, recoloured in four regions from these swatches (a profile keeps the chosen colours, not their index, so the palettes can change). The portrait cycles the moods. Until the painted portraits (A.7), PortraitView draws a placeholder bust in the chosen colours.",
+	"_doc": "PLAN.md 6.2, §6.5 (D3): the player's character. A male or female base, recoloured in four regions from these swatches (a profile keeps the chosen colours, not their index, so the palettes can change). The portrait cycles the moods. PortraitView paints these colours over the A.7 portraits' key hues (visuals.json vis.portraits); without the art it draws a placeholder bust in them.",
 	"bases": ["male", "female"],
 	"moods": ["idle", "happy", "sad", "angry"],
 	"swatches": {
