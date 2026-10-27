@@ -155,12 +155,12 @@ band for the colour the player picked and keeps the shading. Each hue is far fro
 | A.3d | `fx_mines` | `art_src/parts/` | 4, run ×3 | ✅ in the game 2026-10-27: run 1 #2 |
 | A.4 | `icons_main` | `art_src/icons/` | 15, run ×3 | ✅ in the game 2026-10-27: pickups, FIRE, SWITCH, Pause |
 | A.5 | `chrome_panel`, `chrome_header`, `chrome_frame`, `chrome_buttons` | `art_src/ui/` | 3 canvases + 1 sheet | ✅ in the game 2026-10-27: UiTheme |
-| A.6 | `icons_map` | `art_src/icons/` | 1 sheet | to write |
+| A.6 | `icons_map` | `art_src/icons/` | 15, run ×3 | prompt ready 2026-10-27 |
 | A.7 | `portraits_players`: 4 sheets (man, woman × jacket, suit), 2 stand-ins (villain, ally), then NPC sheets | `art_src/portraits/` | 4 × 4 cells, then ~3 sheets | ✅ in the game 2026-10-27: PortraitView, recoloured |
-| A.8 | `station_*` | `art_src/stations/` | ~25 canvases | to write |
-| A.9 | `backdrop_arena_*` | `art_src/backgrounds/` | 5 canvases | to write |
-| A.10 | `world_asteroids` | `art_src/parts/` | 1 sheet | to write |
-| A.11 | `splash`, `app_icon`, `title` | `art_src/backgrounds/`, `art_src/icons/` | 3 canvases | to write |
+| A.8 | `station_backdrop`, `station_exterior`, `station_room` × 5 themes | `art_src/stations/` | 25 canvases | prompts ready 2026-10-27 |
+| A.9 | `arena_nebula` × 5 | `art_src/backgrounds/` | 5 canvases, run ×2 | prompt ready 2026-10-27 |
+| A.10 | `world_asteroids` | `art_src/parts/` | 15, run ×3 | prompt ready 2026-10-27 |
+| A.11 | `splash`, `app_icon`, `title_plate` | `art_src/backgrounds/`, `art_src/icons/`, `art_src/ui/` | 3 canvases, run ×3 | prompts ready 2026-10-27 |
 
 ---
 
@@ -1355,6 +1355,388 @@ filled the "empty" rows with extra characters (a second woman, a third pilot), h
 with every cell filled. The owner then asked for elbow-height framing for story mode, a muscular
 man, a curvy woman and a space-suit outfit, so v1 was replaced and then deleted, with the face
 crops (`ref_man.png`, `ref_woman.png`) cut from it.
+
+---
+
+## icons_map
+
+**A.6: 15 cells. Run ×3. Save them as `art_src/icons/icons_map_1.png`, and so on.**
+
+The world map's icons (9.3), chrome-and-icons tier, the same finish as `icons_main` so they sit
+together. Each one goes on a hex tile, so it must read at 40 px on a coloured hex (grey for
+visited, green for completed, red for failed: the game draws the hex, not the icon).
+
+| Row | What |
+|---|---|
+| 1 | Places: asteroid belt, distress beacon, station, story tile |
+| 2 | Station services: hangar, shop, bar, skull (danger) |
+| 3 | The four job types: kill HVT, protect VIP, mine, hold the zone |
+| 4 | Markers: completed tick, you-are-here, and a spare |
+
+```
+A 1024x1024 sprite sheet of 15 map icons for a mobile space shooter, arranged on a
+strict 4x4 grid of 256x256 cells, one icon centred in each cell, each filling about
+70% of its cell. The bottom-right cell is completely empty, flat black.
+
+BACKGROUND: flat pure black #000000 everywhere there is no artwork. No gradient,
+no vignette, no glow spilling onto the background, no grid lines, no borders, no
+frames around the cells.
+
+STYLE: a rich, glossy, painted mobile-game finish: bevelled edges, soft studio
+light from the upper left, a crisp bright highlight on each object, a thick dark
+outline so each icon reads on any coloured background. NOT pixel art, NOT flat
+vector, NOT a photo. Every icon in the same style, light and level of finish.
+Each icon is ONE bold object or symbol with a clean silhouette, readable when
+shrunk to 40 pixels. No small details.
+
+PALETTE (use these colours):
+gold highlight #F3CD37, gold mid #EAA50D, orange shadow #A76711, bronze deep
+#5F3514, steel light #C3CAD2, steel mid #7A838D, steel dark #343B44, cream
+#FFF1D0, crystal cyan #73F2FF, credits gold #FFCC40, red #E0452A, amber #FFB040.
+
+EACH ROW IS ONE KIND OF ICON:
+
+ROW 1, four cells: PLACES.
+1. Asteroid belt: three grey rocks of different sizes in a loose diagonal line.
+2. Distress beacon: a small steel buoy with a red #E0452A lamp on top and two
+   short curved signal arcs either side of the lamp.
+3. Space station: a round steel hub with two short arms and a gold ring.
+4. Story: a gold four-pointed star inside a gold ring.
+
+ROW 2, four cells: SERVICES AND DANGER.
+5. Hangar: a gold spanner crossed with a steel hammer.
+6. Shop: a gold coin #FFCC40 in front of a small steel crate.
+7. Bar: a glass tankard with cream foam.
+8. Danger: a cream #FFF1D0 skull with dark eye holes, no crossbones.
+
+ROW 3, four cells: FOUR JOBS.
+9. Kill a target: a red #E0452A targeting crosshair, a circle with four ticks.
+10. Protect: a steel shield with a gold rim.
+11. Mine: a steel pickaxe crossed over a cyan #73F2FF crystal.
+12. Hold the zone: a gold flag on a short pole planted in a round steel base.
+
+ROW 4, three cells, then the empty bottom-right cell:
+13. Completed: a bold gold tick (check mark).
+14. You are here: a gold map pin with a dark round hole in its head.
+15. A small gold compass rose with four points.
+16. EMPTY, flat black.
+
+ABSOLUTELY NO TEXT of any kind: no labels, no numbers, no letters, no logos.
+
+Remember: no text, black background, one bold object per cell, and the
+bottom-right cell is empty.
+```
+
+**What happens to it.** Like `icons_main`: the slicer's `sprite` kind (the pin's hole with
+`holes`), one 128 px PNG each in `assets/icons/`, as `vis.icon.map_<id>`. The map (9.3) uses them.
+
+---
+
+## A.8: stations (three prompts, run once per theme)
+
+A station screen (11.2) is a parallax scroll of three layers in front of each other: a
+**backdrop** (space behind the station), the **exterior** (the station itself), and, when you go
+in, a **room** (hangar, shop or bar). There are 5 of each kind, and the game mixes them by seed
+(D9) and shifts their accent hue for the station's colour scheme. **So every station picture
+keeps its colour in ONE accent: amber. The game turns amber into the scheme's colour; everything
+else is steel grey and dark.**
+
+**The five themes.** Each prompt below has a `THEME:` line. Run the prompt once per theme, with
+that line swapped for one of these (×2 each if you want a choice), and save as
+`art_src/stations/<section>_<theme>.png`, e.g. `station_exterior_mining.png`:
+
+| Theme | `THEME:` line |
+|---|---|
+| `mining` | THEME: a rugged mining outpost: heavy girders, ore conveyors, big cargo cranes, scuffed armour plate. |
+| `military` | THEME: a military fortress: thick angular armour, gun turrets, landing lights, a grim fortified look. |
+| `trade` | THEME: a busy trade hub: many docking ports, cargo containers, antenna masts, tidy and prosperous. |
+| `frontier` | THEME: a frontier scrapyard: patched-together modules, mismatched plates, cables strung between, improvised. |
+| `research` | THEME: a research station: smooth curved modules, sensor dishes, observation windows, clean and white-grey. |
+
+### station_backdrop
+
+**A.8: 5 canvases, wide. The space behind a station; it scrolls sideways, so it has to tile.**
+
+```
+A wide 16:9 painted space background for a mobile game, the far layer of a
+side-scrolling scene. NO station, NO ships, NO foreground objects: only deep
+space, a distant planet or moon, and soft nebula clouds.
+
+THEME: <one line from the table, for the kind of space around that station>
+
+The picture must TILE HORIZONTALLY: its left edge continues seamlessly into its
+right edge, so the same clouds and stars line up across the join. Keep the planet
+away from both side edges, in the middle third.
+
+STYLE: painted, soft and atmospheric, DARKER and LOWER in contrast than a normal
+illustration, because a station and game buttons are drawn on top of it. Deep
+space navy #020B15 to #062448, nebula blue #0D3768, a few soft amber #FFB040
+highlights. Small sparse stars. NOT a photo, NOT pixel art.
+
+ABSOLUTELY NO TEXT, no logos, no ships, no stations, no people.
+```
+
+For the backdrops, the `THEME:` lines describe the space, not the station:
+`mining` a dusty brown-grey asteroid haze with a cratered moon; `military` a dark red-amber gas
+giant with a thin ring; `trade` a bright blue nebula and a small blue planet; `frontier` a dim
+star field with drifting rock fragments and a dead grey planet; `research` a pale icy planet with
+a glowing aurora edge.
+
+### station_exterior
+
+**A.8: 5 canvases, on chroma green. The station itself, the middle layer.**
+
+```
+A single ORIGINAL space station for a mobile space shooter, seen from the side
+(a straight side view, not from above), centred on a wide 16:9 canvas and filling
+about 80% of its width.
+
+THEME: <one line from the table>
+
+BACKGROUND: flat pure chroma green #00FF00 everywhere around the station. No
+space, no stars, no planet, no shadow, no gradient, no ground.
+
+COLOUR: steel greys from light #C3CAD2 to dark #343B44 for the whole structure,
+and ONE accent colour only, AMBER #FFB040, for its trim stripes, window lights and
+markings. NOTHING green on the station, no other colours.
+
+STYLE: clean painted game art with crisp edges and a little bevel, light from the
+upper left, the same finish as a polished mobile game. NOT a photo, NOT pixel art.
+No glows, no engine flames, no beams: lights are flat amber shapes.
+
+An original design: it must not resemble any station or ship from a film, TV show
+or game (no Death Star, no Deep Space Nine, no Star Destroyer).
+
+ABSOLUTELY NO TEXT, no signs with writing, no logos, no numbers.
+```
+
+### station_room
+
+**A.8: 15 canvases (hangar, shop and bar × 5 themes). A room's background; the game's panels
+and a character portrait sit on top of it.**
+
+Swap in one `ROOM:` line as well as the `THEME:` line:
+
+| Room | `ROOM:` line |
+|---|---|
+| `hangar` | ROOM: a ship hangar bay seen from the side: a big open floor in the middle with landing markings, work gantries, cranes and tool racks along the walls. The middle of the floor is EMPTY (the game puts the player's ship there). |
+| `shop` | ROOM: a parts shop seen from the front: wall racks of gun barrels, thruster nozzles and crates on both sides, a long counter along the bottom. The middle of the back wall is PLAIN and DARK (the game puts its shop panel there). |
+| `bar` | ROOM: a spacer's bar seen from the front: a long bar counter along the bottom, shelves of bottles and a window onto space behind it, a few empty stools. An EMPTY space behind the counter on the LEFT third, where the bartender stands (the game draws the bartender). |
+
+Save as `art_src/stations/station_room_<room>_<theme>.png`.
+
+```
+A wide 16:9 painted interior background for a mobile space shooter, an empty room
+with NO people and NO characters in it.
+
+ROOM: <one line from the room table>
+
+THEME: <one line from the theme table: the room belongs to that kind of station>
+
+STYLE: painted, atmospheric, DARKER and LOWER in contrast than a normal
+illustration, because the game's buttons and panels are drawn on top. The
+middle of the picture is the quietest part. Steel greys #343B44 to #7A838D, dark
+teal #1F3332, and ONE accent colour, AMBER #FFB040, for lights and trim. Light
+from the upper left. NOT a photo, NOT pixel art.
+
+An original design: nothing from a film, TV show or game.
+
+ABSOLUTELY NO TEXT: no signs, no screens with writing, no posters, no logos, no
+numbers. No people, no aliens, no robots.
+```
+
+**What happens to them.** Backdrops get their seam evened out by the slicer (like the tile
+materials, sideways only) and stay full colour; exteriors are keyed off green; rooms are used as
+they come. All go to `assets/stations/` as `vis.station.<kind>_<theme>`. The station screen (11.2)
+shifts amber to the scheme's hue with a shader, so the 5 × 5 × 5 × 3 combinations (D9) come from
+25 pictures.
+
+---
+
+## arena_nebula
+
+**A.9: 5 canvases, square, run ×2 each. Save them as `art_src/backgrounds/arena_nebula_<n>_1.png`.**
+
+The arena's sky (3.5) is the game's own starfield shader: three layers of stars, no textures. A
+nebula layer goes behind those stars, scrolling slower still, so space has colour and depth. The
+stars stay the shader's, so **the nebula has no stars in it**. It tiles in both directions,
+because an arena is 240 U across and the camera can be anywhere.
+
+Swap in one `NEBULA:` line per run:
+1. NEBULA: soft blue #0D3768 clouds with a few deeper navy channels.
+2. NEBULA: violet and blue clouds, a faint amber #FFB040 glow in one place.
+3. NEBULA: thin teal #1F3332 and blue wisps, mostly empty dark space.
+4. NEBULA: dusty red-brown clouds over navy, like the edge of a dust belt.
+5. NEBULA: a faint cyan #73F2FF veil with darker blue filaments.
+
+```
+A square seamless tileable texture of a space nebula for a mobile space shooter,
+1024x1024. It must TILE in BOTH directions: the left edge continues seamlessly
+into the right edge, and the top edge into the bottom edge.
+
+NEBULA: <one line from the list>
+
+The background between the clouds is deep space navy #020B15. NO STARS at all,
+no bright points, no planets, no galaxies, no objects: only soft clouds.
+
+STYLE: soft painted clouds, very DARK and LOW in contrast (the brightest cloud is
+no brighter than a mid tone), because ships, bullets and stars are drawn on top
+and must always stand out. Even coverage across the whole square, with no single
+big feature that would repeat visibly when tiled. NOT a photo, NOT pixel art.
+
+ABSOLUTELY NO TEXT, no logos.
+```
+
+**What happens to it.** The slicer evens out both seams (as for tile materials, in colour), and
+the starfield shader draws it as its slowest layer, darkened further if it fights the ships.
+Each arena picks one by seed (`vis.space.nebula_<n>`).
+
+---
+
+## world_asteroids
+
+**A.10: 15 cells, on chroma green. Run ×3. Save them as `art_src/parts/world_asteroids_1.png`.**
+
+World tier: strictly top-down. Asteroids split when shot, L → M → S (10.2), and their kind says
+what they drop, so the three kinds must read apart at a glance, even at the S size.
+
+```
+A 1024x1024 sprite sheet of asteroids for a top-down mobile space shooter,
+arranged on a strict 4x4 grid of 256x256 cells, one object centred in each cell.
+The bottom-right cell is completely empty, flat chroma green.
+
+BACKGROUND: flat pure chroma green #00FF00 everywhere around the rocks. No
+gradient, no shadow on the background, no grid lines, no borders.
+
+VIEW: seen from directly above, lit from the upper left. No cast shadows.
+
+STYLE: clean painted game art, crisp edges, readable when shrunk to 32 pixels.
+NOT a photo, NOT pixel art. NOTHING green on any rock.
+
+EACH ROW IS ONE KIND OF ASTEROID, in four sizes from left to right: LARGE (filling
+90% of its cell), MEDIUM (60%), SMALL (35%), and a FRAGMENT (a little broken chip,
+20%). The same rock style in all four.
+ROW 1: STONE asteroids: rough grey rock #7A838D with craters.
+ROW 2: METAL asteroids: dark grey rock with veins and patches of pale blue metal
+#8CADD9 showing through.
+ROW 3: CRYSTAL asteroids: dark rock with bright cyan #73F2FF crystal points
+growing out of it.
+ROW 4, three cells, then the empty bottom-right cell: three more FRAGMENTS, one
+stone, one metal, one crystal, each a different shape from the first ones.
+
+ABSOLUTELY NO TEXT, no labels, no numbers.
+
+Remember: top-down, chroma green background, nothing green on the rocks, and the
+bottom-right cell is empty.
+```
+
+**What happens to it.** The slicer's `sprite` kind (with `{"key": "green"}`) cuts each rock as a
+256 px PNG in `assets/world/`, as `vis.world.asteroid_<kind>_<size>`. The belts (10.2) use them.
+
+---
+
+## A.11: splash, app icon and title
+
+**Text is set by the game in a font, never painted**: Gemini's text was the first splash's worst
+failure, along with its X-wing-like fighters. The title font will be **Orbitron** (OFL, Google
+Fonts; §6.4), added with its licence row when these come in.
+
+**For the splash and the icon, upload a screenshot of one of the game's own ships** (run the
+game, open the hangar, and screenshot a ship you've built), so Gemini paints ships made the way
+ours are: panelled tiles, round turrets, nozzles. Upload `insperationPictures/Menu Theme.png` for
+the title plate.
+
+### splash
+
+**A.11: 1 canvas, wide. Run ×3. Save them as `art_src/backgrounds/splash_1.png`.**
+
+```
+A wide 16:9 painted splash screen for a mobile space shooter, with NO TEXT.
+
+SCENE: a dramatic space battle above a large station: three ORIGINAL fighter
+ships in the style of the attached screenshot (ships built from flat panelled
+square, triangle and hexagon hull tiles, with round gun turrets and engine
+nozzles on their edges), seen from slightly above, firing at a swarm of smaller
+enemy ships. A station and a planet in the distance. Deep blue space.
+
+COMPOSITION: the ships and the action in the upper two thirds. The LOWER MIDDLE
+THIRD is calmer and darker, with nothing important in it, because the game puts
+the title and a loading bar there.
+
+STYLE: rich painted game art, saturated and dramatic, light from the upper left,
+deep space navy #020B15 to #0D3768 with gold #F3CD37 and amber #FFB040 accents.
+NOT a photo, NOT pixel art.
+
+ORIGINAL designs only: no X-wings, no TIE fighters, no Star Destroyers, nothing
+from any film, TV show or game.
+
+ABSOLUTELY NO TEXT: no title, no logo, no loading bar, no numbers, no signs.
+```
+
+### app_icon
+
+**A.11: 1 canvas, square. Run ×3. Save them as `art_src/icons/app_icon_1.png`.**
+
+Android crops an icon to a circle or a rounded square, and shrinks it to 48 px, so it's one bold
+subject in the middle.
+
+```
+A square 1024x1024 app icon for a mobile space shooter, with NO TEXT.
+
+ONE ORIGINAL fighter ship in the style of the attached screenshot (built from flat
+panelled hull tiles, with a round gun turret and engine nozzles), seen from
+directly above, pointing to the upper right, diving out of a deep blue space
+background with a soft gold #F3CD37 glow behind it.
+
+The ship sits in the MIDDLE 60% of the square, with nothing important near the
+edges or corners, because the icon is cropped to a circle.
+
+STYLE: bold, glossy, saturated painted game art, a crisp bright highlight, light
+from the upper left. Readable when shrunk to 48 pixels. NOT a photo, NOT pixel
+art.
+
+ORIGINAL design: nothing from any film, TV show or game.
+
+ABSOLUTELY NO TEXT, no letters, no logo, no border, no frame.
+```
+
+### title_plate
+
+**A.11: 1 canvas, wide, on black. Run ×3. Save them as `art_src/ui/title_plate_1.png`.** Upload
+`insperationPictures/Menu Theme.png`.
+
+The main menu's title: a flashy chrome plate the game writes "MSS" and "Mobile Space Shooter" on,
+in Orbitron.
+
+```
+A single EMPTY title plate for a mobile space shooter's main menu, centred on a
+wide 16:9 canvas and filling about 80% of its width and 45% of its height: a big
+bold banner shape with swept-back wing points on both sides, a thick bevelled
+gold-and-orange rim, a row of small round LED dots along the rim, riveted dark
+steel brackets at the wing tips, and a large PLAIN dark field (#24100A) in the
+middle where the game writes the title. The field is EMPTY and EVEN.
+
+STYLE: FLASHY ARCADE mobile-game UI chrome, a rich glossy painted finish like the
+attached reference image: match its finish and colours, NOT its layout, and copy
+nothing from it. Bold saturated gold and orange with hot white-gold highlights,
+chunky bevels, light from the upper left. Loud and shiny. NOT pixel art, NOT flat
+vector, NOT a photo.
+
+PALETTE: gold highlight #F3CD37, gold mid #EAA50D, orange shadow #A76711, bronze
+deep #5F3514, panel field #24100A, steel light #C3CAD2, steel mid #7A838D, steel
+dark #343B44.
+
+BACKGROUND: flat pure black #000000 outside the artwork. No gradient, no glow
+spilling onto the background.
+
+ABSOLUTELY NO TEXT of any kind: no letters, no title, no logo, no symbols. The
+game writes the title.
+```
+
+**What happens to them.** `tools/make_branding.py` builds the project and Android icons from
+`app_icon` (the adaptive foreground inside its safe zone) and the boot splash from `splash`,
+with the title set over it; the menu draws `title_plate` (a `chrome` cut) behind its title. The
+old `Spash.jpeg` and `Icon_origenal.jpeg` are retired.
 
 ---
 
