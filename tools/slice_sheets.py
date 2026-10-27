@@ -41,6 +41,17 @@ chroma green): keyed like `keyed` (a flood fill from the
 border, so a dark badge centre ringed by gold survives), kept in colour with its alpha, and
 fitted into a square. A "files" atlas writes each sprite as its own PNG, so a Button can use it.
 
+A chrome piece (A.5's panels, header, frame and buttons) is keyed like a sprite but keeps its own
+shape: it's cropped tight to the artwork (so a 9-slice's edges are the art's edges) and scaled so
+its height is `h` px (or its width `w`). `inset` trims the cell window first, past the grid lines
+Gemini draws between cells; `crop` keeps a fraction [x0, y0, x1, y1] of the window (a bar's fill
+out of its track). The game draws them at half size, so they stay crisp on the phone.
+
+A portrait (A.7) is a painted character on chroma green, keyed and despilled like a green sprite,
+but it keeps its whole cell (past `inset`), scaled to `px`: the prompts pin where the head sits in
+the cell, so the game can crop the head with one rect per sheet, and the body runs off the
+bottom edge, where a dialog stands it on the screen's.
+
 Atlas layout (the ship shader's contract): a column per entry of a row, a row per variant, every
 cell padded by cell_px / 16 on each side (wrapped for materials, edge-extended otherwise), so
 mipmaps and linear filtering never read a neighbouring cell. The pad is 1/18 of the stride
@@ -241,11 +252,7 @@ def cut_sprite(rgb: np.ndarray, size: int, holes: bool, green: bool, report: lis
         rgb = rgb.copy()
         rgb[..., 1] = np.minimum(rgb[..., 1], np.maximum(rgb[..., 0], rgb[..., 2]))
     else:
-        lum = luma(rgb)
-        border = np.concatenate([lum[0, :], lum[-1, :], lum[:, 0], lum[:, -1]])
-        thresh = int(min(40, max(10, np.percentile(border, 99.5) + 8)))
-        dark = lum <= thresh
-        alpha = box_blur3((~(dark if holes else fill_from_border(dark))).astype(np.float32))
+        alpha, thresh = key_black(rgb, holes)
     ys, xs = np.nonzero(alpha > 0.5)
     x0, y0, x1, y1 = xs.min(), ys.min(), xs.max() + 1, ys.max() + 1
     rgba = np.dstack([rgb, alpha * 255])[y0:y1, x0:x1]
@@ -256,6 +263,51 @@ def cut_sprite(rgb: np.ndarray, size: int, holes: bool, green: bool, report: lis
     out.paste(art, ((size - w) // 2, (size - h) // 2))
     report.append(f"  {ident:16s} sprite    {x1 - x0}x{y1 - y0} -> {w}x{h} in {size}  (key <= {thresh})")
     return np.asarray(out).astype(np.float32)
+
+
+def key_black(rgb: np.ndarray, holes: bool) -> tuple[np.ndarray, int]:
+    """Coverage 0..1 of artwork on black (the border-connected dark, or with `holes` all of it),
+    and the threshold used, measured from the window's own border."""
+    lum = luma(rgb)
+    border = np.concatenate([lum[0, :], lum[-1, :], lum[:, 0], lum[:, -1]])
+    thresh = int(min(40, max(10, np.percentile(border, 99.5) + 8)))
+    dark = lum <= thresh
+    return box_blur3((~(dark if holes else fill_from_border(dark))).astype(np.float32)), thresh
+
+
+def cut_chrome(rgb: np.ndarray, options: dict, report: list[str], ident: str) -> np.ndarray:
+    """Key a chrome piece off black, crop it tight and scale it to `h` (or `w`) px. RGBA."""
+    inset = int(options.get("inset", 0))
+    if inset:
+        rgb = rgb[inset:-inset, inset:-inset]
+    if "crop" in options:
+        x0, y0, x1, y1 = options["crop"]
+        h, w = rgb.shape[:2]
+        rgb = rgb[round(y0 * h):round(y1 * h), round(x0 * w):round(x1 * w)]
+    alpha, thresh = key_black(rgb, bool(options.get("holes", False)))
+    ys, xs = np.nonzero(alpha > 0.5)
+    x0, y0, x1, y1 = xs.min(), ys.min(), xs.max() + 1, ys.max() + 1
+    k = options["h"] / (y1 - y0) if "h" in options else options["w"] / (x1 - x0)
+    w, h = max(1, round((x1 - x0) * k)), max(1, round((y1 - y0) * k))
+    rgba = np.dstack([rgb, alpha * 255])[y0:y1, x0:x1]
+    art = Image.fromarray(np.clip(rgba, 0, 255).astype(np.uint8), "RGBA").resize((w, h), Image.Resampling.LANCZOS)
+    report.append(f"  {ident:16s} chrome    {x1 - x0}x{y1 - y0} -> {w}x{h}  (key <= {thresh})")
+    return np.asarray(art).astype(np.float32)
+
+
+def cut_portrait(rgb: np.ndarray, options: dict, report: list[str], ident: str) -> np.ndarray:
+    """Key a portrait cell off chroma green, despill it, and keep the whole cell at `px`. RGBA."""
+    inset = int(options.get("inset", 0))
+    if inset:
+        rgb = rgb[inset:-inset, inset:-inset]
+    alpha = key_green(rgb)
+    rgb = rgb.copy()
+    rgb[..., 1] = np.minimum(rgb[..., 1], np.maximum(rgb[..., 0], rgb[..., 2]))
+    px = int(options.get("px", rgb.shape[0]))
+    rgba = np.dstack([rgb, alpha * 255])
+    art = Image.fromarray(np.clip(rgba, 0, 255).astype(np.uint8), "RGBA").resize((px, px), Image.Resampling.LANCZOS)
+    report.append(f"  {ident:20s} portrait  {rgb.shape[1]}x{rgb.shape[0]} -> {px}x{px}  covers {alpha.mean():.0%}")
+    return np.asarray(art).astype(np.float32)
 
 
 def cut_part(rgb: np.ndarray, size: int, report: list[str], ident: str) -> tuple[np.ndarray, np.ndarray]:
@@ -294,6 +346,10 @@ def slice_sheet(name: str, spec: dict, cells: dict[str, np.ndarray], kinds: dict
         elif kind == "sprite":
             cells[ident] = cut_sprite(window, SPRITE_PX, bool(options.get("holes", False)),
                                       options.get("key") == "green", report, ident)
+        elif kind == "portrait":
+            cells[ident] = cut_portrait(window, options, report, ident)
+        elif kind == "chrome":
+            cells[ident] = cut_chrome(window, options, report, ident)
         elif kind in ("gun", "edge_gun"):
             cells[ident], covers[ident] = cut_gun(window, report, ident, kind == "edge_gun")
         elif kind == "part":
@@ -309,7 +365,7 @@ def slice_sheet(name: str, spec: dict, cells: dict[str, np.ndarray], kinds: dict
     for number, entry in spec["cells"].items():
         cell = cells[entry[0]].astype(np.uint8)
         Image.fromarray(cell, "RGBA" if cell.ndim == 3 else "L").save(out_dir / f"{entry[0]}.png")
-    if all(entry[1] != "sprite" for entry in spec["cells"].values()):
+    if all(entry[1] not in ("sprite", "chrome", "portrait") for entry in spec["cells"].values()):
         review(name, spec, cells, out_dir / f"review_{name}.png")
 
 
@@ -335,7 +391,7 @@ def write_files(name: str, spec: dict, cells: dict[str, np.ndarray], report: lis
     out.mkdir(parents=True, exist_ok=True)
     for ident in spec["files"]:
         Image.fromarray(cells[ident].astype(np.uint8), "RGBA").save(out / f"{ident}.png")
-    report.append(f"{name} -> {out.relative_to(ROOT)}/  ({len(spec['files'])} files of {SPRITE_PX} px)")
+    report.append(f"{name} -> {out.relative_to(ROOT)}/  ({len(spec['files'])} files)")
 
 
 def pack_guns(name: str, spec: dict, cells: dict[str, np.ndarray], covers: dict[str, np.ndarray],

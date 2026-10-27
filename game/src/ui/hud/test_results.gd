@@ -20,14 +20,19 @@ func _ready() -> void:
 	var center := CenterContainer.new()
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(center)
+	var panel := PanelContainer.new()
+	panel.theme_type_variation = &"ChromePanel"
+	center.add_child(panel)
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override(&"separation", 16)
-	center.add_child(column)
+	panel.add_child(column)
 	column.add_child(_title)
 	_lines.add_theme_constant_override(&"separation", 6)
 	column.add_child(_lines)
 	var size := Vector2(320, 64)
-	column.add_child(MenuKit.button("Fly again", func() -> void: again_requested.emit(), size, 24))
+	var again := MenuKit.button("Fly again", func() -> void: again_requested.emit(), size, 24)
+	again.theme_type_variation = &"GoButton"
+	column.add_child(again)
 	column.add_child(MenuKit.button("Return to hangar", func() -> void: hangar_requested.emit(), size, 24))
 
 

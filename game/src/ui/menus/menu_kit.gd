@@ -19,8 +19,10 @@ static func tile(title: String, note: String, action: Callable, node_name: Strin
 	var alpha := 1.0 if action.is_valid() else 0.45
 	text.add_child(label(title, title_size, Color(1, 1, 1, alpha)))
 	text.add_child(label(note, 16, Color(1, 1, 1, 0.6 * alpha)))
-	for child in text.get_children():
-		(child as Control).mouse_filter = Control.MOUSE_FILTER_IGNORE
+	for child: Label in text.get_children():
+		child.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		child.add_theme_color_override(&"font_outline_color", UiTheme.TEXT_OUTLINE)
+		child.add_theme_constant_override(&"outline_size", UiTheme.OUTLINE_PX)
 	return button
 
 

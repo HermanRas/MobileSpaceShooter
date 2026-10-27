@@ -160,6 +160,118 @@
 				"13": ["gc", "sprite"]
 			},
 			"spares": {"14": "GC coin stack", "15": "GC credit chip"}
+		},
+		"chrome_panel_2": {
+			"file": "ui/chrome_panel_2.jpeg",
+			"grid": [1, 1],
+			"_doc": "Generated 2026-10-27, run 2 of 3: symmetric corners and evenly spaced LEDs (ART_PROMPT.md review).",
+			"cells": {
+				"1": ["ui_panel", "chrome", {"h": 384}]
+			}
+		},
+		"chrome_header_3": {
+			"file": "ui/chrome_header_3.jpeg",
+			"grid": [1, 1],
+			"_doc": "Generated 2026-10-27, run 3 of 3: matching end caps, an even field.",
+			"cells": {
+				"1": ["ui_header", "chrome", {"h": 128}]
+			}
+		},
+		"chrome_frame_2": {
+			"file": "ui/chrome_frame_2.jpeg",
+			"grid": [1, 1],
+			"_doc": "Generated 2026-10-27, run 2 of 3: the brackets come in mirrored pairs. Its black middle is cut out (holes).",
+			"cells": {
+				"1": ["ui_frame", "chrome", {"h": 384, "holes": true}]
+			}
+		},
+		"chrome_buttons_1": {
+			"file": "ui/chrome_buttons_1.jpeg",
+			"grid": [4, 4],
+			"_doc": "Generated 2026-10-27, run 1 of 3: the same button in every row, the states clearly apart. Cell 14 is a fill drawn inside its track, so the fill is its left part.",
+			"cells": {
+				"1": ["btn_gold_normal", "chrome", {"inset": 4, "h": 120}],
+				"2": ["btn_gold_pressed", "chrome", {"inset": 4, "h": 120}],
+				"3": ["btn_gold_disabled", "chrome", {"inset": 4, "h": 120}],
+				"4": ["btn_gold_selected", "chrome", {"inset": 4, "h": 120}],
+				"5": ["btn_go_normal", "chrome", {"inset": 4, "h": 120}],
+				"6": ["btn_go_pressed", "chrome", {"inset": 4, "h": 120}],
+				"7": ["btn_go_disabled", "chrome", {"inset": 4, "h": 120}],
+				"8": ["btn_go_selected", "chrome", {"inset": 4, "h": 120}],
+				"9": ["btn_danger_normal", "chrome", {"inset": 4, "h": 120}],
+				"10": ["btn_danger_pressed", "chrome", {"inset": 4, "h": 120}],
+				"11": ["btn_danger_disabled", "chrome", {"inset": 4, "h": 120}],
+				"12": ["btn_danger_selected", "chrome", {"inset": 4, "h": 120}],
+				"13": ["bar_track", "chrome", {"inset": 4, "h": 40}],
+				"14": ["bar_fill", "chrome", {"inset": 4, "h": 40, "crop": [0, 0, 0.633, 1]}],
+				"15": ["btn_round", "chrome", {"inset": 4, "h": 96}]
+			}
+		},
+		"portraits_man_jacket_1": {
+			"file": "portraits/portraits_man_jacket_1.jpeg",
+			"grid": [2, 2],
+			"_doc": "Generated 2026-10-27 (A.7), the moods in reading order. Gemini made the jacket a sleeveless vest; head ~27% of the cell.",
+			"cells": {
+				"1": ["male_jacket_idle", "portrait", {"inset": 4, "px": 512}],
+				"2": ["male_jacket_happy", "portrait", {"inset": 4, "px": 512}],
+				"3": ["male_jacket_sad", "portrait", {"inset": 4, "px": 512}],
+				"4": ["male_jacket_angry", "portrait", {"inset": 4, "px": 512}]
+			}
+		},
+		"portraits_man_suit_1": {
+			"file": "portraits/portraits_man_suit_1.jpeg",
+			"grid": [2, 2],
+			"_doc": "Generated 2026-10-27 (A.7), the moods in reading order. An image edit of portraits_man_jacket_1: the same man, pose and crop in the space suit.",
+			"cells": {
+				"1": ["male_suit_idle", "portrait", {"inset": 4, "px": 512}],
+				"2": ["male_suit_happy", "portrait", {"inset": 4, "px": 512}],
+				"3": ["male_suit_sad", "portrait", {"inset": 4, "px": 512}],
+				"4": ["male_suit_angry", "portrait", {"inset": 4, "px": 512}]
+			}
+		},
+		"portraits_woman_jacket_1": {
+			"file": "portraits/portraits_woman_jacket_1.jpeg",
+			"grid": [2, 2],
+			"_doc": "Generated 2026-10-27 (A.7), the moods in reading order. Head ~33% of the cell, cut at the ribs; thin black grid lines (inset).",
+			"cells": {
+				"1": ["female_jacket_idle", "portrait", {"inset": 4, "px": 512}],
+				"2": ["female_jacket_happy", "portrait", {"inset": 4, "px": 512}],
+				"3": ["female_jacket_sad", "portrait", {"inset": 4, "px": 512}],
+				"4": ["female_jacket_angry", "portrait", {"inset": 4, "px": 512}]
+			}
+		},
+		"portraits_woman_suit_1": {
+			"file": "portraits/portraits_woman_suit_1.jpeg",
+			"grid": [2, 2],
+			"_doc": "Generated 2026-10-27 (A.7), the moods in reading order. An image edit of portraits_woman_jacket_1.",
+			"cells": {
+				"1": ["female_suit_idle", "portrait", {"inset": 4, "px": 512}],
+				"2": ["female_suit_happy", "portrait", {"inset": 4, "px": 512}],
+				"3": ["female_suit_sad", "portrait", {"inset": 4, "px": 512}],
+				"4": ["female_suit_angry", "portrait", {"inset": 4, "px": 512}]
+			}
+		},
+		"portraits_npc_villain_1": {
+			"file": "portraits/portraits_npc_villain_1.jpeg",
+			"grid": [2, 2],
+			"_doc": "Generated 2026-10-27 (A.7), the moods in reading order. The generic villain stand-in, in its own colours.",
+			"cells": {
+				"1": ["npc_villain_idle", "portrait", {"inset": 4, "px": 512}],
+				"2": ["npc_villain_happy", "portrait", {"inset": 4, "px": 512}],
+				"3": ["npc_villain_sad", "portrait", {"inset": 4, "px": 512}],
+				"4": ["npc_villain_angry", "portrait", {"inset": 4, "px": 512}]
+			}
+		},
+		"portraits_npc_ally_1": {
+			"file": "portraits/portraits_npc_ally_1.jpeg",
+			"grid": [2, 2],
+			"_doc": "Generated 2026-10-27 (A.7), the moods in reading order. The generic ally stand-in, in its own colours.",
+			"cells": {
+				"1": ["npc_ally_idle", "portrait", {"inset": 4, "px": 512}],
+				"2": ["npc_ally_happy", "portrait", {"inset": 4, "px": 512}],
+				"3": ["npc_ally_sad", "portrait", {"inset": 4, "px": 512}],
+				"4": ["npc_ally_angry", "portrait", {"inset": 4, "px": 512}]
+			}
 		}
 	},
 	"atlases": {
@@ -205,6 +317,26 @@
 			"rows": [
 				["damage_1", "damage_2", "damage_3", "damage_4"]
 			]
+		},
+		"ui": {
+			"out": "game/assets/ui",
+			"layout": "files",
+			"_doc": "A.5's chrome (visuals.json vis.ui.<id>): RGBA PNGs cut tight, at twice the size the game draws them; UiTheme makes 9-slice styleboxes of them.",
+			"files": ["ui_panel", "ui_header", "ui_frame", "btn_round", "bar_track", "bar_fill",
+				"btn_gold_normal", "btn_gold_pressed", "btn_gold_disabled", "btn_gold_selected",
+				"btn_go_normal", "btn_go_pressed", "btn_go_disabled", "btn_go_selected",
+				"btn_danger_normal", "btn_danger_pressed", "btn_danger_disabled", "btn_danger_selected"]
+		},
+		"portraits": {
+			"out": "game/assets/portraits",
+			"layout": "files",
+			"_doc": "A.7's portraits (visuals.json vis.portrait.<id>), one 512 px RGBA PNG per mood, each its whole cell so the head crop is one rect per sheet.",
+			"files": ["male_jacket_idle", "male_jacket_happy", "male_jacket_sad", "male_jacket_angry",
+				"male_suit_idle", "male_suit_happy", "male_suit_sad", "male_suit_angry",
+				"female_jacket_idle", "female_jacket_happy", "female_jacket_sad", "female_jacket_angry",
+				"female_suit_idle", "female_suit_happy", "female_suit_sad", "female_suit_angry",
+				"npc_villain_idle", "npc_villain_happy", "npc_villain_sad", "npc_villain_angry",
+				"npc_ally_idle", "npc_ally_happy", "npc_ally_sad", "npc_ally_angry"]
 		}
 	}
 }

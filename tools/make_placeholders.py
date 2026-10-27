@@ -28,6 +28,7 @@ OUT = Path(__file__).resolve().parent.parent / "game" / "assets" / "placeholders
 DAMAGE_OUT = OUT.with_name("tile_damage.png")
 ICON_OUT = OUT.with_name("icon.png")
 MINE_OUT = OUT.with_name("mine.png")
+CHROME_OUT = OUT.with_name("chrome.png")
 ICON = 64
 
 yy, xx = np.mgrid[0:CELL, 0:CELL].astype(np.float32)
@@ -161,6 +162,14 @@ def main() -> None:
     mine[..., 3] = (inside * 255).astype(np.uint8)
     Image.fromarray(mine, "RGBA").save(MINE_OUT)
     print(f"wrote {MINE_OUT.relative_to(MINE_OUT.parents[3])}")
+
+    # Every vis.ui.* piece: a dark box with a grey rim (UiTheme keeps its flat boxes until the
+    # real chrome is in, so this only shows if something draws the texture itself).
+    chrome = np.zeros((ICON, ICON, 4), dtype=np.uint8)
+    chrome[...] = (150, 156, 164, 255)
+    chrome[4:-4, 4:-4, :3] = (20, 24, 32)
+    Image.fromarray(chrome, "RGBA").save(CHROME_OUT)
+    print(f"wrote {CHROME_OUT.relative_to(CHROME_OUT.parents[3])}")
 
 
 if __name__ == "__main__":

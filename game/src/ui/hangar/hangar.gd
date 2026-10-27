@@ -972,6 +972,7 @@ func _build_ui() -> void:
 				_show_notice(editor.refusal))
 		root.add_child(_market)
 	_fly_button = _tool_button(tools, "Fly", _on_fly_pressed)
+	_fly_button.theme_type_variation = &"GoButton"
 	if stocked() and OS.is_debug_build():
 		# Debug: start the profile over (owner, 2026-10-26). Two taps, then a clean load from the
 		# menu. Beside Undo rather than in the column, which is full down to the palette.

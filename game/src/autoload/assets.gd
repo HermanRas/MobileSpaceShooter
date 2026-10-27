@@ -3,13 +3,19 @@ extends Node
 ##
 ## `data/visuals.json` maps each ID to `{"path": ..., "placeholder": ...}`. `tex()` is total:
 ## the real art if it exists, else the declared placeholder, else a loud magenta square.
-## It never returns null, so no phase ever blocks on missing art.
+## It never returns null, so no phase ever blocks on missing art. It also merges the chrome
+## theme (UiTheme) into Godot's default theme, the one every Control falls back to: a theme on
+## the root window doesn't reach past a CanvasLayer.
 
 const MISSING_SIZE := 16
 const MISSING_COLOR := Color(1.0, 0.0, 1.0)
 
 var _cache: Dictionary = {}
 var _missing: Texture2D
+
+
+func _ready() -> void:
+	ThemeDB.get_default_theme().merge_with(UiTheme.build())
 
 
 func tex(id: StringName) -> Texture2D:

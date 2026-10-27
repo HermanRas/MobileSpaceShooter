@@ -15,11 +15,7 @@ func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_CENTER)
 	grow_horizontal = Control.GROW_DIRECTION_BOTH
 	grow_vertical = Control.GROW_DIRECTION_BOTH
-	var background := StyleBoxFlat.new()
-	background.bg_color = Color(0.05, 0.06, 0.09, 0.96)
-	background.set_content_margin_all(20)
-	background.set_corner_radius_all(8)
-	add_theme_stylebox_override(&"panel", background)
+	theme_type_variation = &"ChromePanel"
 	_column.add_theme_constant_override(&"separation", 12)
 	add_child(_column)
 

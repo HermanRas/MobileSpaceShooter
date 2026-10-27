@@ -11,11 +11,7 @@ const CARD := Vector2(150, 130)
 
 func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_ALWAYS
-	var background := StyleBoxFlat.new()
-	background.bg_color = Color(0.05, 0.06, 0.09, 0.95)
-	background.set_content_margin_all(20)
-	background.set_corner_radius_all(8)
-	add_theme_stylebox_override(&"panel", background)
+	theme_type_variation = &"ChromePanel"
 
 
 ## Lists `gunnery`'s manual weapons, the active one marked.

@@ -154,9 +154,9 @@ band for the colour the player picked and keeps the shading. Each hue is far fro
 | A.3c | `parts_guns_edge` | `art_src/parts/` | edit of `ref_turrets.png`, run ×3 | ✅ in the game 2026-10-27: fixed and swivel pictures (v1 failed ×5) |
 | A.3d | `fx_mines` | `art_src/parts/` | 4, run ×3 | ✅ in the game 2026-10-27: run 1 #2 |
 | A.4 | `icons_main` | `art_src/icons/` | 15, run ×3 | ✅ in the game 2026-10-27: pickups, FIRE, SWITCH, Pause |
-| A.5 | `chrome_panel`, `chrome_header`, `chrome_frame`, `chrome_buttons` | `art_src/ui/` | 3 canvases + 1 sheet | prompts ready 2026-10-27 |
+| A.5 | `chrome_panel`, `chrome_header`, `chrome_frame`, `chrome_buttons` | `art_src/ui/` | 3 canvases + 1 sheet | ✅ in the game 2026-10-27: UiTheme |
 | A.6 | `icons_map` | `art_src/icons/` | 1 sheet | to write |
-| A.7 | `portraits_players` (then NPC sheets) | `art_src/portraits/` | 8 cells, then ~3 sheets | player prompt ready 2026-10-27 |
+| A.7 | `portraits_players`: 4 sheets (man, woman × jacket, suit), 2 stand-ins (villain, ally), then NPC sheets | `art_src/portraits/` | 4 × 4 cells, then ~3 sheets | generated 2026-10-27: all 6 sheets in, to cut |
 | A.8 | `station_*` | `art_src/stations/` | ~25 canvases | to write |
 | A.9 | `backdrop_arena_*` | `art_src/backgrounds/` | 5 canvases | to write |
 | A.10 | `world_asteroids` | `art_src/parts/` | 1 sheet | to write |
@@ -1048,69 +1048,309 @@ bottom-right cell is empty.
 9-slice margins are measured from the art, and they become one `Theme` (`assets/ui/theme.tres`)
 that the menus, dialogs, pause screen and hangar panels use in place of today's flat boxes.
 
+### Review, 2026-10-27: what came back (×3 each)
+
+All twelve were on style. The picks are the ones that survive 9-slicing:
+- **Panel run 2**: mirrored corners and evenly spaced LEDs. Run 1's corners differ from each
+  other, and run 3 is plainer.
+- **Header run 3**: matching end caps. Run 1 came back on white.
+- **Frame run 2**: its brackets come in mirrored pairs near the corners. Runs 1 and 3 have one-off
+  brackets.
+- **Buttons run 1**: the same button in every row, the states clearly apart. Cell 14 is a fill
+  drawn inside its track, so the fill is cut as its left part. Run 2 lost the grid in row 4.
+
+In the game, the "selected" state is too close to "normal" to mark a chosen tab, so UiTheme
+brightens it (`LIT`). Stretching smeared the rims' LED dots, so the edges tile instead.
+
 ---
 
 ## portraits_players
 
-**A.7: 8 cells, rows 1–2. Run ×3. Choose the highest output resolution Gemini offers (2K or
-4K), because portraits are the top art tier. Save them as `art_src/portraits/portraits_players_1.png`,
-and so on.**
+**A.7: four sheets of 4 cells, in two steps. Choose the highest output resolution Gemini offers (2K
+or 4K): run 1 came back at 1024, which leaves a head crop of only ~110 px. Save them as
+`art_src/portraits/portraits_man_jacket_1.png`, and so on.**
 
-The player's two base characters (§6.5): **one row per character, its four moods side by side**,
-so the face stays the same. They're painted in the **key hues** (A.0) so the game can recolour hair,
-eyes, outfit and trim. Each mood must sit in its cell **in the same place and at the same size**, so
-the portrait doesn't jump when the mood changes.
+The player's two base characters (§6.5), each in two outfits, the flight jacket and a space suit:
+**one sheet per character per outfit, its four moods in a 2×2 grid**. Every cell is filled, because
+Gemini filled the "empty" rows of the first sheet with extra characters. The framing is **elbow
+height, turned three-quarters to the right**, like the owner's visual-novel references: in a
+story-mode conversation the picture stands on the bottom edge of the screen with the dialog box
+over its lower body, the player on the left and the other speaker mirrored on the right. Menus and
+the HUD show a head crop, so **every cell must put the head in the same place at the same size**. They're
+painted in the **key hues** (A.0) so the game can recolour hair, eyes, outfit and trim.
+
+**Step 1: the jackets.** Run `portraits_man_jacket` and `portraits_woman_jacket` ×3 each, uploading
+`art_src/portraits/ref_man.png` or `ref_woman.png` (run 1's faces) so the face carries over. Leave
+the upload out if you'd rather have new faces.
+**Step 2: the suits.** Pick the best jacket sheet of each, then run `portraits_man_suit` and
+`portraits_woman_suit` ×3 each **as edits of that pick**: upload it and ask for one change, the
+outfit. Editing worked for the side guns (A.3c) where a fresh prompt didn't, and it keeps the face,
+the pose and the framing, so the head crop is the same in both outfits.
+
+### portraits_man_jacket
 
 ```
-A square sprite sheet of character portraits for a mobile space shooter game,
-arranged on a strict 4x4 grid of equal square cells. Rows 1 and 2 are filled, 4
-cells each. ROWS 3 AND 4 ARE COMPLETELY EMPTY, flat chroma green.
+A square sprite sheet of character portraits for a mobile space shooter game: a
+strict 2x2 grid of four equal square cells, all four filled. The SAME man in all
+four cells.
 
-BACKGROUND: flat pure chroma green #00FF00 in every cell behind the characters,
-and in all of rows 3 and 4. No gradient, no shadow, no grid lines, no borders.
+The attached picture shows ONLY his face and hair: copy the face, hairstyle and
+colouring, but NOT its framing. It is a close-up; this sheet is a much wider
+shot that shows his upper body (see FRAMING).
+
+BACKGROUND: flat pure chroma green #00FF00 behind him in every cell. No
+gradient, no shadow, no grid lines, no borders.
 
 STYLE: the highest quality in the game. Detailed, semi-realistic painted
-portraits, like the hero portraits of a polished mobile game: a head-and-shoulders
-bust facing the viewer, a soft warm rim light, rich painterly shading, crisp
-clean edges against the background. NOT pixel art, NOT anime, NOT a photo, NOT a
-3D render.
+portraits, like the hero portraits of a polished mobile game: rich painterly
+shading, a soft warm rim light, crisp clean edges against the background. NOT
+pixel art, NOT anime, NOT a photo, NOT a 3D render.
 
-ROW 1, four cells: ONE MAN, a young space pilot in his twenties, short tousled
-hair, a fitted flight jacket with a high collar. The SAME man in all four cells,
-in the SAME pose, at the SAME size and position: only his face changes.
-ROW 2, four cells: ONE WOMAN, a young space pilot in her twenties, long hair tied
-back with a few loose strands, the same kind of flight jacket. The SAME woman in
-all four, the same pose, size and position.
+THE MAN: a young space pilot in his late twenties with a big, heavily muscled
+build: very broad shoulders, a thick neck, a broad powerful chest and big arms
+that strain his fitted flight jacket with a high collar. A heroic action-hero
+physique.
 
-THE FOUR MOODS, left to right in both rows:
-1. IDLE: calm, confident, a slight half-smile.
-2. HAPPY: a big open smile, bright eyes.
-3. SAD: eyes looking down, brows raised in the middle, mouth turned down.
-4. ANGRY: brows drawn down hard, gritted teeth, a glare.
+FRAMING, identical in all four cells: a MEDIUM SHOT of his upper body, like a
+character standing at the edge of a visual-novel dialogue screen. His HEAD IS
+SMALL in the cell: from the top of his hair to his chin is only about 30% of
+the cell's height, with the top of the hair just below the top of the cell.
+Below the head the cell shows his neck, both shoulders, his whole chest and
+both upper arms down to the elbows; the bottom edge of the cell cuts straight
+across his body at elbow height, with no fade. He is NOT facing straight at
+the viewer: his body and head are turned about 30 degrees towards the RIGHT
+side of the picture, his eyes on the viewer, arms relaxed at his sides. The
+same pose, size and position in every cell: ONLY HIS FACE CHANGES.
+
+THE FOUR MOODS: top left IDLE (calm, confident, a slight half-smile); top right
+HAPPY (a big open smile, bright eyes); bottom left SAD (eyes looking down, brows
+raised in the middle, mouth turned down); bottom right ANGRY (brows drawn down
+hard, gritted teeth, a glare).
 
 RECOLOUR KEY COLOURS, exactly these and nowhere else in the picture:
-- HAIR is painted in shades of MAGENTA #FF00C8 (dark magenta in the shadows, light
-  pink-magenta in the highlights).
+- HAIR is painted in shades of MAGENTA #FF00C8 (dark magenta in the shadows,
+  light pink-magenta in the highlights).
 - The IRISES of the eyes are CYAN #00E5FF.
 - The flight JACKET is BLUE #2450FF, shaded darker and lighter.
 - The jacket's TRIM (collar edge, seams, shoulder stripes) is YELLOW #FFE600.
-Skin is a natural skin tone. The whites of the eyes are white. Nothing else is
-magenta, cyan, blue, yellow or green.
+Skin is a natural skin tone. The whites of the eyes are white. Anything under
+the jacket is dark charcoal grey. Nothing else is magenta, cyan, blue, yellow or
+green.
 
 ABSOLUTELY NO TEXT of any kind: no labels, no mood names, no numbers, no logos,
 no badges with writing.
 
-Original characters only: they must not resemble any real person, actor, or
+An original character: he must not resemble any real person, actor, or
 character from a film, TV show or game.
 
-Remember: the same face and pose across each row, the key colours exactly, chroma
-green behind them, rows 3 and 4 empty, and no text.
+Remember: four cells, the same man, pose and framing in each, cut at the elbows,
+the key colours exactly, chroma green behind him, and no text.
 ```
 
-**What happens to it.** Each portrait is cut as a colour sprite off green and staged as
-`assets/portraits/<base>_<mood>.png`. `PortraitView` swaps its placeholder bust for the picture,
-with a shader that swaps each key-hue band for the player's colour and keeps the shading. If a
-band bleeds into the skin, a hand-made mask fixes it (§6.5).
+### portraits_woman_jacket
+
+```
+A square sprite sheet of character portraits for a mobile space shooter game: a
+strict 2x2 grid of four equal square cells, all four filled. The SAME woman in
+all four cells.
+
+The attached picture shows ONLY her face and hair: copy the face, hairstyle and
+colouring, but NOT its framing. It is a close-up; this sheet is a much wider
+shot that shows her upper body (see FRAMING).
+
+BACKGROUND: flat pure chroma green #00FF00 behind her in every cell. No
+gradient, no shadow, no grid lines, no borders.
+
+STYLE: the highest quality in the game. Detailed, semi-realistic painted
+portraits, like the hero portraits of a polished mobile game: rich painterly
+shading, a soft warm rim light, crisp clean edges against the background. NOT
+pixel art, NOT anime, NOT a photo, NOT a 3D render.
+
+THE WOMAN: a young space pilot in her late twenties, long hair tied back with a
+few loose strands. A curvy hourglass figure: a large, full, soft bust and a
+narrow waist, in a fitted flight jacket with a high collar, zipped up.
+Glamorous but tasteful, fully clothed.
+
+FRAMING, identical in all four cells: a MEDIUM SHOT of her upper body, like a
+character standing at the edge of a visual-novel dialogue screen. Her HEAD IS
+SMALL in the cell: from the top of her hair to her chin is only about 30% of
+the cell's height, with the top of the hair just below the top of the cell.
+Below the head the cell shows her neck, both shoulders, her whole chest and
+both upper arms down to the elbows; the bottom edge of the cell cuts straight
+across her body at elbow height, with no fade. She is NOT facing straight at
+the viewer: her body and head are turned about 30 degrees towards the RIGHT
+side of the picture, her eyes on the viewer, arms relaxed at her sides. The
+same pose, size and position in every cell: ONLY HER FACE CHANGES.
+
+THE FOUR MOODS: top left IDLE (calm, confident, a slight half-smile); top right
+HAPPY (a big open smile, bright eyes); bottom left SAD (eyes looking down, brows
+raised in the middle, mouth turned down); bottom right ANGRY (brows drawn down
+hard, gritted teeth, a glare).
+
+RECOLOUR KEY COLOURS, exactly these and nowhere else in the picture:
+- HAIR is painted in shades of MAGENTA #FF00C8 (dark magenta in the shadows,
+  light pink-magenta in the highlights).
+- The IRISES of the eyes are CYAN #00E5FF.
+- The flight JACKET is BLUE #2450FF, shaded darker and lighter.
+- The jacket's TRIM (collar edge, seams, shoulder stripes) is YELLOW #FFE600.
+Skin is a natural skin tone. The whites of the eyes are white. Anything under
+the jacket is dark charcoal grey. Nothing else is magenta, cyan, blue, yellow or
+green.
+
+ABSOLUTELY NO TEXT of any kind: no labels, no mood names, no numbers, no logos,
+no badges with writing.
+
+An original character: she must not resemble any real person, actress, or
+character from a film, TV show or game.
+
+Remember: four cells, the same woman, pose and framing in each, cut at the
+elbows, the key colours exactly, chroma green behind her, and no text.
+```
+
+### portraits_man_suit
+
+Upload the chosen `portraits_man_jacket` sheet.
+
+```
+Edit the attached sprite sheet. Keep EVERYTHING the same: the same man, his face,
+hair, the four expressions, his build, his three-quarter pose, the framing cut
+at the elbows,
+his size and position in each cell, the 2x2 grid and the flat chroma green
+#00FF00 background. Change ONLY his clothes.
+
+Replace the flight jacket with a rugged space suit, helmet off: hard shell chest
+and shoulder plates and padded sections in BLUE #2450FF, shaded darker and
+lighter, fitted to his big muscular build; YELLOW #FFE600 trim lines along the
+plate edges and seams; a chunky steel-grey metal neck ring where the helmet
+locks on; grey padded joints and grey hoses; a small grey control box on the
+chest with no lights and no writing.
+
+Keep the key colours exact: hair MAGENTA #FF00C8, irises CYAN #00E5FF, suit
+BLUE #2450FF, trim YELLOW #FFE600, and nothing else in those colours or in
+green. The same painted style. ABSOLUTELY NO TEXT, no logos, no badges.
+```
+
+### portraits_woman_suit
+
+Upload the chosen `portraits_woman_jacket` sheet.
+
+```
+Edit the attached sprite sheet. Keep EVERYTHING the same: the same woman, her
+face, hair, the four expressions, her figure, her three-quarter pose, the
+framing cut at the elbows, her size and position in each cell, the 2x2 grid and the flat chroma
+green #00FF00 background. Change ONLY her clothes.
+
+Replace the flight jacket with a sleek space suit, helmet off: hard shell chest
+and shoulder plates and padded sections in BLUE #2450FF, shaded darker and
+lighter, fitted to her curvy figure; YELLOW #FFE600 trim lines along the plate
+edges and seams; a chunky steel-grey metal neck ring where the helmet locks on;
+grey padded joints and grey hoses; a small grey control box on the chest with no
+lights and no writing. Tasteful, fully clothed.
+
+Keep the key colours exact: hair MAGENTA #FF00C8, irises CYAN #00E5FF, suit
+BLUE #2450FF, trim YELLOW #FFE600, and nothing else in those colours or in
+green. The same painted style. ABSOLUTELY NO TEXT, no logos, no badges.
+```
+
+### portraits_npc_villain and portraits_npc_ally
+
+Two stand-ins for the story's cast, so the dialog code has a bad guy and a friend to show before
+the story is written (owner, 2026-10-27). Real characters come later, as NPC sheets (A.7). Run
+each ×3, no upload. They're NPCs, so they're painted in their own colours: no key hues, but still
+**nothing green**, because green is the key.
+
+```
+A square sprite sheet of character portraits for a mobile space shooter game: a
+strict 2x2 grid of four equal square cells, all four filled. The SAME man in all
+four cells.
+
+BACKGROUND: flat pure chroma green #00FF00 behind him in every cell. No
+gradient, no shadow, no grid lines, no borders.
+
+STYLE: the highest quality in the game. Detailed, semi-realistic painted
+portraits, like the hero portraits of a polished mobile game: rich painterly
+shading, a soft warm rim light, crisp clean edges against the background. NOT
+pixel art, NOT anime, NOT a photo, NOT a 3D render.
+
+THE MAN: a menacing space pirate warlord in his forties, the villain of the
+story: a hard, scarred face, a shaved head, a short black beard, one glowing red
+cybernetic eye, a heavy armoured long coat in black and gunmetal with blood-red
+trim, spiked shoulder armour, a broad powerful build.
+
+FRAMING, identical in all four cells: a MEDIUM SHOT of his upper body, like a
+character standing at the edge of a visual-novel dialogue screen. His HEAD IS
+SMALL in the cell: from the top of his hair to his chin is only about 30% of
+the cell's height, with the top of the hair just below the top of the cell.
+Below the head the cell shows his neck, both shoulders, his whole chest and
+both upper arms down to the elbows; the bottom edge of the cell cuts straight
+across his body at elbow height, with no fade. He is NOT facing straight at
+the viewer: his body and head are turned about 30 degrees towards the RIGHT
+side of the picture, his eyes on the viewer, arms relaxed at his sides. The
+same pose, size and position in every cell: ONLY HIS FACE CHANGES.
+
+THE FOUR MOODS: top left IDLE (cold, a cruel smirk); top right HAPPY (a wide
+gloating grin); bottom left SAD (a bitter scowl, eyes narrowed and looking
+away); bottom right ANGRY (a furious snarl, teeth bared).
+
+Nothing in the picture is green except the background.
+
+ABSOLUTELY NO TEXT of any kind: no labels, no mood names, no numbers, no logos,
+no badges with writing.
+
+An original character: he must not resemble any real person, actor, or
+character from a film, TV show or game.
+
+Remember: four cells, the same man, pose and framing in each, cut at the elbows,
+chroma green behind him, and no text.
+```
+
+For the ally, use the same prompt with **THE MAN** and **THE FOUR MOODS** swapped for:
+
+```
+THE MAN: a friendly veteran space pilot in his fifties, the player's mentor and
+ally: a warm weathered face, kind eyes, a grey stubble beard and short grey
+hair, a worn orange-and-white flight suit with patched elbows and a scuffed
+brown leather collar, a sturdy build.
+
+THE FOUR MOODS: top left IDLE (a warm, steady half-smile); top right HAPPY (a
+big laughing grin, eyes crinkled); bottom left SAD (eyes lowered, brows raised in
+the middle, a heavy frown); bottom right ANGRY (brows drawn down hard, jaw
+clenched, a fierce glare).
+```
+
+**What happens to them.** Each cell is cut as a colour sprite off green and staged as
+`assets/portraits/<base>_<outfit>_<mood>.png` (the stand-ins as `npc_villain_<mood>.png` and
+`npc_ally_<mood>.png`, not recoloured). `PortraitView` swaps its placeholder bust for the
+picture, with a shader that swaps each key-hue band for the player's colour and keeps the shading.
+In menus and the HUD it shows a fixed head crop (the same rect in every cell, which is why the
+framing is pinned); story-mode conversations show the whole picture standing on the bottom edge,
+mirrored when the speaker is on the right. If a band bleeds into the
+skin, a hand-made mask fixes it (§6.5).
+
+### Review, 2026-10-27: what came back (one run each, all used)
+
+The medium-shot framing worked: every sheet is turned right with the body cut near the elbows,
+and the same face, pose and position in all four cells.
+- `portraits_man_jacket_1`: Gemini made the jacket a sleeveless vest, which shows the build; the
+  head is ~27% of the cell. `portraits_man_suit_1` is the edit of it: the same man, framing and
+  crop in the suit.
+- `portraits_woman_jacket_1`: the jacket is half unzipped, although the prompt said zipped. The
+  crop is tighter than the man's (head ~33%, cut at the ribs), so the head crop is set per sheet.
+  `portraits_woman_suit_1` is the edit of it, a match.
+- `portraits_npc_villain_1` and `portraits_npc_ally_1`: both on brief. The ally has wing-and-star
+  badges, but no writing.
+- All came back at 1024 px (512 px cells), with thin black grid lines on the woman's sheets,
+  which the slicer insets past.
+- The first attempts (a head-and-shoulders bust) were a prompt mix-up, not Gemini, and were
+  deleted.
+
+### Review, 2026-10-27: the first sheet (v1, head and shoulders, 4×4)
+
+Run 1 was usable: the same face across each row, the key hues right, at 1024 px. Runs 2 and 3
+filled the "empty" rows with extra characters (a second woman, a third pilot), hence 2×2 sheets
+with every cell filled. The owner then asked for elbow-height framing for story mode, a muscular
+man, a curvy woman and a space-suit outfit, so v1 is replaced. Its faces are kept as
+`ref_man.png` and `ref_woman.png`.
 
 ---
 

@@ -29,10 +29,7 @@ var _confirm := ConfirmationDialog.new()
 func _ready() -> void:
 	# The offsets have to be reset too; anchors alone left the panel collapsed to its minimum.
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	var background := StyleBoxFlat.new()
-	background.bg_color = Color(0.05, 0.06, 0.09, 0.97)
-	background.set_content_margin_all(16)
-	add_theme_stylebox_override(&"panel", background)
+	theme_type_variation = &"ChromePanel"
 	var column := VBoxContainer.new()
 	add_child(column)
 

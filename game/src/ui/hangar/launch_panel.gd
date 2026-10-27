@@ -21,9 +21,12 @@ func _ready() -> void:
 	var center := CenterContainer.new()
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(center)
+	var panel := PanelContainer.new()
+	panel.theme_type_variation = &"ChromePanel"
+	center.add_child(panel)
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override(&"separation", 16)
-	center.add_child(column)
+	panel.add_child(column)
 	column.add_child(MenuKit.label("Fly", 44))
 	var size := Vector2(420, 64)
 	column.add_child(MenuKit.button("Free flight", func() -> void: launched.emit(0), size, 24))
@@ -38,7 +41,9 @@ func _ready() -> void:
 		level = int(value)
 		_show_level())
 	column.add_child(_slider)
-	column.add_child(MenuKit.button("Test fight", func() -> void: launched.emit(level), size, 24))
+	var fight := MenuKit.button("Test fight", func() -> void: launched.emit(level), size, 24)
+	fight.theme_type_variation = &"GoButton"
+	column.add_child(fight)
 	_show_level()
 
 

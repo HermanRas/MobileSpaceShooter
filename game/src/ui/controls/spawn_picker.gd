@@ -20,11 +20,7 @@ func _ready() -> void:
 	offset_top = MARGIN
 	offset_right = -MARGIN
 	offset_bottom = -MARGIN
-	var background := StyleBoxFlat.new()
-	background.bg_color = Color(0.05, 0.06, 0.09, 0.96)
-	background.set_content_margin_all(16)
-	background.set_corner_radius_all(8)
-	add_theme_stylebox_override(&"panel", background)
+	theme_type_variation = &"ChromePanel"
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override(&"separation", 10)
 	add_child(column)

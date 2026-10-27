@@ -3,8 +3,6 @@ extends ColorRect
 ## "Are you sure?" over a dimmed screen (PLAN.md 6.2, 6.5): a question, Cancel, and a button
 ## that does it. Used before deleting a pilot and before quitting. Runs while paused.
 
-const DANGER := Color(1.0, 0.5, 0.45)
-
 var _text := Label.new()
 var _yes := Button.new()
 var _action := Callable()
@@ -19,13 +17,7 @@ func _ready() -> void:
 	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	add_child(center)
 	var panel := PanelContainer.new()
-	var style := StyleBoxFlat.new()
-	style.bg_color = Color(0.06, 0.07, 0.1)
-	style.border_color = DANGER
-	style.set_border_width_all(2)
-	style.set_corner_radius_all(10)
-	style.set_content_margin_all(24)
-	panel.add_theme_stylebox_override(&"panel", style)
+	panel.theme_type_variation = &"ChromePanel"
 	center.add_child(panel)
 	var column := VBoxContainer.new()
 	column.add_theme_constant_override(&"separation", 20)
@@ -40,7 +32,7 @@ func _ready() -> void:
 	buttons.add_child(MenuKit.button("Cancel", close))
 	_yes.custom_minimum_size = Vector2(200, 60)
 	_yes.add_theme_font_size_override(&"font_size", 22)
-	_yes.add_theme_color_override(&"font_color", DANGER)
+	_yes.theme_type_variation = &"DangerButton"
 	_yes.pressed.connect(func() -> void:
 		close()
 		_action.call())
