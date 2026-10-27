@@ -214,10 +214,37 @@ func _step_weapons() -> void:
 	mounts = _hangar.editor.blueprint.mounts
 	_check(mounts.back().get("face", false) and int(mounts.back()["tile"]) == 5 and mounts.back()["mode"] == "auto",
 			"a turret drops onto the rear-right hardpoint's face")
+	_check(int(mounts.back().get("level", 0)) == 1, "a new Creative gun starts at L1 (7.1)")
+	var slider := _hangar._palette.find_child("GunLevel", true, false) as HSlider
+	_check(slider != null and slider.max_value == placement_max_level(), "Creative's Weapons tab has a level slider to the top")
+	if slider != null:
+		var guns_before := _rows_text("guns")
+		slider.value = 250
+		await _frames(2)
+		mounts = _hangar.editor.blueprint.mounts
+		_check(int(mounts.back()["level"]) == 250 and "L250" in _hangar._part_text(),
+				"the slider takes the selected turret to L250 (%s)" % _hangar._part_text())
+		_check(_rows_text("guns") != guns_before, "and the panel's dmg/s follows (%s -> %s)" % [guns_before, _rows_text("guns")])
+		_hangar._undo_button.pressed.emit()
+		await _frames(2)
+		_check(int(_hangar.editor.blueprint.mounts.back()["level"]) == 1, "one undo puts it back to L1")
+		_check(slider_value() == 1, "and so does the slider")
+		_hangar._redo_button.pressed.emit()
+		await _frames(2)
+		_check("L250" in _hangar._part_text() and "L250" in _hangar._stats._part.text, "redo brings L250 back, label included")
 	await _frames(2)
 	_save_shot("drive_hangar_weapons.png")
 	_palette_tab("Hull").button_pressed = true
 	await _frames(1)
+
+
+func slider_value() -> int:
+	var slider := _hangar._palette.find_child("GunLevel", true, false) as HSlider
+	return int(slider.value) if slider != null else -1
+
+
+func placement_max_level() -> int:
+	return _hangar.placement.weapons.xp.max_level
 
 
 func _rows_text(key: StringName) -> String:

@@ -158,7 +158,9 @@ func _step_guns() -> void:
 	_check(fired[0] >= 1, "FIRE fires the manual nose cannon (%d)" % fired[0])
 	_check(sandbox.impacts.count > 0, "hits throw sparks (%d)" % sandbox.impacts.count)
 	_check(health.call(ship) == ours_before, "not one shot touched our own ship")
-	sandbox._level_button.pressed.emit()
+	_check(sandbox._level_button.text == "Guns: own", "Creative guns start at their own levels (7.1)")
+	sandbox._level_button.pressed.emit()  # own -> L1
+	sandbox._level_button.pressed.emit()  # L1 -> L10
 	await _physics_frames(2)
 	_check(ship.guns.guns[0].level == 10 and sandbox.weapons.gunnery.layout == ship.guns
 			and ship.guns.guns[0].spread < WeaponLib.spread_for(ship.guns.guns[0].stats, 1),

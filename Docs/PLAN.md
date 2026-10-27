@@ -1377,8 +1377,14 @@ at zero size.
 ### Phase 7: Creative mode → **M2**
 
 #### 7.1 Creative hangar
-- [ ] Hangar mode `CREATIVE`: unlimited materials, every part, and guns at any level 1–999
-- **Done when:** any part can be placed with no cost checks.
+✅ 2026-10-27. Creative is the hangar with no stock (the main menu's Creative tile): nothing costs
+anything, every part is in the palette. Each Creative gun carries its own `level` on its mount,
+from a log-scale slider (L1 to the XP curve's top) in the Weapons tab that sets new guns and the
+selected one (`HangarEditor.set_gun_level`, mirrored, one undo step per drag). Only Creative flight
+reads it (`GunLayout.compute(..., own_levels)`): an enemy built from the ship fights at its
+encounter level, and a pilot's guns level by XP. The sandbox's Guns button now starts at "own" and
+overrides every gun. Tested in `tests/model/test_creative.gd`; `drive_hangar` drags the slider.
+⚠️ A selected *mount* never refreshed its label after an edit, so undo left "L1" showing.
 
 #### 7.2 Test flight
 - [ ] A level slider 1–100 → a random empty arena + `encounter.generate(level)` → back to the hangar on death or exit

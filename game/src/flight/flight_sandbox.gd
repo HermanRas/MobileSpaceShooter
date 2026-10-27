@@ -104,8 +104,9 @@ var _sandbox: Dictionary
 ## Which ship _picked is on.
 var _picked_ship: ShipBody
 var _last_hit := ""
-## The level the player's guns are at (the Guns button steps through `gun_levels`); Creative only.
-var gun_level := 1
+## Creative only: the level the Guns button has put every gun at, or 0 while they fly at their
+## own levels (each mount's, set in the hangar, 7.1). The button steps through `gun_levels`.
+var gun_level := 0
 ## The profile's stock when the ship was built from it (PLAN.md 4.8a), or null. Its fitted guns
 ## fly at their own levels, and a kill's XP goes to them.
 var stock: Inventory
@@ -189,9 +190,10 @@ func _spawn_player() -> void:
 	if stock != null:
 		ship.gun_levels = _item_levels()
 		ship.guns = GunLayout.compute(ship.blueprint, _placement, 1, ship.gun_levels)
-	elif gun_level != ship.gun_level:
-		ship.gun_level = gun_level
-		ship.build(_bp, _placement)
+	else:
+		ship.gun_level = maxi(gun_level, 1)
+		ship.own_levels = gun_level == 0
+		ship.guns = GunLayout.compute(ship.blueprint, _placement, ship.gun_level, {}, 1.0, ship.own_levels)
 	last_spawn_usec = Time.get_ticks_usec() - started
 	ship.enable_damage(damage_table)
 	_world.add_child(ship)
@@ -747,7 +749,7 @@ func _build_ui() -> void:
 	pause.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT, Control.PRESET_MODE_KEEP_SIZE, 16)
 	pause.pressed.connect(open_pause)
 	ui.add_child(pause)
-	_level_button.text = "Guns L%d" % gun_level
+	_level_button.text = _level_text()
 	_level_button.size = Vector2(132, 56)
 	_level_button.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT, Control.PRESET_MODE_KEEP_SIZE, 16)
 	_level_button.position.y += 64
@@ -781,14 +783,20 @@ func _build_ui() -> void:
 
 ## Steps the player's guns to the next test level (a stand-in for Creative's level slider, 7.x),
 ## so accuracy by level can be felt before guns are items (4.8).
+## Steps every gun through the sandbox's `gun_levels`, then back to their own levels (0).
 func _next_gun_level() -> void:
-	var levels: Array = (_sandbox.get("gun_levels", [1, 10, 100, 999]) as Array).map(func(v: Variant) -> int: return int(v))
+	var levels: Array = [0] + (_sandbox.get("gun_levels", [1, 10, 100, 999]) as Array).map(func(v: Variant) -> int: return int(v))
 	gun_level = levels[(levels.find(gun_level) + 1) % levels.size()]
-	_level_button.text = "Guns L%d" % gun_level
+	_level_button.text = _level_text()
 	if ship != null:
-		ship.gun_level = gun_level
-		ship.guns = GunLayout.compute(ship.blueprint, ship.placement, gun_level)
+		ship.gun_level = maxi(gun_level, 1)
+		ship.own_levels = gun_level == 0
+		ship.guns = GunLayout.compute(ship.blueprint, ship.placement, ship.gun_level, {}, 1.0, ship.own_levels)
 		weapons.gunnery.set_layout(ship.guns)
+
+
+func _level_text() -> String:
+	return "Guns: own" if gun_level == 0 else "Guns L%d" % gun_level
 
 
 ## The settings, over the pause menu (6.5); Done goes back to it.

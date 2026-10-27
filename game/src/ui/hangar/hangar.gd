@@ -334,7 +334,10 @@ func _start_carry_thruster(type_id: StringName, size: StringName, level: int) ->
 
 
 func _start_carry_weapon(weapon_id: StringName, mount_type: StringName, mode: StringName) -> void:
-	_start_carry_part({"part": WeaponLib.part_id(weapon_id), "mount": String(mount_type), "mode": String(mode)})
+	var part := {"part": WeaponLib.part_id(weapon_id), "mount": String(mount_type), "mode": String(mode)}
+	if not stocked():
+		part["level"] = _palette.gun_level
+	_start_carry_part(part)
 
 
 ## Carrying a loose part from the Inventory tab (`part` as `stock_drag_started` gives it).
@@ -529,7 +532,7 @@ func _commit_carry() -> void:
 				done = editor.move_mount(_carry["moving_mount"], _mount_slot)
 			elif Mounting.is_weapon(part):
 				done = not editor.add_weapon(WeaponLib.type_of_part(str(part["part"])), StringName(part["mount"]),
-						StringName(part["mode"]), _mount_slot, str(part.get("gun", ""))).is_empty()
+						StringName(part["mode"]), _mount_slot, str(part.get("gun", "")), int(part.get("level", 0))).is_empty()
 			else:
 				done = not editor.add_thruster(ThrusterLib.type_of_part(str(part["part"])), StringName(part["size"]),
 						int(part["level"]), _mount_slot, bool(part.get("stock", false))).is_empty()
@@ -596,7 +599,15 @@ func _select_mount(index: int) -> void:
 	_select(-1)
 	_selected_mount = index
 	_view.set_selected_mount(index)
+	if not stocked() and index >= 0 and Mounting.is_weapon(editor.blueprint.mounts[index]):
+		_palette.show_gun_level(int(editor.blueprint.mounts[index].get("level", 1)))
 	_refresh_buttons()
+
+
+## Creative: the level slider moved; the selected gun (and its mirror image) goes to it.
+func _on_gun_level_changed(level: int) -> void:
+	if not stocked() and _selected_mount >= 0:
+		editor.set_gun_level(_selected_mount, level)
 
 
 func _select(tile_id: int) -> void:
@@ -702,6 +713,10 @@ func _on_changed() -> void:
 		_select(-1)
 	elif _selected_mount >= 0:
 		_view.set_selected_mount(_selected_mount)
+		var mount := editor.blueprint.mounts[_selected_mount]
+		if not stocked() and Mounting.is_weapon(mount):
+			_palette.show_gun_level(int(mount.get("level", 1)))  # undo and redo move the slider too
+		_refresh_buttons()
 	elif _selected >= 0 and editor.blueprint.tile_by_id(_selected) == null:
 		_select(-1)
 	else:
@@ -711,7 +726,7 @@ func _on_changed() -> void:
 		_fly_button.disabled = not problems.is_empty()
 		var stats := ShipStats.compute(editor.blueprint, placement)
 		var envelope := ThrustEnvelope.compute(editor.blueprint, placement, stats)
-		var guns := GunLayout.compute(editor.blueprint, placement, 1, gun_levels())
+		var guns := GunLayout.compute(editor.blueprint, placement, 1, gun_levels(), 1.0, not stocked())
 		_view.set_envelope(envelope, stats.center_of_mass)
 		_view.set_guns(guns)
 		_stats.show_stats(stats, problems, placement.max_tiles, envelope, guns)
@@ -739,7 +754,9 @@ func _part_text() -> String:
 	if Mounting.is_weapon(mount):
 		var gun := placement.weapons.weapon(WeaponLib.type_of_part(str(mount["part"])))
 		var item: Inventory.GunItem = editor.stock.guns.get(str(mount.get("gun", ""))) if editor.stock != null else null
-		if item == null:
+		if item == null and not stocked():
+			parts.append("%s L%d" % [gun.get("name", "?"), int(mount.get("level", 1))])
+		elif item == null:
 			parts.append(str(gun.get("name", "?")))
 		else:
 			var xp := placement.weapons.xp
@@ -856,6 +873,7 @@ func _build_ui() -> void:
 	_palette.thruster_drag_started.connect(_start_carry_thruster)
 	_palette.weapons = placement.weapons
 	_palette.weapon_drag_started.connect(_start_carry_weapon)
+	_palette.gun_level_changed.connect(_on_gun_level_changed)
 	_palette.stock = editor.stock
 	_palette.ship = editor.blueprint
 	_palette.stock_drag_started.connect(_start_carry_stock)

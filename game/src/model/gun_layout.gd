@@ -71,9 +71,10 @@ var warnings: Array[Dictionary] = []
 
 
 ## Every gun at `level`, except a fitted inventory gun named in `levels` (item id -> level),
-## which is at its own (Phase 4.8b). `damage_share` scales every gun's damage (an encounter's
-## enemies, 5.3).
-static func compute(bp: Blueprint, placement: Placement, level := 1, levels := {}, damage_share := 1.0) -> GunLayout:
+## which is at its own (Phase 4.8b), and with `own_levels`, a Creative gun with a `level` on its
+## mount (7.1). `damage_share` scales every gun's damage (an encounter's enemies, 5.3).
+static func compute(bp: Blueprint, placement: Placement, level := 1, levels := {}, damage_share := 1.0,
+		own_levels := false) -> GunLayout:
 	var layout := GunLayout.new()
 	if placement.weapons == null:
 		return layout
@@ -81,7 +82,8 @@ static func compute(bp: Blueprint, placement: Placement, level := 1, levels := {
 		var gun := _gun(bp, placement, i)
 		if gun != null:
 			gun.item = str(bp.mounts[i].get("gun", ""))
-			gun.level = int(levels.get(gun.item, level))
+			var fallback := int(bp.mounts[i].get("level", level)) if own_levels else level
+			gun.level = clampi(int(levels.get(gun.item, fallback)), 1, placement.weapons.xp.max_level)
 			gun.stats = placement.weapons.xp.scaled(gun.stats, gun.level, damage_share)
 			gun.spread = WeaponLib.spread_for(gun.stats, gun.level)
 			layout.guns.append(gun)

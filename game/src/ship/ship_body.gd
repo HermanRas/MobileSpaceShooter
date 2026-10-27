@@ -42,6 +42,8 @@ var guns: GunLayout
 ## PLAN.md 4.8b); `gun_level` is the sandbox's Guns button and enemies' encounter level.
 var gun_level := 1
 var gun_levels := {}
+## Creative: each gun flies at the `level` on its mount (7.1), not `gun_level`.
+var own_levels := false
 ## The share of its guns' damage it deals (an encounter's enemies, 5.3), and the encounter level
 ## it was spawned at (what its kill is worth).
 var gun_damage := 1.0
@@ -115,7 +117,7 @@ func build(bp: Blueprint, placement_rules: Placement) -> void:
 
 	stats = ShipStats.compute(bp, placement)
 	envelope = ThrustEnvelope.compute(bp, placement, stats)
-	guns = GunLayout.compute(bp, placement, gun_level, gun_levels, gun_damage)
+	guns = GunLayout.compute(bp, placement, gun_level, gun_levels, gun_damage, own_levels)
 	mass = maxf(stats.mass, 0.001)
 	center_of_mass = stats.center_of_mass * PX
 	inertia = maxf(stats.inertia * PX * PX, 0.001)

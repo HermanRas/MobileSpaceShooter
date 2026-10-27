@@ -13,6 +13,8 @@ extends PanelContainer
 signal drag_started(type: StringName, shape: StringName, size: StringName)
 signal thruster_drag_started(type_id: StringName, size: StringName, level: int)
 signal weapon_drag_started(weapon_id: StringName, mount_type: StringName, mode: StringName)
+## Creative: the level slider moved (new guns, and the selected one, go to it).
+signal gun_level_changed(level: int)
 ## A loose part from the Inventory tab: a mount without a place, with `"gun": <item id>` for a
 ## gun or `"stock": true` for a thruster.
 signal stock_drag_started(part: Dictionary)
@@ -50,6 +52,8 @@ var mode: StringName = &"auto"
 var type: StringName = &"hull"
 var tile_size: StringName = &"L"
 var level: int = 1
+## Creative: the level new guns get (7.1), L1 to the XP curve's top.
+var gun_level: int = 1
 ## The profile's stock and the ship it's building (for which guns are loose); null in Creative.
 var stock: Inventory
 var ship: Blueprint
@@ -208,6 +212,49 @@ func _weapon_row() -> void:
 		button.toggled.connect(func(on: bool) -> void:
 			if on:
 				mode = each)
+	if stock == null:
+		_shape_row.add_child(_spacer())
+		_shape_row.add_child(_gun_level_slider())
+
+
+## Creative's gun level: a slider from L1 to the top on a log scale, so the low levels, which
+## change the most, get most of its length.
+func _gun_level_slider() -> Control:
+	var box := HBoxContainer.new()
+	var label := Label.new()
+	label.text = "L%d" % gun_level
+	label.custom_minimum_size = Vector2(70, 0)
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	var slider := HSlider.new()
+	slider.name = "GunLevel"
+	slider.min_value = 1
+	slider.max_value = weapons.xp.max_level
+	slider.exp_edit = true
+	slider.step = 1
+	slider.value = gun_level
+	slider.custom_minimum_size = Vector2(260, BUTTON.y)
+	# A drag moves the selected gun once, when it ends, so it's one undo step.
+	var dragging := [false]
+	slider.drag_started.connect(func() -> void: dragging[0] = true)
+	slider.drag_ended.connect(func(_moved: bool) -> void:
+		dragging[0] = false
+		gun_level_changed.emit(gun_level))
+	slider.value_changed.connect(func(value: float) -> void:
+		gun_level = int(value)
+		label.text = "L%d" % gun_level
+		if not dragging[0]:
+			gun_level_changed.emit(gun_level))
+	box.add_child(label)
+	box.add_child(slider)
+	return box
+
+
+## Creative: shows `to` on the slider (a gun was selected) without moving any gun.
+func show_gun_level(to: int) -> void:
+	if gun_level == to:
+		return
+	gun_level = to
+	_refresh_shapes()
 
 
 ## Shows the stock now (after an edit); the Inventory tab is redrawn if it's open.

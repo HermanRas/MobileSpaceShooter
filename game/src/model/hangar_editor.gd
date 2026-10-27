@@ -133,13 +133,16 @@ func add_thruster(type_id: StringName, size: StringName, level: int, slot: Dicti
 
 ## Mounts a gun in a slot from `Mounting.weapon_slots()`, the same way. A mode its mount type
 ## doesn't allow is replaced by one it does (a turret is always auto). `item`: the loose gun from
-## the inventory to fit, rather than a bought one.
+## the inventory to fit, rather than a bought one. `level`: in Creative (no stock), the gun's own
+## level (PLAN.md 7.1), kept on the mount; a stocked gun's level comes from its XP instead.
 func add_weapon(weapon_id: StringName, mount_type: StringName, mode: StringName, slot: Dictionary,
-		item := "") -> PackedInt32Array:
+		item := "", level := 0) -> PackedInt32Array:
 	var resolved := placement.weapons.mode_for(mount_type, mode) if placement.weapons != null else mode
 	var mount := {"part": WeaponLib.part_id(weapon_id), "mount": String(mount_type), "mode": String(resolved)}
 	if not item.is_empty():
 		mount["gun"] = item
+	elif stock == null and level > 0:
+		mount["level"] = _gun_level(level)
 	return _add_mount(Mounting.moved_to(mount, slot), SHOP if item.is_empty() else STOCK)
 
 
@@ -162,6 +165,31 @@ func set_mount_mode(index: int, mode: StringName) -> bool:
 	mount["mode"] = String(mode)
 	changed.emit()
 	return true
+
+
+## Creative: sets a gun's (and its mirror image's) own level, clamped to L1 and the XP curve's
+## top. False if it isn't a gun, the hangar is stocked, or the gun is at that level already.
+func set_gun_level(index: int, level: int) -> bool:
+	if stock != null or index < 0 or index >= blueprint.mounts.size() or not Mounting.is_weapon(blueprint.mounts[index]):
+		return false
+	var mount := blueprint.mounts[index]
+	var to := _gun_level(level)
+	if int(mount.get("level", 1)) == to:
+		return false
+	_checkpoint()
+	var host := blueprint.tile_by_id(int(mount["tile"]))
+	var twin_id := _existing_twin_id(host) if host != null else -1
+	if twin_id >= 0:
+		var at := mount_index(Mounting.mirrored(placement, blueprint, mount, twin_id, axis_y()))
+		if at >= 0 and blueprint.mounts[at]["part"] == mount["part"]:
+			blueprint.mounts[at]["level"] = to
+	mount["level"] = to
+	changed.emit()
+	return true
+
+
+func _gun_level(level: int) -> int:
+	return clampi(level, 1, placement.weapons.xp.max_level if placement.weapons != null else 999)
 
 
 ## Removes a mount (and its mirror image); with a stock, the parts go in the inventory.
