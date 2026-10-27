@@ -9,6 +9,7 @@ by CELL / 16 on every side. Each cell is seamless. Channels follow the ship shad
     G = trim mask (drawn untinted, e.g. the shield's emitter lines)
     B = unused, A = 255
 And game/assets/placeholders/tile_damage.png: four damage overlays, darker speckle per step.
+And game/assets/placeholders/icon.png: one grey ring that stands in for every icon (A.4).
 """
 from __future__ import annotations
 
@@ -24,6 +25,8 @@ VARIANTS = 3
 PAD = CELL // 16
 OUT = Path(__file__).resolve().parent.parent / "game" / "assets" / "placeholders" / "tile_atlas.png"
 DAMAGE_OUT = OUT.with_name("tile_damage.png")
+ICON_OUT = OUT.with_name("icon.png")
+ICON = 64
 
 yy, xx = np.mgrid[0:CELL, 0:CELL].astype(np.float32)
 rng = np.random.default_rng(7)
@@ -127,6 +130,16 @@ def main() -> None:
         damage[:, step * stride:(step + 1) * stride, 0] = np.pad((1 - marks) * 255, PAD, mode="wrap")
     Image.fromarray(damage, "RGBA").save(DAMAGE_OUT)
     print(f"wrote {DAMAGE_OUT.relative_to(DAMAGE_OUT.parents[3])}")
+
+    # Last, so the seeded noise above stays as it was.
+    iy, ix = np.mgrid[0:ICON, 0:ICON].astype(np.float32)
+    d = np.hypot(ix - ICON / 2 + 0.5, iy - ICON / 2 + 0.5)
+    ring = np.clip(1 - np.abs(d - ICON * 0.36) / 3.0, 0, 1)
+    icon = np.zeros((ICON, ICON, 4), dtype=np.uint8)
+    icon[..., :3] = 200
+    icon[..., 3] = (ring * 255).astype(np.uint8)
+    Image.fromarray(icon, "RGBA").save(ICON_OUT)
+    print(f"wrote {ICON_OUT.relative_to(ICON_OUT.parents[3])}")
 
 
 if __name__ == "__main__":

@@ -151,7 +151,7 @@ band for the colour the player picked and keeps the shading. Each hue is far fro
 | A.1b | `tiles_cores_shields` | `art_src/tiles/` | 12 | ✅ in the game 2026-10-26: core, shields, damage |
 | A.2 | `parts_thrusters` | `art_src/parts/` | 12 | ✅ in the game 2026-10-27: a nozzle per type |
 | A.3 | `parts_guns` | `art_src/parts/` | 12, run ×3 | ✅ in the game 2026-10-27: 9 gun heads; flak and seeker re-roll open |
-| A.4 | `icons_main` | `art_src/icons/` | 15, run ×2 | prompt ready 2026-10-27 |
+| A.4 | `icons_main` | `art_src/icons/` | 15, run ×3 | ✅ in the game 2026-10-27: pickups, FIRE, SWITCH, Pause |
 | A.5 | `chrome_*` | `art_src/ui/` | one canvas per piece | to write |
 | A.6 | `icons_map` | `art_src/icons/` | 1 sheet | to write |
 | A.7 | `portraits_*` | `art_src/portraits/` | ~4 sheets | to write |
@@ -594,6 +594,73 @@ arsenals (PLAN.md §9).
 
 ---
 
+## parts_guns_flak_seeker
+
+**A.3b: 8 cells, rows 1–2; rows 3–4 stay empty. Run ×3. Save them as
+`art_src/parts/parts_guns_flak_seeker_1.png`, `_2`, `_3`.**
+
+The re-roll for the owner's two run-3 favourites, the twin flared flak and the triple finned
+seeker, at run 2's proportions: a small housing and long barrels. The words are the same as
+`parts_guns`, except for the stronger proportion rules, which are given relative to the
+housing.
+
+```
+A 1024x1024 sprite sheet of spaceship gun turrets for a top-down 2D spaceship
+building game, arranged on a strict 4x4 grid of 256x256 cells. Rows 1 and 2 are
+filled, 4 cells each, one gun per cell, centred in its cell. ROWS 3 AND 4 ARE
+COMPLETELY EMPTY, flat chroma green.
+
+BACKGROUND: flat pure chroma green #00FF00 everywhere there is no artwork: around
+every gun, between the guns and in all of rows 3 and 4. No gradient, no shadow on
+the background, no grid lines, no borders or frames.
+
+STYLE: clean, crisp sci-fi machinery seen from DIRECTLY ABOVE, perfectly flat and
+orthographic, like a gun turret on the deck of a starship in a top-down space
+game. Flat shading with a little bevel on edges, light from the upper left, a
+thin dark outline, fine readable detail that still reads when shrunk to 32
+pixels. NOT perspective, NOT isometric, NOT a 3D render, NOT a photo, NOT pixel
+art. No cast shadows.
+
+COLOUR: STRICTLY GREYSCALE. No colour at all, no tint, no hue, and NO GREEN
+anywhere in the artwork. Light-to-mid greys (around 55% to 80% brightness); dark
+greys and black only in recesses, barrel bores and tube mouths. Each gun has
+exactly ONE thin band of PURE WHITE #FFFFFF, a trim ring around its round
+housing; nothing else on it is pure white.
+
+EVERY GUN HAS THE SAME LAYOUT AND FACING, seen from above, pointing RIGHT:
+- A SMALL ROUND armoured housing, a circle seen from above, at the LEFT of the
+  cell. Its diameter is only about one third of the cell.
+- The gun on top of it is LONGER THAN THE HOUSING IS WIDE: the barrels or
+  missiles reach out to the right about twice the housing's width beyond it,
+  almost to the right edge of the cell.
+- The gun is symmetric about the horizontal line through the housing's centre.
+- NO muzzle flash, NO glow, NO smoke, NO exhaust, NO projectiles in flight.
+
+ROW 1, four cells: FOUR FLAK CANNONS, variants of one design: two thick, short
+cannon bodies side by side on the housing, each ending in a long barrel with a
+wide flared bell mouth, like a double-barrelled shotgun.
+
+ROW 2, four cells: FOUR SEEKER MISSILE LAUNCHERS, variants of one design: a box
+launcher on the housing holding three pointed missiles side by side on rails,
+each with small tail fins, their noses pointing right.
+
+ROWS 3 AND 4: completely empty, flat chroma green.
+
+ABSOLUTELY NO TEXT of any kind: no labels, no numbers, no letters, no digits, no
+logos, no emblems, no insignia, no warning signs.
+
+Original designs only: nothing resembling a weapon or ship from any film, TV
+show or game.
+
+Remember: no text, no colour, no green in the art, a SMALL housing with a LONG
+gun, every gun points right, and rows 3 and 4 are empty.
+```
+
+**What happens to it.** The best flak and seeker are cut as `gun` cells in place of run 2's,
+with no code change.
+
+---
+
 ## icons_main
 
 **A.4: 15 cells. Run ×2. Save them as `art_src/icons/icons_main_1.png` and `_2`.**
@@ -672,10 +739,18 @@ Remember: no text, no numbers, black background, the badges' centres empty, and
 the bottom-right cell is empty.
 ```
 
-**What happens to it.** Icons are cut with the existing `keyed` flood fill from black (as
-the core was), but kept with their own alpha and in colour rather than greyscale, so this sheet
-gets a `sprite` kind and its own atlas when it arrives. HUD code asks for `vis.icon.*` IDs, and
-each has a placeholder.
+**What happens to it.** The slicer's `sprite` kind keys each icon off black with the flood fill
+(so a badge's dark centre survives; `holes` keys enclosed black too, for the crosshair and the
+coil) and writes it as its own 128 px PNG in `assets/icons/`. Code asks for `vis.icon.<id>`, which
+shares one grey-ring placeholder, and keeps its old text or shapes until `has_real_art()`.
+
+### Review, 2026-10-27: what came back
+
+Three runs, nearly identical and all on brief: no text, empty badge centres, an empty corner.
+**Run 2 is used**: it has the brightest Tech green, and its button symbols are all cream (run 3's
+are gold). The coin stack and credit chip are spares. In the game: the loot pickups in flight,
+FIRE and SWITCH, and the Pause button. Boost and the badges wait for their features (8.3). See
+them with `tools/preview.sh res://dev_preview/art_pickups.tscn 1200x300 --frames=5`.
 
 ---
 

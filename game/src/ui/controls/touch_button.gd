@@ -10,11 +10,18 @@ signal pressed
 signal released
 
 @export var text := ""
+## Drawn in place of `text` when set (A.4's symbols), ICON_SHARE of the button across.
+var icon: Texture2D:
+	set(value):
+		icon = value
+		queue_redraw()
 var held := false
 var fill := Color(1, 1, 1, 0.18)
 var outline := Color(1, 1, 1, 0.6)
 
 var _finger := -1
+
+const ICON_SHARE := 0.55
 
 
 func _ready() -> void:
@@ -55,6 +62,11 @@ func _draw() -> void:
 	var radius := minf(size.x, size.y) * 0.5 - 2.0
 	draw_circle(center, radius, Color(fill, fill.a * (2.5 if held else 1.0)))
 	draw_arc(center, radius, 0.0, TAU, 48, outline, 3.0, true)
+	if icon != null:
+		var side := radius * 2.0 * ICON_SHARE
+		draw_texture_rect(icon, Rect2(center - Vector2(side, side) * 0.5, Vector2(side, side)), false,
+				Color(1, 1, 1, maxf(outline.a, 0.75)))
+		return
 	var font := get_theme_default_font()
 	var font_size := 20
 	var width := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x

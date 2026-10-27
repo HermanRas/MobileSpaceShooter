@@ -651,6 +651,8 @@ func _step_a_level_30_fight() -> void:
 	_check(sandbox.enemies.is_empty() and "level 30 cleared" in sandbox._hud.text,
 			"every ship down: the fight is cleared (%s)" % sandbox._hud.text)
 	_check(sandbox.pickups.count() > 0, "and their loot floats where they fell (%d pickups)" % sandbox.pickups.count())
+	await _frames(20)
+	_save_shot("drive_flight_loot.png")
 	_hangar.land()
 	await _frames(2)
 

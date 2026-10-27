@@ -76,6 +76,27 @@
 			"_doc": "Run 3 of 3 (A.3). Heavier outlines, and housings so big (r 110 px) that the barrels end 1.1 r out: fitted to a muzzle, the disc would be wider than a tile. The owner's flak (4) and seeker (6) picks wait for a re-roll in sheet 2's proportions; sheet 2's stand in.",
 			"cells": {},
 			"spares": {"4": "twin flak (owner's pick)", "6": "triple seeker (owner's pick)", "7": "missile rack", "9": "finned laser", "10": "wired EMP", "11": "twin-rail laser", "12": "quad EMP"}
+		},
+		"icons_main_2": {
+			"file": "icons/icons_main_2.jpeg",
+			"grid": [4, 4],
+			"_doc": "Generated 2026-10-27, run 2 of 3 of one prompt (A.4); all three came back nearly identical, and this one has the brightest Tech green and all-cream button symbols. Badges 9-12 are the x2-x5 power-ups (the game writes the number).",
+			"cells": {
+				"1": ["hull", "sprite"],
+				"2": ["alloy", "sprite"],
+				"3": ["crystal", "sprite"],
+				"4": ["tech", "sprite", {"holes": true}],
+				"5": ["fire", "sprite", {"holes": true}],
+				"6": ["switch", "sprite"],
+				"7": ["pause", "sprite"],
+				"8": ["boost", "sprite"],
+				"9": ["powerup_2", "sprite"],
+				"10": ["powerup_3", "sprite"],
+				"11": ["powerup_4", "sprite"],
+				"12": ["powerup_5", "sprite"],
+				"13": ["gc", "sprite"]
+			},
+			"spares": {"14": "GC coin stack", "15": "GC credit chip"}
 		}
 	},
 	"atlases": {
@@ -97,6 +118,13 @@
 			"rows": [
 				["gun_gatling", "gun_gatling_multi", "gun_cannon", "gun_flak", "gun_rocket", "gun_seeker", "gun_mines", "gun_laser", "gun_emp"]
 			]
+		},
+		"icons": {
+			"out": "game/assets/icons",
+			"layout": "files",
+			"_doc": "One 128 px RGBA PNG per icon (visuals.json vis.icon.<id>), for Buttons and the pickups.",
+			"files": ["hull", "alloy", "crystal", "tech", "gc", "fire", "switch", "pause", "boost",
+				"powerup_2", "powerup_3", "powerup_4", "powerup_5"]
 		},
 		"tile_damage": {
 			"out": "game/assets/tiles/tile_damage.png",

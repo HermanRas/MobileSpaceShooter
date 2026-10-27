@@ -6,14 +6,17 @@ extends Node2D
 ## collects it. All pickups live in arrays and draw in one `_draw`, like the shot pool.
 ##
 ## A pickup is a piece of loot: {resource: amount} (Economy.loot_pieces), or a part from
-## Economy.part_drop ({"gun", "mount", "xp"} or {"thruster"}). Placeholder shapes until art
-## lands: Hull a scrap of plate (pentagon, so it isn't taken for a tile of debris), Alloy a
-## steel hexagon, Crystal a cyan shard, Tech a bundle of wires, GC a gold coin, a part a crate.
+## Economy.part_drop ({"gun", "mount", "xp"} or {"thruster"}). A resource shows its icon (A.4,
+## `vis.icon.<resource>`), rocking gently. Without the icon art it's a shape in code: Hull a scrap
+## of plate (pentagon, so it isn't taken for a tile of debris), Alloy a steel hexagon, Crystal a
+## cyan shard, Tech a bundle of wires, GC a gold coin. A part is always a crate.
 
 signal collected(piece: Dictionary)
 
 const PX := ShipMesh.PX_PER_U
 const RADIUS_U := 0.35
+## An icon's size, in pickup radii.
+const ICON_SCALE := 3.0
 
 ## Tuning (flight.json pickups): U, U/s, seconds.
 var magnet_u := 8.0
@@ -37,6 +40,12 @@ var _vel := PackedVector2Array()
 var _age := PackedFloat32Array()
 var _spin := PackedFloat32Array()
 var _piece: Array[Dictionary] = []
+## Resource -> its icon, or null while it has only the placeholder.
+var _icons := {}
+
+
+func _ready() -> void:
+	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 
 
 func configure(table: Dictionary) -> void:
@@ -130,6 +139,13 @@ func _draw() -> void:
 		var piece := _piece[i]
 		var kind: StringName = &"part" if piece.has("gun") or piece.has("thruster") else piece.keys()[0]
 		draw_circle(at, r * 1.7, Color(_colour(kind), 0.18))
+		var icon := _icon(kind)
+		if icon != null:
+			var side := r * ICON_SCALE
+			draw_set_transform(at, sin(_spin[i]) * 0.3, Vector2.ONE)
+			draw_texture_rect(icon, Rect2(Vector2(-side, -side) * 0.5, Vector2(side, side)), false)
+			draw_set_transform_matrix(Transform2D.IDENTITY)
+			continue
 		match kind:
 			&"hull":
 				_draw_shape(at, 5, r, _spin[i], Color(0.78, 0.8, 0.84))
@@ -147,6 +163,13 @@ func _draw() -> void:
 				_draw_shape(at, 4, r * 1.3, PI * 0.25, Color(0.95, 0.55, 0.2) if piece.has("gun") else Color(0.3, 0.8, 0.75))
 				draw_line(at - Vector2(r * 0.6, 0), at + Vector2(r * 0.6, 0), Color.WHITE, 2.0)
 				draw_line(at - Vector2(0, r * 0.6), at + Vector2(0, r * 0.6), Color.WHITE, 2.0)
+
+
+func _icon(kind: StringName) -> Texture2D:
+	if not _icons.has(kind):
+		var id := StringName("vis.icon.%s" % kind)
+		_icons[kind] = Assets.tex(id) if kind != &"part" and Assets.has_real_art(id) else null
+	return _icons[kind]
 
 
 func _colour(kind: StringName) -> Color:

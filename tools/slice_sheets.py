@@ -33,6 +33,10 @@ the gun so its barrel tip lands on GUN_TIP_X. The game then scales a cell so the
 weapon's muzzle (data), and the housing is whatever size the art gives it. A "guns" atlas is a row of those, RGB = grey and
 A = coverage, over a second row holding the trim mask (the white band) for the game to tint.
 
+A sprite (A.4's icons) is colour artwork on black: keyed like `keyed` (a flood fill from the
+border, so a dark badge centre ringed by gold survives), kept in colour with its alpha, and
+fitted into a square. A "files" atlas writes each sprite as its own PNG, so a Button can use it.
+
 Atlas layout (the ship shader's contract): a column per entry of a row, a row per variant, every
 cell padded by cell_px / 16 on each side (wrapped for materials, edge-extended otherwise), so
 mipmaps and linear filtering never read a neighbouring cell. The pad is 1/18 of the stride
@@ -57,6 +61,8 @@ INSET_PX = 3              # cut this far inside the gutters, past the JPEG ringi
 EVEN_BAND_PX = 16         # how far in from each edge the seam correction reaches
 TRIM_FROM, TRIM_TO = 225, 250   # near-white becomes the untinted trim mask (G)
 GREEN_MARGIN = 60         # chroma key: G exceeds both R and B by more than this
+SPRITE_PX = 128           # an icon file's size
+SPRITE_FILL = 0.94        # how much of it the artwork spans
 GUN_CELL = (256, 256)     # a gun's atlas cell, w x h
 GUN_PIVOT = (96, 128)     # where the housing's centre lands in it
 GUN_TIP_X = 248           # and the barrel's tip
@@ -214,6 +220,27 @@ def cut_gun(rgb: np.ndarray, report: list[str], ident: str) -> tuple[np.ndarray,
     return out_grey, out_cover
 
 
+def cut_sprite(rgb: np.ndarray, size: int, holes: bool, report: list[str], ident: str) -> np.ndarray:
+    """Key colour artwork off a black cell and fit it, centred, into SPRITE_FILL of a square.
+    With `holes`, enclosed black goes too (a crosshair's middle); without, it stays (a badge's
+    dark centre). Returns RGBA, size x size."""
+    lum = luma(rgb)
+    border = np.concatenate([lum[0, :], lum[-1, :], lum[:, 0], lum[:, -1]])
+    thresh = int(min(40, max(10, np.percentile(border, 99.5) + 8)))
+    dark = lum <= thresh
+    alpha = box_blur3((~(dark if holes else fill_from_border(dark))).astype(np.float32))
+    ys, xs = np.nonzero(alpha > 0.5)
+    x0, y0, x1, y1 = xs.min(), ys.min(), xs.max() + 1, ys.max() + 1
+    rgba = np.dstack([rgb, alpha * 255])[y0:y1, x0:x1]
+    k = size * SPRITE_FILL / max(x1 - x0, y1 - y0)
+    w, h = max(1, round((x1 - x0) * k)), max(1, round((y1 - y0) * k))
+    art = Image.fromarray(np.clip(rgba, 0, 255).astype(np.uint8), "RGBA").resize((w, h), Image.Resampling.LANCZOS)
+    out = Image.new("RGBA", (size, size), (0, 0, 0, 0))
+    out.paste(art, ((size - w) // 2, (size - h) // 2))
+    report.append(f"  {ident:16s} sprite    {x1 - x0}x{y1 - y0} -> {w}x{h} in {size}  (key <= {thresh})")
+    return np.asarray(out).astype(np.float32)
+
+
 def cut_part(rgb: np.ndarray, size: int, report: list[str], ident: str) -> tuple[np.ndarray, np.ndarray]:
     """Key a part off its chroma-green background and stretch it over the whole cell. Returns
     (grey, coverage 0..1)."""
@@ -247,6 +274,8 @@ def slice_sheet(name: str, spec: dict, cells: dict[str, np.ndarray], kinds: dict
             cells[ident] = cut_material(window, size, report, ident)
         elif kind == "overlay":
             cells[ident] = cut_overlay(window, size, report, ident)
+        elif kind == "sprite":
+            cells[ident] = cut_sprite(window, SPRITE_PX, bool(options.get("holes", False)), report, ident)
         elif kind == "gun":
             cells[ident], covers[ident] = cut_gun(window, report, ident)
         elif kind == "part":
@@ -260,8 +289,10 @@ def slice_sheet(name: str, spec: dict, cells: dict[str, np.ndarray], kinds: dict
     out_dir = src.parent / "sliced"
     out_dir.mkdir(exist_ok=True)
     for number, entry in spec["cells"].items():
-        Image.fromarray(cells[entry[0]].astype(np.uint8), "L").save(out_dir / f"{entry[0]}.png")
-    review(name, spec, cells, out_dir / f"review_{name}.png")
+        cell = cells[entry[0]].astype(np.uint8)
+        Image.fromarray(cell, "RGBA" if cell.ndim == 3 else "L").save(out_dir / f"{entry[0]}.png")
+    if all(entry[1] != "sprite" for entry in spec["cells"].values()):
+        review(name, spec, cells, out_dir / f"review_{name}.png")
 
 
 def review(name: str, spec: dict, cells: dict[str, np.ndarray], path: Path) -> None:
@@ -278,6 +309,15 @@ def review(name: str, spec: dict, cells: dict[str, np.ndarray], path: Path) -> N
                 sheet.paste(small, (x + dx, y + dy))
         draw.text((x, y + tile + 6), f"{entry[0]}  ({entry[1]})", fill=(230, 230, 230))
     sheet.save(path)
+
+
+def write_files(name: str, spec: dict, cells: dict[str, np.ndarray], report: list[str]) -> None:
+    """Each listed sprite as its own PNG in the `out` folder, named by its id."""
+    out = ROOT / spec["out"]
+    out.mkdir(parents=True, exist_ok=True)
+    for ident in spec["files"]:
+        Image.fromarray(cells[ident].astype(np.uint8), "RGBA").save(out / f"{ident}.png")
+    report.append(f"{name} -> {out.relative_to(ROOT)}/  ({len(spec['files'])} files of {SPRITE_PX} px)")
 
 
 def pack_guns(name: str, spec: dict, cells: dict[str, np.ndarray], covers: dict[str, np.ndarray],
@@ -347,11 +387,13 @@ def main() -> int:
     for name, spec in config["sheets"].items():
         slice_sheet(name, spec, cells, kinds, covers, size, report)
     for name, spec in config["atlases"].items():
-        missing = [i for row in spec["rows"] for i in row if i not in cells]
+        missing = [i for row in spec.get("rows", [spec.get("files", [])]) for i in row if i not in cells]
         if missing:
             print(f"{name}: no cell called {', '.join(sorted(set(missing)))}", file=sys.stderr)
             return 1
-        if spec.get("layout") == "guns":
+        if spec.get("layout") == "files":
+            write_files(name, spec, cells, report)
+        elif spec.get("layout") == "guns":
             pack_guns(name, spec, cells, covers, report)
         else:
             pack(name, spec, cells, kinds, covers, report)

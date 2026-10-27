@@ -737,6 +737,13 @@ func _build_ui() -> void:
 	pause.name = "Pause"
 	pause.text = "Pause"
 	pause.size = Vector2(132, 56)
+	if Assets.has_real_art(&"vis.icon.pause"):
+		pause.text = ""
+		pause.icon = Assets.tex(&"vis.icon.pause")
+		pause.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		pause.add_theme_constant_override(&"icon_max_width", 34)
+		pause.size = Vector2(72, 56)
+		pause.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	pause.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT, Control.PRESET_MODE_KEEP_SIZE, 16)
 	pause.pressed.connect(open_pause)
 	ui.add_child(pause)

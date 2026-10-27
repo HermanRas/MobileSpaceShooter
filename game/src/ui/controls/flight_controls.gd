@@ -33,6 +33,10 @@ func _ready() -> void:
 	switch_button.name = "Switch"
 	switch_button.text = "SWITCH"
 	switch_button.pressed.connect(func() -> void: switch_pressed.emit())
+	for pair: Array in [[fire, &"vis.icon.fire"], [switch_button, &"vis.icon.switch"]]:
+		if Assets.has_real_art(pair[1]):
+			(pair[0] as TouchButton).icon = Assets.tex(pair[1])
+			(pair[0] as TouchButton).texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	add_child(stick)
 	add_child(fire)
 	add_child(switch_button)
