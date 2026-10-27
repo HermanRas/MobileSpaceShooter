@@ -1387,9 +1387,16 @@ overrides every gun. Tested in `tests/model/test_creative.gd`; `drive_hangar` dr
 ⚠️ A selected *mount* never refreshed its label after an edit, so undo left "L1" showing.
 
 #### 7.2 Test flight
-- [ ] A level slider 1–100 → a random empty arena + `encounter.generate(level)` → back to the hangar on death or exit
-- [ ] A results card: survived, time, kills, damage taken
-- **Done when:** level 1 is easy with the starter ship and level 100 is brutal.
+✅ 2026-10-27. In Creative, Fly opens a `LaunchPanel`: free flight as before, or a **test fight**
+at a level from its slider (1 to the top of `levels.json`). `FlightSandbox.test_level` drops the
+practice target, the Spawn and Guns buttons and the respawn, and brings in a generated fight; a
+`TestFlight` (`src/model/`) records time, kills and damage taken, and `TestResults` shows them when
+the fight is cleared or the ship is destroyed, with Fly again and Return to hangar (or the back
+gesture). Measured by `drive_testflight` with the starter sitting still, every gun on auto: **L1 is
+cleared in about 50 s** taking ~630 of 1,160 HP; **L100 destroys it in about 1 s**. ⚠️ Enemies spawn
+just off screen (~18 U) inside every long gun's range (24–32 U), so a high level opens fire before
+anything is on screen: brutal, but no ship can react. Flagged for the tuning pass (8.7): a spawn
+grace before they fire, or spawning beyond range.
 
 #### 7.3 Publish to the library `[D6]`
 - [ ] "Publish" makes a validated blueprint buyable in WaveTime and Story at its computed cost
@@ -1452,6 +1459,9 @@ overrides every gun. Tested in `tests/model/test_creative.gd`; `drive_hangar` dr
 - **Done when:** a blueprint can be bought, then flown in the next run.
 
 #### 8.7 New-player curve
+- [ ] Spawn fairness (from 7.2): at L100 the off-screen spawn ring sits inside the enemies' gun
+  range, and the starter dies in about a second, unseen. Give enemies a grace before they fire
+  (until seen, or a second or two), or spawn them beyond their range.
 - [ ] Starter ship (§4.10): Core, hull tiles and 3 hardpoints carrying 3 pulse thrusters (2 rear, 1 front) and 1 single gatling
 - [ ] Tune so run 1 lasts ~1–2 min and every run banks enough to visibly upgrade
 - [ ] Owner's sandbox playtest, 2026-10-26: a level-1 Starter with 3 gatlings barely survived

@@ -55,6 +55,8 @@ var _wallet: Button
 var _reset_button: Button
 var _reset_armed_until := 0
 var _market: MarketPanel
+## Creative's Fly: free flight or a test fight at a level (7.2).
+var _launch := LaunchPanel.new()
 var _notice: Label
 var _notice_left := 0.0
 
@@ -163,9 +165,19 @@ func _open_library(open: bool) -> void:
 		_library_panel.refresh()
 
 
-## Test-flies a copy of the ship on top of the hangar (Phase 3). Returns null if the ship has
-## problems. The hangar is hidden and paused, not freed, so edits and undo survive the flight.
-func fly() -> FlightSandbox:
+## Fly: in Creative, the launch panel (free flight or a test fight, 7.2); stocked, straight up.
+func _on_fly_pressed() -> void:
+	if stocked():
+		fly()
+	elif placement.validate(editor.blueprint).is_empty():
+		_launch.open()
+
+
+## Test-flies a copy of the ship on top of the hangar (Phase 3), or with `test_level`, flies a
+## Creative test fight at that level (7.2). Returns null if the ship has problems. The hangar is
+## hidden and paused, not freed, so edits and undo survive the flight.
+func fly(test_level := 0) -> FlightSandbox:
+	_launch.visible = false
 	if _sandbox != null or not placement.validate(editor.blueprint).is_empty():
 		return null
 	if not _carry.is_empty():
@@ -177,9 +189,13 @@ func fly() -> FlightSandbox:
 	_sandbox.name = "FlightSandbox"
 	_sandbox.stock = editor.stock
 	_sandbox.economy = editor.economy
+	_sandbox.test_level = test_level if not stocked() else 0
 	add_child(_sandbox)
 	_sandbox.open(copy, placement)
 	_sandbox.closed.connect(land)
+	_sandbox.again.connect(func(level: int) -> void:
+		land()
+		fly.call_deferred(level))
 	return _sandbox
 
 
@@ -221,6 +237,8 @@ func on_back() -> void:
 		_sandbox.on_back()  # it pauses rather than lands (6.5)
 	elif not _carry.is_empty():
 		_end_carry()
+	elif _launch.visible:
+		_launch.visible = false
 	elif _market != null and _market.visible:
 		_open_market(false)
 	elif _library_panel.visible:
@@ -953,7 +971,7 @@ func _build_ui() -> void:
 			if not editor.trade(material, amount):
 				_show_notice(editor.refusal))
 		root.add_child(_market)
-	_fly_button = _tool_button(tools, "Fly", func() -> void: fly())
+	_fly_button = _tool_button(tools, "Fly", _on_fly_pressed)
 	if stocked() and OS.is_debug_build():
 		# Debug: start the profile over (owner, 2026-10-26). Two taps, then a clean load from the
 		# menu. Beside Undo rather than in the column, which is full down to the palette.
@@ -983,6 +1001,10 @@ func _build_ui() -> void:
 		load_from_library(id)
 		_open_library(false))
 	root.add_child(_library_panel)
+	_launch.name = "LaunchPanel"
+	_launch.max_level = int(Encounter.Rules.from_table(Data.table(&"levels")).bands.back().get("to", 100))
+	_launch.launched.connect(func(level: int) -> void: fly(level))
+	root.add_child(_launch)
 
 
 ## The first tap arms it; a second within RESET_ARM_S deletes the profile's saved stock and goes

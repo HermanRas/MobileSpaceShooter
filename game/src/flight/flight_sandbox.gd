@@ -27,10 +27,18 @@ extends Node
 ##
 ## Combat HUD (4.7): shield and hull bars, the active manual weapon, and a flash, jolt and buzz
 ## when hit. SWITCH pauses and lists the manual weapons (Q on a keyboard cycles them instead).
+##
+## Test fight (7.2, Creative): with `test_level` set before `open()`, there's no practice target,
+## no Spawn or Guns button and no respawn: a generated fight at that level comes in, and when it's
+## cleared or the ship is destroyed, the results card (TestResults) shows how it went.
 
 signal closed
+## Fly again, from the results card: the hangar flies a fresh copy at `level`.
+signal again(level: int)
 
 const PX := ShipMesh.PX_PER_U
+## Seconds from a test fight's end to its results card, so the last explosion is seen.
+const RESULTS_DELAY_S := 1.2
 ## The edge mark for the carrier you escort (enemies get marks with radar tech, v2).
 const CARRIER_MARK := Color(0.4, 1.0, 0.5, 0.95)
 ## The edge dot for an enemy you've seen (5.5).
@@ -125,6 +133,11 @@ var spawn_list := SpawnPicker.new()
 var _spawn_button := Button.new()
 ## The level of the fight spawned from the list, until it's cleared (0: none).
 var _fight_level := 0
+## A test fight's level (Creative, 7.2), or 0 for free flight; set before `open()`.
+var test_level := 0
+## The test fight under way, or null.
+var test: TestFlight
+var results := TestResults.new()
 
 
 ## Spawns `bp` (already validated) at the origin, and the practice target ahead of it.
@@ -176,7 +189,10 @@ func open(bp: Blueprint, placement: Placement) -> void:
 	add_child(spawner)
 	_spawn_player()
 	_camera.make_current()
-	spawn(SPAWN_ENEMIES, str(_sandbox.get("start_target", "target_barge")))
+	if test_level > 0:
+		test = TestFlight.start(test_level, spawn_encounter(test_level).spawns.size())
+	else:
+		spawn(SPAWN_ENEMIES, str(_sandbox.get("start_target", "target_barge")))
 	var stars := Starfield.new()
 	stars.camera = _camera
 	add_child(stars)
@@ -218,6 +234,9 @@ func _spawn_player() -> void:
 	hud.attach(ship, weapons, _camera, _flight.get("combat_hud", {}))
 	ship.rebuilt.connect(_show_status)
 	ship.destroyed.connect(_on_player_destroyed)
+	ship.damaged.connect(func(result: ShipDamage.Result) -> void:
+		if test != null:
+			test.took(result.shield + result.hull))
 	_camera.configure(_flight.get("camera", {}), ship, Spawner.extent_u(_bp, _placement))
 
 
@@ -245,7 +264,8 @@ func spawn(kind: StringName, id: String, level := 0, gun_level := 0) -> ShipBody
 func spawn_encounter(level: int, hvt := false) -> Encounter:
 	var fight := spawner.spawn_encounter(level, hvt)
 	_fight_level = level
-	_note = "level %d: %d enemies, guns ~L%d" % [level, fight.spawns.size(), roundi(levels.gun_per_level * level)]
+	_note = "level %d: %d enemies, guns ~L%d" % [level, fight.spawns.size(),
+			mini(roundi(levels.gun_per_level * level), _placement.weapons.xp.max_level)]
 	_note_until = Time.get_ticks_msec() + 3000
 	return fight
 
@@ -319,6 +339,10 @@ func _on_player_destroyed() -> void:
 	pilot = null
 	weapons = null
 	_clear_pick()
+	if test != null:
+		test.destroyed()
+		_show_results_soon()
+		return
 	_note = "destroyed"
 	_note_until = Time.get_ticks_msec() + int(float(_sandbox.get("respawn_s", 3.0)) * 1000.0)
 	_after_respawn_delay(func() -> void:
@@ -331,10 +355,15 @@ func _on_enemy_destroyed(body: ShipBody, built: Blueprint) -> void:
 	_clear_pick()
 	_drop_loot(body, built)
 	_on_kill(body)
+	if test != null:
+		test.killed()
 
 
 ## The last enemy is gone; if it was a fight from the Spawn list, say so.
 func _on_cleared() -> void:
+	if test != null and ship != null:
+		test.cleared()
+		_show_results_soon()
 	if _fight_level > 0:
 		_note = "level %d cleared!" % _fight_level
 		_note_until = Time.get_ticks_msec() + 4000
@@ -435,6 +464,19 @@ func _item_levels() -> Dictionary:
 	return out
 
 
+## The results card, a moment after a test fight ends; it pauses the flight under it.
+func _show_results_soon() -> void:
+	get_tree().create_timer(RESULTS_DELAY_S).timeout.connect(func() -> void:
+		if not is_inside_tree() or test == null:
+			return
+		_touches.clear()
+		controls.stick.reset()
+		controls.fire.reset()
+		pause_menu.visible = false
+		results.show_flight(test)
+		get_tree().paused = true)
+
+
 func _after_respawn_delay(then: Callable) -> void:
 	get_tree().create_timer(float(_sandbox.get("respawn_s", 3.0))).timeout.connect(then)
 
@@ -450,7 +492,7 @@ func close() -> void:
 
 ## Pauses the flight under the pause menu (6.5).
 func open_pause() -> void:
-	if pause_menu.visible or spawn_list.visible or picker.visible:
+	if pause_menu.visible or spawn_list.visible or picker.visible or results.visible:
 		return
 	_touches.clear()  # a panel over the fingers takes their release
 	controls.stick.reset()
@@ -468,7 +510,9 @@ func resume() -> void:
 ## The Android back button (through the hangar): it closes whatever is open, and otherwise
 ## pauses or resumes. It never lands straight away; Return to hangar is in the pause menu.
 func on_back() -> void:
-	if _controls_panel.visible:
+	if results.visible:
+		close()
+	elif _controls_panel.visible:
 		_open_controls_panel(false)
 	elif spawn_list.visible:
 		_close_spawner()
@@ -514,7 +558,9 @@ func _close_switch(weapon_id: StringName = &"") -> void:
 	get_tree().paused = false
 
 
-func _process(_delta: float) -> void:
+func _process(delta: float) -> void:
+	if test != null:
+		test.tick(delta)
 	if ship == null:
 		_hud.text = _note
 		return
@@ -754,13 +800,14 @@ func _build_ui() -> void:
 	_level_button.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT, Control.PRESET_MODE_KEEP_SIZE, 16)
 	_level_button.position.y += 64
 	_level_button.pressed.connect(_next_gun_level)
-	_level_button.visible = stock == null  # a stocked ship's guns are at their own levels
+	_level_button.visible = stock == null and test_level == 0  # a stocked ship's guns are at their own levels
 	ui.add_child(_level_button)
 	_spawn_button.text = "Spawn"
 	_spawn_button.size = Vector2(132, 56)
 	_spawn_button.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT, Control.PRESET_MODE_KEEP_SIZE, 16)
 	_spawn_button.position.y += 128
 	_spawn_button.pressed.connect(open_spawner)
+	_spawn_button.visible = test_level == 0  # a test fight is the fight
 	ui.add_child(_spawn_button)
 	spawn_list.name = "SpawnPicker"
 	spawn_list.visible = false
@@ -775,14 +822,16 @@ func _build_ui() -> void:
 	pause_menu.settings_requested.connect(_open_controls_panel.bind(true))
 	pause_menu.hangar_requested.connect(close)
 	ui.add_child(pause_menu)
+	results.name = "TestResults"
+	results.again_requested.connect(func() -> void: again.emit(test_level))
+	results.hangar_requested.connect(close)
+	ui.add_child(results)
 	_controls_panel = ControlsPanel.new()
 	_controls_panel.process_mode = Node.PROCESS_MODE_ALWAYS  # opened from the pause menu
 	_controls_panel.visible = false
 	ui.add_child(_controls_panel)
 
 
-## Steps the player's guns to the next test level (a stand-in for Creative's level slider, 7.x),
-## so accuracy by level can be felt before guns are items (4.8).
 ## Steps every gun through the sandbox's `gun_levels`, then back to their own levels (0).
 func _next_gun_level() -> void:
 	var levels: Array = [0] + (_sandbox.get("gun_levels", [1, 10, 100, 999]) as Array).map(func(v: Variant) -> int: return int(v))

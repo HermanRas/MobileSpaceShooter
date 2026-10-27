@@ -18,6 +18,8 @@ tools/drive.sh res://dev_preview/drive_hangar.tscn       # play the hangar with 
 tools/drive.sh res://dev_preview/drive_flight.tscn       # hangar -> Fly -> hits, draw calls, collisions -> back
 tools/drive.sh res://dev_preview/drive_menu.tscn         # every main-menu button and screen, and back
 tools/drive.sh res://dev_preview/drive_profiles.tscn     # 3 pilots, separate stock, switch, delete
+tools/drive.sh res://dev_preview/drive_stocked.tscn      # the stocked hangar: wallet, sell, inventory, market
+tools/drive.sh res://dev_preview/drive_testflight.tscn   # Creative test fights: L1 easy, L100 brutal, results card
 $GODOT --headless --path game res://dev_preview/trace_flight.tscn -- --ship=starter --stick=0,-1 --seconds=6
                                   # frame-by-frame flight trace (add --from=4.0 for every frame)
 tools/run.sh python3 -I tools/licence_audit.py            # every asset declared?
