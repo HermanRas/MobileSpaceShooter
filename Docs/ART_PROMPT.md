@@ -61,7 +61,7 @@ The art comes in four tiers. Each prompt says which tier it belongs to.
 | Tier | What | How it looks |
 |---|---|---|
 | **World** | Tile materials, thrusters, weapons, asteroids | Strictly top-down and orthographic. Clean, flat-shaded panels with crisp edges and a little bevel. Readable at 32 px on a phone. No perspective, no cast shadows. |
-| **Chrome and icons** | Panels, buttons, frames, bars, icons, map icons | A rich, glossy painted mobile-game finish, like "Menu Theme": bevelled gold and orange rims, dark warm fields, riveted steel brackets, soft studio light from the upper left. **NOT** pixel art, **NOT** flat vector. |
+| **Chrome and icons** | Panels, buttons, frames, bars, icons, map icons | **Flashy arcade** (owner, 2026-10-27): a rich, glossy painted mobile-game finish, like "Menu Theme". Bold saturated gold and orange rims with hot highlights, chunky bevels, chamfered corners, rows of small LED dots in the rims, dark warm fields, riveted steel brackets, light from the upper left. Loud, not tasteful. **NOT** pixel art, **NOT** flat vector. |
 | **Portraits** | The player bases and the NPCs | The highest quality in the game: detailed, semi-realistic painted busts, head and shoulders, soft rim light. They appear only in menus and dialogs. |
 | **Backdrops** | Arena backgrounds, station backdrops and interiors, the splash | Painted, darker and lower in contrast than everything on top of them, so ships and UI always read against them. |
 
@@ -154,9 +154,9 @@ band for the colour the player picked and keeps the shading. Each hue is far fro
 | A.3c | `parts_guns_edge` | `art_src/parts/` | edit of `ref_turrets.png`, run ×3 | ✅ in the game 2026-10-27: fixed and swivel pictures (v1 failed ×5) |
 | A.3d | `fx_mines` | `art_src/parts/` | 4, run ×3 | ✅ in the game 2026-10-27: run 1 #2 |
 | A.4 | `icons_main` | `art_src/icons/` | 15, run ×3 | ✅ in the game 2026-10-27: pickups, FIRE, SWITCH, Pause |
-| A.5 | `chrome_*` | `art_src/ui/` | one canvas per piece | to write |
+| A.5 | `chrome_panel`, `chrome_header`, `chrome_frame`, `chrome_buttons` | `art_src/ui/` | 3 canvases + 1 sheet | prompts ready 2026-10-27 |
 | A.6 | `icons_map` | `art_src/icons/` | 1 sheet | to write |
-| A.7 | `portraits_*` | `art_src/portraits/` | ~4 sheets | to write |
+| A.7 | `portraits_players` (then NPC sheets) | `art_src/portraits/` | 8 cells, then ~3 sheets | player prompt ready 2026-10-27 |
 | A.8 | `station_*` | `art_src/stations/` | ~25 canvases | to write |
 | A.9 | `backdrop_arena_*` | `art_src/backgrounds/` | 5 canvases | to write |
 | A.10 | `world_asteroids` | `art_src/parts/` | 1 sheet | to write |
@@ -890,6 +890,227 @@ Three runs, nearly identical and all on brief: no text, empty badge centres, an 
 are gold). The coin stack and credit chip are spares. In the game: the loot pickups in flight,
 FIRE and SWITCH, and the Pause button. Boost and the badges wait for their features (8.3). See
 them with `tools/preview.sh res://dev_preview/art_pickups.tscn 1200x300 --frames=5`.
+
+---
+
+## A.5: UI chrome (four prompts, one batch)
+
+**Upload `insperationPictures/Menu Theme.png` with each prompt** as the style reference: handing
+Gemini existing art worked for the side guns (A.3c). Every prompt asks for its finish, not its
+layout. Save them in `art_src/ui/` as `<section>_1.png`, and so on.
+
+How the game uses them: each piece becomes a **9-slice** `StyleBoxTexture` in one Godot theme. The
+corners stay as painted, and the edges and middle stretch, so **the middle of every piece must be
+plain and even**, and the corners must sit well inside the canvas. Fields stay empty because the
+game writes its own text.
+
+## chrome_panel
+
+**A.5: one canvas. Run ×2.** The big panel behind menus, dialogs and the pause screen.
+
+```
+A single empty UI PANEL for a mobile space shooter game, centred on a 1024x1024
+canvas and filling about 90% of it: one wide window frame with a thick bevelled
+gold-and-orange rim, chamfered corners, riveted steel corner brackets, and a large
+plain dark field (#24100A) inside with very faint horizontal scanlines. The field
+is EMPTY and EVEN all over, so it can be stretched.
+
+STYLE: FLASHY ARCADE mobile-game UI chrome, a rich glossy painted finish like
+the attached reference image: match its finish and colours, NOT its layout, and
+copy nothing from it. Bold saturated gold and orange rims with hot white-gold
+highlights, chunky bevels, chamfered (cut) corners, a row of small round LED dots
+set into the rim, riveted dark steel brackets, light from the upper left. Loud
+and shiny, not tasteful. NOT pixel art, NOT flat vector, NOT a photo.
+
+PALETTE: gold highlight #F3CD37, gold mid #EAA50D, orange shadow #A76711, bronze
+deep #5F3514, panel field #24100A, steel light #C3CAD2, steel mid #7A838D, steel
+dark #343B44.
+
+BACKGROUND: flat pure black #000000 outside the artwork. No gradient, no
+vignette, no glow spilling onto the background, no grid lines.
+
+ABSOLUTELY NO TEXT of any kind: no labels, no numbers, no letters, no logos, no
+icons, no symbols. The game puts its own text and icons on top.
+```
+
+## chrome_header
+
+**A.5: one canvas. Run ×2.** The bar across the top of a screen: a title on the left, the wallet on the right.
+
+```
+A single empty UI HEADER BAR for a mobile space shooter game, on a 1024x1024
+canvas: one long horizontal bar spanning about 95% of the canvas width and about
+20% of its height, centred. A thick bevelled gold-and-orange rim with chamfered
+ends, a row of small LED dots along its bottom edge, steel end-caps with rivets,
+and a plain dark field (#24100A) inside. The field is EMPTY and EVEN along its
+whole length, so the bar can be stretched sideways.
+
+STYLE: FLASHY ARCADE mobile-game UI chrome, a rich glossy painted finish like
+the attached reference image: match its finish and colours, NOT its layout, and
+copy nothing from it. Bold saturated gold and orange rims with hot white-gold
+highlights, chunky bevels, chamfered (cut) corners, a row of small round LED dots
+set into the rim, riveted dark steel brackets, light from the upper left. Loud
+and shiny, not tasteful. NOT pixel art, NOT flat vector, NOT a photo.
+
+PALETTE: gold highlight #F3CD37, gold mid #EAA50D, orange shadow #A76711, bronze
+deep #5F3514, panel field #24100A, steel light #C3CAD2, steel mid #7A838D, steel
+dark #343B44.
+
+BACKGROUND: flat pure black #000000 outside the artwork. No gradient, no
+vignette, no glow spilling onto the background, no grid lines.
+
+ABSOLUTELY NO TEXT of any kind: no labels, no numbers, no letters, no logos, no
+icons, no symbols. The game puts its own text and icons on top.
+```
+
+## chrome_frame
+
+**A.5: one canvas. Run ×2.** A card frame round a picture: a portrait, a ship, a station. Its middle is a hole.
+
+```
+A single empty UI CARD FRAME for a mobile space shooter game, centred on a
+1024x1024 canvas and filling about 85% of it, square: a thick bevelled
+gold-and-orange border with chamfered corners and a thin inner steel lip. The
+middle of the frame is a large EMPTY HOLE, plain flat pure black #000000, where
+the game puts a picture. The border is the same thickness all round.
+
+STYLE: FLASHY ARCADE mobile-game UI chrome, a rich glossy painted finish like
+the attached reference image: match its finish and colours, NOT its layout, and
+copy nothing from it. Bold saturated gold and orange rims with hot white-gold
+highlights, chunky bevels, chamfered (cut) corners, a row of small round LED dots
+set into the rim, riveted dark steel brackets, light from the upper left. Loud
+and shiny, not tasteful. NOT pixel art, NOT flat vector, NOT a photo.
+
+PALETTE: gold highlight #F3CD37, gold mid #EAA50D, orange shadow #A76711, bronze
+deep #5F3514, panel field #24100A, steel light #C3CAD2, steel mid #7A838D, steel
+dark #343B44.
+
+BACKGROUND: flat pure black #000000 outside the artwork. No gradient, no
+vignette, no glow spilling onto the background, no grid lines.
+
+ABSOLUTELY NO TEXT of any kind: no labels, no numbers, no letters, no logos, no
+icons, no symbols. The game puts its own text and icons on top.
+```
+
+## chrome_buttons
+
+**A.5: 15 cells. Run ×2.** Buttons in their states, and the bars, **one kind per row**.
+
+```
+A 1024x1024 sprite sheet of mobile-game UI widgets for a space shooter, arranged
+on a strict 4x4 grid of 256x256 cells, one widget centred in each cell. The
+bottom-right cell is completely empty, flat black.
+
+STYLE: FLASHY ARCADE mobile-game UI chrome, a rich glossy painted finish like
+the attached reference image: match its finish and colours, NOT its layout, and
+copy nothing from it. Bold saturated gold and orange rims with hot white-gold
+highlights, chunky bevels, chamfered (cut) corners, a row of small round LED dots
+set into the rim, riveted dark steel brackets, light from the upper left. Loud
+and shiny, not tasteful. NOT pixel art, NOT flat vector, NOT a photo.
+
+PALETTE: gold highlight #F3CD37, gold mid #EAA50D, orange shadow #A76711, bronze
+deep #5F3514, panel field #24100A, steel light #C3CAD2, steel mid #7A838D, steel
+dark #343B44.
+Go green highlight #8FC03E, green dark #2F5E1E, danger red highlight #E0452A,
+red dark #770F12.
+
+EVERY BUTTON is the same shape: a WIDE rounded-and-chamfered rectangle filling
+the cell's width and about 40% of its height, with a thick bevelled rim and a
+glossy EMPTY face. NO text, NO icon on it.
+
+ROW 1, four cells: ORANGE-GOLD BUTTONS: normal; pressed (pushed in, darker, the
+highlight at the bottom); disabled (dull grey-brown, no shine, no LEDs);
+selected (brighter, the rim's LED dots lit).
+
+ROW 2, four cells: GREEN "GO" BUTTONS in the same four states, in the greens.
+
+ROW 3, four cells: RED "DANGER" BUTTONS in the same four states, in the reds.
+
+ROW 4, three cells, then the empty bottom-right cell:
+13. A progress bar TRACK: a long thin empty dark trough with a steel rim, the
+   width of the cell and about 15% of its height.
+14. A progress bar FILL: a long thin glossy gold bar the same size, plain and
+   even along its length.
+15. A ROUND icon button: a glossy gold-rimmed disc with an EMPTY dark face.
+16. EMPTY, flat black.
+
+BACKGROUND: flat pure black #000000 outside the artwork. No gradient, no
+vignette, no glow spilling onto the background, no grid lines.
+
+ABSOLUTELY NO TEXT of any kind: no labels, no numbers, no letters, no logos, no
+icons, no symbols. The game puts its own text and icons on top.
+
+Remember: no text, no icons, empty button faces, one kind per row, and the
+bottom-right cell is empty.
+```
+
+**What happens to them.** Each piece is keyed off black (the frame's hole with `holes`), the
+9-slice margins are measured from the art, and they become one `Theme` (`assets/ui/theme.tres`)
+that the menus, dialogs, pause screen and hangar panels use in place of today's flat boxes.
+
+---
+
+## portraits_players
+
+**A.7: 8 cells, rows 1–2. Run ×3. Choose the highest output resolution Gemini offers (2K or
+4K), because portraits are the top art tier. Save them as `art_src/portraits/portraits_players_1.png`,
+and so on.**
+
+The player's two base characters (§6.5): **one row per character, its four moods side by side**,
+so the face stays the same. They're painted in the **key hues** (A.0) so the game can recolour hair,
+eyes, outfit and trim. Each mood must sit in its cell **in the same place and at the same size**, so
+the portrait doesn't jump when the mood changes.
+
+```
+A square sprite sheet of character portraits for a mobile space shooter game,
+arranged on a strict 4x4 grid of equal square cells. Rows 1 and 2 are filled, 4
+cells each. ROWS 3 AND 4 ARE COMPLETELY EMPTY, flat chroma green.
+
+BACKGROUND: flat pure chroma green #00FF00 in every cell behind the characters,
+and in all of rows 3 and 4. No gradient, no shadow, no grid lines, no borders.
+
+STYLE: the highest quality in the game. Detailed, semi-realistic painted
+portraits, like the hero portraits of a polished mobile game: a head-and-shoulders
+bust facing the viewer, a soft warm rim light, rich painterly shading, crisp
+clean edges against the background. NOT pixel art, NOT anime, NOT a photo, NOT a
+3D render.
+
+ROW 1, four cells: ONE MAN, a young space pilot in his twenties, short tousled
+hair, a fitted flight jacket with a high collar. The SAME man in all four cells,
+in the SAME pose, at the SAME size and position: only his face changes.
+ROW 2, four cells: ONE WOMAN, a young space pilot in her twenties, long hair tied
+back with a few loose strands, the same kind of flight jacket. The SAME woman in
+all four, the same pose, size and position.
+
+THE FOUR MOODS, left to right in both rows:
+1. IDLE: calm, confident, a slight half-smile.
+2. HAPPY: a big open smile, bright eyes.
+3. SAD: eyes looking down, brows raised in the middle, mouth turned down.
+4. ANGRY: brows drawn down hard, gritted teeth, a glare.
+
+RECOLOUR KEY COLOURS, exactly these and nowhere else in the picture:
+- HAIR is painted in shades of MAGENTA #FF00C8 (dark magenta in the shadows, light
+  pink-magenta in the highlights).
+- The IRISES of the eyes are CYAN #00E5FF.
+- The flight JACKET is BLUE #2450FF, shaded darker and lighter.
+- The jacket's TRIM (collar edge, seams, shoulder stripes) is YELLOW #FFE600.
+Skin is a natural skin tone. The whites of the eyes are white. Nothing else is
+magenta, cyan, blue, yellow or green.
+
+ABSOLUTELY NO TEXT of any kind: no labels, no mood names, no numbers, no logos,
+no badges with writing.
+
+Original characters only: they must not resemble any real person, actor, or
+character from a film, TV show or game.
+
+Remember: the same face and pose across each row, the key colours exactly, chroma
+green behind them, rows 3 and 4 empty, and no text.
+```
+
+**What happens to it.** Each portrait is cut as a colour sprite off green and staged as
+`assets/portraits/<base>_<mood>.png`. `PortraitView` swaps its placeholder bust for the picture,
+with a shader that swaps each key-hue band for the player's colour and keeps the shading. If a
+band bleeds into the skin, a hand-made mask fixes it (§6.5).
 
 ---
 
