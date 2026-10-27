@@ -26,8 +26,18 @@
 			"jet": ["#ffe9a0", "#ff8a30", "#e83010", "#801000"],
 			"ion": ["#ffffff", "#9fe8ff", "#3a8bff", "#1030c0"]
 		},
+		"vis.weapons.atlas": {
+			"path": "res://assets/parts/gun_atlas.png",
+			"cell_px": 256,
+			"pad_px": 16,
+			"pivot_px": [96, 128],
+			"tip_x_px": 248,
+			"_doc": "The gun heads (A.3): a row of cells in vis.weapons `atlas_cells` order over a row of trim masks, each cell padded by pad_px, with the housing's centre at pivot_px and the barrel tip at tip_x_px. Built by tools/slice_sheets.py from art_src/sheets.json; the geometry must match its GUN_* constants. No placeholder file: without it GunView draws the guns in code."
+		},
 		"vis.weapons": {
-			"_doc": "Guns (PLAN.md 4.4), drawn in code until their art lands; no files. A turret is a round base with barrels, an edge gun a mounting block with them. Sizes in U. Each shot shows a muzzle flash flash_u across for flash_s. `guns` overrides barrels, barrel_width_u and flash_u per weapon. The hangar marks each gun's mode with a dot: manual or auto.",
+			"_doc": "Guns (PLAN.md 4.4). With vis.weapons.atlas, a gun is the head in its `atlas_cells` cell (`art` in `guns`, else the weapon id), and its trim band is `trim` (per weapon, else the default): HE red, AP amber. Without the atlas they're drawn in code: a turret is a round base with barrels, an edge gun a mounting block with them. Sizes in U. Each shot shows a muzzle flash flash_u across for flash_s. `guns` overrides barrels, barrel_width_u and flash_u per weapon. The hangar marks each gun's mode with a dot: manual or auto.",
+			"atlas_cells": ["gatling_single", "gatling_multi", "cannon", "flak", "rocket", "seeker", "mines", "laser", "emp"],
+			"trim": "#c3cad2",
 			"base": "#59616b",
 			"barrel": "#2a2e34",
 			"rim": "#9aa3ad",
@@ -42,10 +52,10 @@
 				"gatling_multi": {"barrels": 3, "barrel_width_u": 0.05},
 				"cannon": {"barrel_width_u": 0.2, "flash_u": 0.6},
 				"flak": {"barrels": 2, "barrel_width_u": 0.09, "flash_u": 0.45},
-				"rocket_ff_he": {"barrels": 2, "barrel_width_u": 0.14, "flash_u": 0.35},
-				"rocket_ff_ap": {"barrels": 2, "barrel_width_u": 0.14, "flash_u": 0.35},
-				"rocket_homing_he": {"barrels": 3, "barrel_width_u": 0.11, "flash_u": 0.35},
-				"rocket_homing_ap": {"barrels": 3, "barrel_width_u": 0.11, "flash_u": 0.35},
+				"rocket_ff_he": {"art": "rocket", "trim": "#e0452a", "barrels": 2, "barrel_width_u": 0.14, "flash_u": 0.35},
+				"rocket_ff_ap": {"art": "rocket", "trim": "#ffb040", "barrels": 2, "barrel_width_u": 0.14, "flash_u": 0.35},
+				"rocket_homing_he": {"art": "seeker", "trim": "#e0452a", "barrels": 3, "barrel_width_u": 0.11, "flash_u": 0.35},
+				"rocket_homing_ap": {"art": "seeker", "trim": "#ffb040", "barrels": 3, "barrel_width_u": 0.11, "flash_u": 0.35},
 				"laser": {"barrel_width_u": 0.1, "beam_color": "#ff4060"},
 				"emp": {"barrel_width_u": 0.16, "flash_u": 0.5},
 				"mines": {"barrels": 2, "barrel_width_u": 0.14}

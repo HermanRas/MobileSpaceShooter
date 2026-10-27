@@ -23,6 +23,11 @@ below repeats. Approved by the owner 2026-10-26.
 different light, and a sheet with one cell lit differently is worse than a sheet with one weak
 cell.
 
+**Batches (owner, 2026-10-27).** Gemini Pro runs up to 5 generations at once with no daily
+limit, so a section can say "run ×3". Save the runs as `<section>_1`, `<section>_2`, and so
+on, and we review them together. We pick the best **whole** sheet and borrow a cell from
+another run only when it clearly matches that sheet's light and line weight.
+
 ### The canvas contract, identical for every sheet
 
 - **1024 × 1024 px**: a 4 × 4 grid of 256 px cells.
@@ -145,8 +150,8 @@ band for the colour the player picked and keeps the shading. Each hue is far fro
 | A.1 | `tiles_materials` | `art_src/tiles/` | 15 | ✅ in the game 2026-10-26: hull, armour, hardpoint |
 | A.1b | `tiles_cores_shields` | `art_src/tiles/` | 12 | ✅ in the game 2026-10-26: core, shields, damage |
 | A.2 | `parts_thrusters` | `art_src/parts/` | 12 | ✅ in the game 2026-10-27: a nozzle per type |
-| A.3 | `parts_weapons_*` | `art_src/parts/` | 2–3 sheets | to write |
-| A.4 | `icons_*` | `art_src/icons/` | 2 sheets | to write |
+| A.3 | `parts_guns` | `art_src/parts/` | 12, run ×3 | ✅ in the game 2026-10-27: 9 gun heads; flak and seeker re-roll open |
+| A.4 | `icons_main` | `art_src/icons/` | 15, run ×2 | prompt ready 2026-10-27 |
 | A.5 | `chrome_*` | `art_src/ui/` | one canvas per piece | to write |
 | A.6 | `icons_map` | `art_src/icons/` | 1 sheet | to write |
 | A.7 | `portraits_*` | `art_src/portraits/` | ~4 sheets | to write |
@@ -460,6 +465,217 @@ greyscale, no glow, every exhaust pointing right, and most cells with the white 
 
 Seen with `tools/preview.sh res://scenes/debug/thruster_fx_showcase.tscn 1560x720 --frames=45`
 (every type × size × level) and `art_tiles.tscn --ship=meteor` (ion) or `--ship=harrier` (jet).
+
+---
+
+## parts_guns
+
+**A.3: 12 cells, rows 1–3; row 4 stays empty. Run ×3. Save them as
+`art_src/parts/parts_guns_1.png`, `_2`, `_3`.**
+
+Guns are drawn in code today (`GunView`): a grey disc or block with dark bars for barrels. Each
+gun type gets one picture here, a **gun head**: the round housing with its barrels, seen from
+above and pointing right. The game turns the whole head about the housing's centre, which
+is what "base and barrel as separate cells" was for: one picture turning is simpler and looks
+better. On an edge mount (fixed, swivel) the same head sits on the mounting block, so one
+picture serves all three mounts.
+
+**Why the proportions are relative:** Gemini ignored pixel sizes on the thruster sheet but
+fills the cell. So this prompt sizes the barrel against the housing drawn in the same cell
+("about a quarter as thick as the housing"), and the slicer finds the housing's centre itself.
+
+| Row | Family | Cells |
+|---|---|---|
+| 1 | Kinetic | gatling, multi gatling, cannon, flak |
+| 2 | Explosive | rocket pod (fire and forget), seeker pod (homing), mine dropper, spare rocket pod |
+| 3 | Energy | laser, EMP, spare laser, spare EMP |
+
+HE and AP rockets share a launcher. The white band is the trim mask, so the warhead (or a
+level tier) can colour it.
+
+```
+A 1024x1024 sprite sheet of spaceship gun turrets for a top-down 2D spaceship
+building game, arranged on a strict 4x4 grid of 256x256 cells. Rows 1 to 3 are
+filled, 4 cells each, one gun per cell, centred in its cell. ROW 4 IS COMPLETELY
+EMPTY, flat chroma green.
+
+BACKGROUND: flat pure chroma green #00FF00 everywhere there is no artwork: around
+every gun, between the guns and in all of row 4. No gradient, no shadow on the
+background, no grid lines, no borders or frames.
+
+STYLE: clean, crisp sci-fi machinery seen from DIRECTLY ABOVE, perfectly flat and
+orthographic, like a gun turret on the deck of a starship in a top-down space
+game. Flat shading with a little bevel on edges, light from the upper left, fine
+readable detail that still reads when shrunk to 32 pixels. NOT perspective, NOT
+isometric, NOT a 3D render, NOT a photo, NOT pixel art. No cast shadows.
+
+COLOUR: STRICTLY GREYSCALE. No colour at all, no tint, no hue, and NO GREEN
+anywhere in the artwork. Light-to-mid greys (around 55% to 80% brightness); dark
+greys and black only in recesses, barrel bores and tube mouths. Each gun has
+exactly ONE thin band of PURE WHITE #FFFFFF, a trim ring around its round
+housing; nothing else on it is pure white.
+
+EVERY GUN HAS THE SAME LAYOUT AND FACING, seen from above, pointing RIGHT:
+- A ROUND armoured housing, a circle seen from above, sits in the LEFT half of
+  the cell. Its diameter is about 40% of the cell.
+- The barrel or barrels come out of the RIGHT side of the housing and point
+  straight RIGHT, reaching almost to the right edge of the cell.
+- The gun is symmetric about the horizontal line through the housing's centre.
+- NO muzzle flash, NO glow, NO beam, NO smoke, NO projectiles.
+
+EACH ROW IS ONE FAMILY OF GUNS, four different guns per row:
+
+ROW 1, four cells: KINETIC GUNS.
+1. Gatling: one long barrel, about a quarter as thick as the housing, with a
+   ribbed cooling jacket.
+2. Multi gatling: a rotary cluster of three thin barrels side by side, bound
+   together by two rings.
+3. Cannon: one very thick, long barrel, about half as thick as the housing, with
+   a slotted muzzle brake at its tip. The heaviest-looking gun.
+4. Flak: two short, wide barrels side by side with flared mouths, like a
+   double-barrelled shotgun.
+
+ROW 2, four cells: MISSILE LAUNCHERS AND MINES.
+5. Rocket pod: a boxy launcher on the housing with two open launch tubes side by
+   side, their dark round mouths facing right.
+6. Seeker pod: a slimmer launcher with three small tubes and a small round
+   sensor dome on top.
+7. Mine dropper: a squat armoured box with a wide rectangular hatch facing right
+   and a round spiked mine half out of it.
+8. Rocket pod, heavy: a launcher with four small tubes in a two-by-two block.
+
+ROW 3, four cells: ENERGY WEAPONS.
+9. Laser: a long, slim emitter with rows of cooling fins, ending in a dark
+   smoked-glass lens. The lens does NOT glow.
+10. EMP projector: a short, stubby emitter wrapped in coil rings, ending in a
+   shallow dish with three prongs.
+11. Laser, twin rail: two parallel slim rails with a dark lens between their tips.
+12. EMP projector, ring: a large ring coil held in front of the housing by two
+   short struts.
+
+The three rows must be easy to tell apart at a glance: row 1 has gun barrels,
+row 2 has launch tubes and boxes, row 3 has fins, coils and lenses.
+
+ROW 4: completely empty, flat chroma green.
+
+ABSOLUTELY NO TEXT of any kind: no labels, no numbers, no letters, no digits, no
+logos, no emblems, no insignia, no warning signs.
+
+Original designs only: nothing resembling a weapon or ship from any film, TV
+show or game.
+
+Remember: no text, no colour, no green in the art, no flash or glow, every gun
+points right, and row 4 is empty.
+```
+
+**What happens to it.**
+- Each gun is cut as a `gun` (keyed off green like a `part`). The slicer finds the housing's
+  centre from the art's left edge and places it at a fixed **pivot** in the cell, scaled so the
+  **barrel tip** lands at a fixed x.
+- `GunView` draws the head turning about the pivot, scaled so the tip meets the weapon's
+  muzzle (data), and tints the trim band per weapon. Gameplay doesn't move.
+- Guns sit above the hull and turn, so they stay one canvas item per ship, drawn from
+  `assets/parts/gun_atlas.png`.
+
+### Review, 2026-10-27: what came back
+
+Three good runs, all on brief, with more liked designs than weapons. The owner picked
+favourites; the leftovers are catalogued as `spares` in `art_src/sheets.json` for v2's faction
+arsenals (PLAN.md §9).
+- **Used:** gatling, multi gatling (triple), cannon, flak, seeker, mines, laser and EMP from
+  run 2 (#1, 2, 3, 4, 6, 7, 9, 10), and the rocket pod from run 1 (#8). HE and AP share a launcher;
+  the trim is red for HE and amber for AP.
+- **Barrels came out short:** about 2 housing radii, against the data's 2.2–3.7. Fitting the
+  tip to the muzzle makes the housings a little bigger than `turret_radius_u`, which reads fine.
+- **Run 3 doesn't fit.** Its housings fill the cell (r 110 px against about 75), so its barrels end
+  1.1 r out; fitted to a muzzle, the disc would be wider than a tile. The owner's run-3 picks
+  (flak #4, seeker #6) need a re-roll with the gun drawn smaller on its housing. Run 2's
+  versions stand in until then.
+
+---
+
+## icons_main
+
+**A.4: 15 cells. Run ×2. Save them as `art_src/icons/icons_main_1.png` and `_2`.**
+
+The first icon sheet, chrome-and-icons tier (glossy and painted, on black). It holds only what
+has no in-game art to borrow from. **Thruster, weapon and tile-type icons reuse the part art**
+(the A.2 nozzles, the A.3 gun heads and the A.1 material swatches, drawn on a chrome frame), so
+an icon always looks like the part it stands for, and A.4 needs one sheet instead of two.
+
+| Row | What | Used by |
+|---|---|---|
+| 1 | Resources: Hull, Alloy, Crystal, Tech | Hangar costs, loot, market (4.6) |
+| 2 | HUD symbols: fire, switch weapon, pause, boost | Combat HUD (4.7) |
+| 3 | Power-up badges, ×2 to ×5, with an empty centre | WaveTime (8.3); the game writes the number |
+| 4 | GC: coin, coin stack, credit chip (pick one) | Prices, wallet |
+
+```
+A 1024x1024 sprite sheet of 15 game icons for a mobile space shooter, arranged on a
+strict 4x4 grid of 256x256 cells, one icon centred in each cell, each filling about
+75% of its cell. The bottom-right cell is completely empty, flat black.
+
+BACKGROUND: flat pure black #000000 everywhere there is no artwork. No gradient,
+no vignette, no glow spilling onto the background, no grid lines, no borders, no
+frames around the cells.
+
+STYLE: a rich, glossy, painted mobile-game finish: bevelled edges, soft studio
+light from the upper left, a crisp bright highlight on each object, a thin dark
+outline so each icon reads on any background. NOT pixel art, NOT flat vector,
+NOT a photo. Every icon in the same style, light and level of finish. Each icon
+is one solid object or symbol with a clean silhouette, readable when shrunk to
+48 pixels.
+
+PALETTE (use these colours):
+gold highlight #F3CD37, gold mid #EAA50D, orange shadow #A76711, bronze deep
+#5F3514, steel light #C3CAD2, steel mid #7A838D, steel dark #343B44, cream
+#FFF1D0, hull grey #C7CCD6, alloy blue #8CADD9, crystal cyan #73F2FF, tech green
+#80FF66, credits gold #FFCC40, red #E0452A, amber #FFB040.
+
+EACH ROW IS ONE KIND OF ICON:
+
+ROW 1, four cells: FOUR RAW MATERIALS, each a small pile of the material.
+1. Hull: a stack of three light grey #C7CCD6 steel plates with rivets.
+2. Alloy: two pale blue #8CADD9 metal ingots crossed.
+3. Crystal: a cluster of bright cyan #73F2FF crystal shards.
+4. Tech: a coiled bundle of bright green #80FF66 wires ending in a small steel
+   connector plug.
+
+ROW 2, four cells: FOUR BUTTON SYMBOLS, cream #FFF1D0 with gold #EAA50D bevelled
+edges, the symbol only, with NO button, disc or plate behind it.
+5. Fire: a targeting crosshair, a circle with four short ticks.
+6. Switch weapon: two curved arrows chasing each other round in a circle.
+7. Pause: two thick vertical bars.
+8. Boost: two bold chevrons pointing right, one behind the other.
+
+ROW 3, four cells: FOUR ROUND POWER-UP BADGES, each a glossy medallion with a
+LARGE EMPTY dark centre (a plain flat dark disc filling half the badge, left
+blank because the game writes a number there). Increasingly grand from left to
+right:
+9. A bronze #A76711 ring.
+10. A steel #C3CAD2 ring with four small studs.
+11. A gold #F3CD37 ring with a laurel of small leaves.
+12. A gold ring set with cyan #73F2FF crystals and short sunburst points round
+   the outside.
+
+ROW 4, three cells, then the empty bottom-right cell:
+13. A single gold #FFCC40 coin seen at a slight angle, embossed with a simple
+   four-pointed star.
+14. A short stack of the same gold coins.
+15. A thin gold credit chip, a rounded rectangle with circuit lines.
+16. EMPTY, flat black.
+
+ABSOLUTELY NO TEXT of any kind: no labels, no numbers, no letters, no digits, no
+currency symbols, no logos. The badges' centres stay EMPTY.
+
+Remember: no text, no numbers, black background, the badges' centres empty, and
+the bottom-right cell is empty.
+```
+
+**What happens to it.** Icons are cut with the existing `keyed` flood fill from black (as
+the core was), but kept with their own alpha and in colour rather than greyscale, so this sheet
+gets a `sprite` kind and its own atlas when it arrives. HUD code asks for `vis.icon.*` IDs, and
+each has a placeholder.
 
 ---
 

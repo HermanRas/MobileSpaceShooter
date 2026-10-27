@@ -58,6 +58,7 @@ func _ready() -> void:
 	add_child(_ship)
 	add_child(_ghost)
 	add_child(_overlay)
+	_overlay.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS  # the gun art (A.3)
 	_overlay.draw.connect(_draw_overlay)
 	_gun_look = Assets.meta(GunView.LOOK_ID)
 

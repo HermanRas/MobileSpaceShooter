@@ -26,6 +26,13 @@ channel the green bleeds into). The art is stretched to fill the whole cell, sin
 samples a part in its own frame (flange to mouth, along the edge), and its coverage goes into B
 inverted: B = 255 is cut out, so the placeholder atlas (B = 0) stays solid.
 
+A gun (A.3) is a part too, but it turns about its round housing's centre, so it keeps its
+shape: the slicer finds the housing from the art's left edge (a circle's chord grows as
+2 * sqrt(2 R d - d^2) in from its edge), puts its centre at GUN_PIVOT in a GUN_CELL and scales
+the gun so its barrel tip lands on GUN_TIP_X. The game then scales a cell so the tip meets the
+weapon's muzzle (data), and the housing is whatever size the art gives it. A "guns" atlas is a row of those, RGB = grey and
+A = coverage, over a second row holding the trim mask (the white band) for the game to tint.
+
 Atlas layout (the ship shader's contract): a column per entry of a row, a row per variant, every
 cell padded by cell_px / 16 on each side (wrapped for materials, edge-extended otherwise), so
 mipmaps and linear filtering never read a neighbouring cell. The pad is 1/18 of the stride
@@ -50,6 +57,9 @@ INSET_PX = 3              # cut this far inside the gutters, past the JPEG ringi
 EVEN_BAND_PX = 16         # how far in from each edge the seam correction reaches
 TRIM_FROM, TRIM_TO = 225, 250   # near-white becomes the untinted trim mask (G)
 GREEN_MARGIN = 60         # chroma key: G exceeds both R and B by more than this
+GUN_CELL = (256, 256)     # a gun's atlas cell, w x h
+GUN_PIVOT = (96, 128)     # where the housing's centre lands in it
+GUN_TIP_X = 248           # and the barrel's tip
 
 
 def luma(rgb: np.ndarray) -> np.ndarray:
@@ -158,18 +168,59 @@ def cut_keyed(rgb: np.ndarray, size: int, base: np.ndarray, fill: float,
     return np.asarray(out).astype(np.float32)
 
 
-def cut_part(rgb: np.ndarray, size: int, report: list[str], ident: str) -> tuple[np.ndarray, np.ndarray]:
-    """Key a part off its chroma-green background and stretch it over the whole cell. Returns
-    (grey, coverage 0..1)."""
+def key_green(rgb: np.ndarray) -> np.ndarray:
+    """Coverage (0..1) of the artwork on a chroma-green cell, ignoring a ruled border."""
     r, g, b = rgb[..., 0], rgb[..., 1], rgb[..., 2]
     green = (g - np.maximum(r, b)) > GREEN_MARGIN
     # Gemini sometimes rules a thin dark grid line on the cell border: treat it as background.
     green[:INSET_PX, :] = green[-INSET_PX:, :] = True
     green[:, :INSET_PX] = green[:, -INSET_PX:] = True
-    cover = box_blur3((~fill_from_border(green)).astype(np.float32))
+    return box_blur3((~fill_from_border(green)).astype(np.float32))
+
+
+def cut_gun(rgb: np.ndarray, report: list[str], ident: str) -> tuple[np.ndarray, np.ndarray]:
+    """Key a gun head off green, find its housing and place it in a GUN_CELL. Returns
+    (grey, coverage 0..1), both GUN_CELL sized."""
+    cover = key_green(rgb)
+    solid = cover > 0.5
+    cols = np.nonzero(solid.sum(axis=0) >= 3)[0]
+    x0 = cols.min()
+    estimates, middles = [], []
+    for d in range(4, 40):
+        ys = np.nonzero(solid[:, x0 + d])[0]
+        if ys.size:
+            h = ys.max() - ys.min() + 1
+            estimates.append((h * h / 4 + d * d) / (2 * d))
+            middles.append((ys.max() + ys.min()) / 2)
+    radius, cy = float(np.median(estimates)), float(np.median(middles))
+    cx = x0 + radius
+    tip_x = np.nonzero(solid.sum(axis=0) >= 1)[0].max()
+    k = (GUN_TIP_X - GUN_PIVOT[0]) / (tip_x - cx)
+    grey = (rgb[..., 0] + rgb[..., 2]) / 2.0
+    w, h = round(rgb.shape[1] * k), round(rgb.shape[0] * k)
+    scale = lambda a: np.asarray(Image.fromarray(np.clip(a, 0, 255).astype(np.uint8), "L")
+                                 .resize((w, h), Image.Resampling.LANCZOS)).astype(np.float32)
+    big_grey, big_cover = scale(grey), scale(cover * 255) / 255
+    out_grey = np.zeros((GUN_CELL[1], GUN_CELL[0]), np.float32)
+    out_cover = np.zeros_like(out_grey)
+    ox, oy = round(GUN_PIVOT[0] - cx * k), round(GUN_PIVOT[1] - cy * k)
+    sx0, sy0 = max(0, -ox), max(0, -oy)
+    sx1, sy1 = min(w, GUN_CELL[0] - ox), min(h, GUN_CELL[1] - oy)
+    out_grey[sy0 + oy:sy1 + oy, sx0 + ox:sx1 + ox] = big_grey[sy0:sy1, sx0:sx1]
+    out_cover[sy0 + oy:sy1 + oy, sx0 + ox:sx1 + ox] = big_cover[sy0:sy1, sx0:sx1]
+    lost = 1 - out_cover.sum() / max(big_cover.sum(), 1e-3)
+    report.append(f"  {ident:16s} gun       housing r {radius:5.1f} px at ({cx:5.1f}, {cy:5.1f}), "
+                  f"tip {(tip_x - cx) / radius:4.2f} r -> r {radius * k:5.1f} px in the cell  clipped {lost:.1%}")
+    return out_grey, out_cover
+
+
+def cut_part(rgb: np.ndarray, size: int, report: list[str], ident: str) -> tuple[np.ndarray, np.ndarray]:
+    """Key a part off its chroma-green background and stretch it over the whole cell. Returns
+    (grey, coverage 0..1)."""
+    cover = key_green(rgb)
     ys, xs = np.nonzero(cover > 0.5)
     x0, y0, x1, y1 = xs.min(), ys.min(), xs.max() + 1, ys.max() + 1
-    grey = (r + b) / 2.0
+    grey = (rgb[..., 0] + rgb[..., 2]) / 2.0
     stretch = lambda a: np.asarray(Image.fromarray(np.clip(a, 0, 255).astype(np.uint8), "L")
                                    .resize((size, size), Image.Resampling.LANCZOS)).astype(np.float32)
     out_grey, out_cover = stretch(grey[y0:y1, x0:x1]), stretch(cover[y0:y1, x0:x1] * 255) / 255
@@ -196,6 +247,8 @@ def slice_sheet(name: str, spec: dict, cells: dict[str, np.ndarray], kinds: dict
             cells[ident] = cut_material(window, size, report, ident)
         elif kind == "overlay":
             cells[ident] = cut_overlay(window, size, report, ident)
+        elif kind == "gun":
+            cells[ident], covers[ident] = cut_gun(window, report, ident)
         elif kind == "part":
             cells[ident], covers[ident] = cut_part(window, size, report, ident)
         elif kind == "keyed":
@@ -225,6 +278,32 @@ def review(name: str, spec: dict, cells: dict[str, np.ndarray], path: Path) -> N
                 sheet.paste(small, (x + dx, y + dy))
         draw.text((x, y + tile + 6), f"{entry[0]}  ({entry[1]})", fill=(230, 230, 230))
     sheet.save(path)
+
+
+def pack_guns(name: str, spec: dict, cells: dict[str, np.ndarray], covers: dict[str, np.ndarray],
+              report: list[str]) -> None:
+    """A row of gun cells (RGB = grey, A = coverage) over a row of their trim masks (white,
+    A = the near-white band), each padded by GUN_CELL[1] / 16."""
+    w, h = GUN_CELL
+    pad = h // 16
+    row = spec["rows"][0]
+    out = np.zeros((2 * (h + 2 * pad), len(row) * (w + 2 * pad), 4), dtype=np.uint8)
+    for c, ident in enumerate(row):
+        grey = np.pad(cells[ident], pad, mode="edge")
+        cover = np.pad(covers[ident], pad, mode="constant")
+        trim = np.clip((grey - TRIM_FROM) / (TRIM_TO - TRIM_FROM), 0, 1) * cover
+        x = c * (w + 2 * pad)
+        art = out[:h + 2 * pad, x:x + w + 2 * pad]
+        art[..., 0] = art[..., 1] = art[..., 2] = np.clip(grey, 0, 255).astype(np.uint8)
+        art[..., 3] = (cover * 255).astype(np.uint8)
+        band = out[h + 2 * pad:, x:x + w + 2 * pad]
+        band[..., :3] = 255
+        band[..., 3] = (trim * 255).astype(np.uint8)
+    path = ROOT / spec["out"]
+    path.parent.mkdir(parents=True, exist_ok=True)
+    Image.fromarray(out, "RGBA").save(path)
+    report.append(f"{name} -> {path.relative_to(ROOT)}  ({out.shape[1]}x{out.shape[0]}, "
+                  f"{len(row)} guns of {w}x{h} px + {pad} px pad, trim row below)")
 
 
 def pack(name: str, spec: dict, cells: dict[str, np.ndarray], kinds: dict[str, str],
@@ -260,7 +339,7 @@ def pack(name: str, spec: dict, cells: dict[str, np.ndarray], kinds: dict[str, s
 
 def main() -> int:
     config = json.loads(CONFIG.read_text(encoding="utf-8"))
-    size = max(int(a["cell_px"]) for a in config["atlases"].values())
+    size = max(int(a.get("cell_px", 0)) for a in config["atlases"].values())
     cells: dict[str, np.ndarray] = {}
     kinds: dict[str, str] = {}
     covers: dict[str, np.ndarray] = {}
@@ -272,7 +351,10 @@ def main() -> int:
         if missing:
             print(f"{name}: no cell called {', '.join(sorted(set(missing)))}", file=sys.stderr)
             return 1
-        pack(name, spec, cells, kinds, covers, report)
+        if spec.get("layout") == "guns":
+            pack_guns(name, spec, cells, covers, report)
+        else:
+            pack(name, spec, cells, kinds, covers, report)
     print("\n".join(report))
     return 0
 

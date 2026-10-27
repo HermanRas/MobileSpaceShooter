@@ -1,7 +1,9 @@
 class_name GunView
 extends Node2D
-## Draws a ship's guns (PLAN.md 4.4): a turret's round base, an edge gun's mounting block, and
-## each barrel at its current angle. Drawn in code from `vis.weapons` until gun art lands.
+## Draws a ship's guns (PLAN.md 4.4). With the gun atlas (A.3), each gun is its painted head
+## (housing and barrels) turning about the housing's centre, scaled so the barrel tip meets the
+## muzzle; the trim band is tinted per weapon. Without it (the placeholder), a turret's round
+## base, an edge gun's mounting block, and each barrel at its current angle, drawn in code.
 ## Turrets and swivels turn, so guns can't be part of the ship's one static mesh; they're one
 ## more canvas item per ship, above the hull. The hangar draws with `draw_gun()` too. Each shot
 ## flashes at the muzzle for `flash_s` (4.5). A laser draws its beam to where it ends and a heat
@@ -9,6 +11,7 @@ extends Node2D
 
 const PX := ShipMesh.PX_PER_U
 const LOOK_ID := &"vis.weapons"
+const ATLAS_ID := &"vis.weapons.atlas"
 
 var _gunnery: Gunnery
 var _controller: WeaponController
@@ -23,6 +26,7 @@ func attach(controller: WeaponController) -> void:
 	_controller = controller
 	_look = Assets.meta(LOOK_ID)
 	z_index = 1
+	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 
 
 func _process(delta: float) -> void:
@@ -99,6 +103,11 @@ static func draw_gun(canvas: CanvasItem, gun: GunLayout.Gun, angle: float, look:
 	var width := float(own.get("barrel_width_u", look.get("barrel_width_u", 0.12))) * PX
 	var barrels := int(own.get("barrels", 1))
 	var pivot := gun.pivot * PX
+	var cell := (look.get("atlas_cells", []) as Array).find(str(own.get("art", gun.weapon)))
+	if cell >= 0 and Assets.has_real_art(ATLAS_ID):
+		_draw_head(canvas, pivot, angle, gun.muzzle * PX, cell,
+				Color.from_string(str(own.get("trim", look.get("trim", "#c3cad2"))), Color.WHITE))
+		return
 	var dir := Vector2.from_angle(angle)
 	var tip := pivot + dir * gun.muzzle * PX
 	if gun.arc >= PI:
@@ -117,6 +126,26 @@ static func draw_gun(canvas: CanvasItem, gun: GunLayout.Gun, angle: float, look:
 	canvas.draw_polyline(block + PackedVector2Array([block[0]]), rim, 1.5, true)
 	_draw_barrels(canvas, pivot + depth * 0.5, tip, dir, barrels, width, barrel)
 	canvas.draw_line(tip - dir * width, tip, rim, width * (barrels + 0.2))
+
+
+## A gun's painted head from the atlas: turned to `angle` about `pivot` (pixels), scaled so its
+## barrel tip is `muzzle_px` out, with its trim band drawn over it in `trim`. The atlas geometry
+## comes from tools/slice_sheets.py, via the atlas's entry in visuals.json.
+static func _draw_head(canvas: CanvasItem, pivot: Vector2, angle: float, muzzle_px: float, cell: int, trim: Color) -> void:
+	var meta := Assets.meta(ATLAS_ID)
+	var size := float(meta.get("cell_px", 256))
+	var pad := float(meta.get("pad_px", 16))
+	var at: Array = meta.get("pivot_px", [96, 128])
+	var cell_pivot := Vector2(float(at[0]), float(at[1]))
+	var k := muzzle_px / (float(meta.get("tip_x_px", 248)) - cell_pivot.x)
+	var stride := size + 2.0 * pad
+	var art := Rect2(cell * stride + pad, pad, size, size)
+	var drawn := Rect2(-cell_pivot * k, Vector2(size, size) * k)
+	var atlas := Assets.tex(ATLAS_ID)
+	canvas.draw_set_transform(pivot, angle, Vector2.ONE)
+	canvas.draw_texture_rect_region(atlas, drawn, art)
+	canvas.draw_texture_rect_region(atlas, drawn, Rect2(art.position + Vector2(0, stride), art.size), trim)
+	canvas.draw_set_transform_matrix(Transform2D.IDENTITY)
 
 
 ## `count` barrels side by side from `from` to `tip`.

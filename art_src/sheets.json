@@ -44,6 +44,38 @@
 				"7": ["nozzle_jet", "part"],
 				"11": ["nozzle_ion", "part"]
 			}
+		},
+		"parts_guns_1": {
+			"file": "parts/parts_guns_1.jpeg",
+			"grid": [4, 4],
+			"_doc": "Generated 2026-10-27, the first of three runs of one prompt (A.3). Picks by the owner; the rest are in `spares`, kept for v2's faction arsenals (PLAN.md 9).",
+			"cells": {
+				"8": ["gun_rocket", "gun"]
+			},
+			"spares": {"1": "gatling", "2": "twin gatling", "7": "mine arm", "9": "finned laser", "10": "EMP, ring coils"}
+		},
+		"parts_guns_2": {
+			"file": "parts/parts_guns_2.jpeg",
+			"grid": [4, 4],
+			"_doc": "Run 2 of 3 (A.3); the base sheet, since its line weight matches run 1.",
+			"cells": {
+				"1": ["gun_gatling", "gun"],
+				"2": ["gun_gatling_multi", "gun"],
+				"3": ["gun_cannon", "gun"],
+				"4": ["gun_flak", "gun"],
+				"6": ["gun_seeker", "gun"],
+				"7": ["gun_mines", "gun"],
+				"9": ["gun_laser", "gun"],
+				"10": ["gun_emp", "gun"]
+			},
+			"spares": {"5": "twin cannon", "11": "twin-rail laser", "12": "ring EMP"}
+		},
+		"parts_guns_3": {
+			"file": "parts/parts_guns_3.jpeg",
+			"grid": [4, 4],
+			"_doc": "Run 3 of 3 (A.3). Heavier outlines, and housings so big (r 110 px) that the barrels end 1.1 r out: fitted to a muzzle, the disc would be wider than a tile. The owner's flak (4) and seeker (6) picks wait for a re-roll in sheet 2's proportions; sheet 2's stand in.",
+			"cells": {},
+			"spares": {"4": "twin flak (owner's pick)", "6": "triple seeker (owner's pick)", "7": "missile rack", "9": "finned laser", "10": "wired EMP", "11": "twin-rail laser", "12": "quad EMP"}
 		}
 	},
 	"atlases": {
@@ -56,6 +88,14 @@
 				["core_a", "hull_a", "armor_a", "shield_hex", "hardpoint_a", "nozzle_pulse"],
 				["core_a", "hull_b", "armor_b", "shield_diamond", "hardpoint_b", "nozzle_jet"],
 				["core_a", "hull_c", "armor_c", "shield_circuit", "hardpoint_c", "nozzle_ion"]
+			]
+		},
+		"gun_atlas": {
+			"out": "game/assets/parts/gun_atlas.png",
+			"layout": "guns",
+			"_doc": "GunView's gun heads (A.3), in visuals.json vis.weapons `atlas_cells` order: a row of 256 x 256 cells (RGB grey, A coverage; the housing's centre at 96, 128 and the barrel tip at x 248), over a row of trim masks.",
+			"rows": [
+				["gun_gatling", "gun_gatling_multi", "gun_cannon", "gun_flak", "gun_rocket", "gun_seeker", "gun_mines", "gun_laser", "gun_emp"]
 			]
 		},
 		"tile_damage": {
