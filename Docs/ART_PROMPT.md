@@ -151,6 +151,7 @@ band for the colour the player picked and keeps the shading. Each hue is far fro
 | A.1b | `tiles_cores_shields` | `art_src/tiles/` | 12 | ✅ in the game 2026-10-26: core, shields, damage |
 | A.2 | `parts_thrusters` | `art_src/parts/` | 12 | ✅ in the game 2026-10-27: a nozzle per type |
 | A.3 | `parts_guns` | `art_src/parts/` | 12, run ×3 | ✅ in the game 2026-10-27: 9 gun heads (A.3b re-rolled flak and seeker) |
+| A.3c | `parts_guns_edge` | `art_src/parts/` | edit of `ref_turrets.png`, run ×3 | v2 prompt ready 2026-10-27 (v1 failed ×5) |
 | A.4 | `icons_main` | `art_src/icons/` | 15, run ×3 | ✅ in the game 2026-10-27: pickups, FIRE, SWITCH, Pause |
 | A.5 | `chrome_*` | `art_src/ui/` | one canvas per piece | to write |
 | A.6 | `icons_map` | `art_src/icons/` | 1 sheet | to write |
@@ -670,6 +671,65 @@ with no code change.
 - **Run 2** is pixel art on square bases: off-style, unused.
 - Asking for proportions relative to the housing worked in one run of three. Running ×3 is
   what made it pay.
+
+---
+
+## parts_guns_edge
+
+**A.3c: an image edit. Upload `art_src/parts/ref_turrets.png` to Gemini with the prompt below.
+Run ×3. Save them as `art_src/parts/parts_guns_edge_v2_1.png`, `_2`, `_3`.**
+
+Side-mounted guns (fixed and swivel, on a hardpoint's edge) get their own picture (owner,
+2026-10-27). Until now they borrowed the turret's round housing, so a side gun and a turret
+looked the same in the hangar. A side gun is **the same gun on a flat bracket bolted to the
+hull edge**, with no round base. The game turns a swivel about the middle of the bracket's flat
+side, where it meets the hull.
+
+`ref_turrets.png` is the nine turret heads in use, in their atlas order (row 1: gatling, multi
+gatling, cannon, flak; row 2: rocket pod, seeker, mine dropper; row 3: laser, EMP), built from
+the masters by hand. **Gemini redraws those guns**, so each side gun matches its turret.
+
+```
+This image is a sprite sheet of nine top-down spaceship gun turrets on a chroma
+green background, seen from directly above, each pointing right and sitting on a
+round turret base.
+
+Redraw this SAME sheet: the same nine guns in the same cells, the same order,
+size and position, the same style, line weight, greyscale shading and light from
+the upper left. Change ONE thing on every gun:
+
+REMOVE the round turret base disc under the gun completely. Instead, the gun is
+mounted on a flat rectangular MOUNTING BRACKET at the far LEFT of its cell:
+- the bracket's LEFT SIDE is a straight vertical edge, because it bolts flat
+  against the side of a spaceship's hull, seen from above;
+- the bracket is narrow, about one eighth of the cell wide, and as tall as the
+  gun is wide, with a few bolts and ONE thin pure white #FFFFFF stripe across it;
+- the gun's back end sits against the bracket's right side.
+
+Keep every gun's barrels, missiles, coils, fins, details and length exactly as in
+the original: the gun itself does not change, only its base. Everything is still
+seen from DIRECTLY ABOVE, flat and orthographic, pointing RIGHT. NOT a side view,
+NOT a handheld weapon: no handles, no grips, no triggers, no stocks.
+
+Keep the empty cells empty. Background stays flat pure chroma green #00FF00,
+with no grid lines, no shadows and no glow. Strictly greyscale artwork, no green
+in it. No text, no numbers, no letters anywhere.
+```
+
+**What happens to it.** Each gun is cut as an `edge_gun`: keyed off green like a `gun`, with
+the pivot at the middle of the bracket's flat left side, and fitted so the barrel tip lands at
+a fixed x. It goes into the gun atlas as an `edge_*` cell. `GunView` draws an edge mount from
+its `edge_*` cell when there is one, and otherwise from the turret head as today. A swivel
+shows a small pivot cap drawn in code, so fixed and swivel stay apart too.
+
+### Review, 2026-10-27: the first prompt failed (×5)
+
+The first version described the guns from scratch, "bolted to the side of a starship". **The
+word "side" made Gemini draw side views**: runs 1–3 are profile views of handheld guns with
+pistol grips and triggers, partly in perspective. Runs 4 and 5 are top-down on brackets but
+plain and blocky, and none matches its turret. The masters (`parts_guns_edge_1`–`5`) are
+kept, unused. **Lesson: to get a variant of art we already have, give Gemini that art and ask
+for one change**, rather than describing it again.
 
 ---
 
