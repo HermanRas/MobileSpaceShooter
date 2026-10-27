@@ -1687,19 +1687,24 @@ grace before they fire, or spawning beyond range.
 Prompts are written into `Docs/ART_PROMPT.md` (one `##` section per sheet, following the §6.1
 contract). The owner generates in Gemini, and then we review, slice and stage.
 
-**Owed on the phone** (owner, 2026-10-27: the phone is only free in the evenings; tick each one
-off, or note what broke). Everything here passed on the PC in previews and drives:
-- [ ] `tools/android.sh deploy` (from main: v0.0.6 plus 7.1, 7.2 and the chrome)
-- [ ] A.1 tiles in the hangar and in flight: materials, the core, the shield glow, all four damage steps
-- [ ] The texture sampling (mipmaps on the tile, gun and icon art): no shimmer or seams when zooming
-- [ ] A.2 nozzles on every side, and the trim colour at L1, L2 and L3
-- [ ] A.3 guns: turret, fixed and swivel easy to tell apart in the hangar; heads turn smoothly
-- [ ] A.4 icons: FIRE, SWITCH and Pause big enough under a thumb; loot pickups readable
-- [ ] Mines in space read as mines (A.3d: 0.8 U, blinking), and the blink isn't too much
-- [ ] A.5 chrome: crisp, not soft (the 2× art through a size override); the chosen hangar tab stands out; buttons still easy to hit
-- [ ] A.7 portraits: the pilot cards and the character screen, a few colour sets (white hair is the hard case)
-- [ ] 7.1/7.2: the Creative gun-level slider drags smoothly; a test fight and its results card
-- [ ] `tools/android.sh perf` in a busy fight: guns are now textured quads (one canvas item per ship), so check the frame time against §5.5
+**Checked on the phone, 2026-10-27 evening** (v0.0.7; owner):
+- [x] Deploy, the launcher icon and the boot splash; the menus, chrome and portraits; the nebula
+- [x] A.1 tiles and damage steps, mipmaps (no shimmer when zooming), A.2 nozzles and trims, A.3
+  guns, the hangar palette and tabs, the 7.1 slider, A.4 icons and pickups, a 7.2 test fight
+- [x] Mines read as mines. They rarely go off, since enemies seldom fly within 1.3 U; the owner
+  keeps them static but wants them **shootable**, so a minefield never traps you. Done: a shot
+  passing within `hit_u` of an enemy mine sets it off, so does a blast (a field can chain), and
+  auto guns aim at enemy mines when they have no ship to aim at (`drive_flight`,
+  `test_specials`). Retest on the phone.
+- [x] The shield tiles' pale cyan emitter lines (the "shield glow")
+- [x] `tools/android.sh perf`, Level 100 against the 150-tile Big ship (~20 enemies): mostly
+  60 fps, but every 5 s window has a **110–250 ms hitch**, and one window averaged 18 fps (under
+  the 30 floor) while the Big ship was being shot to pieces. The owner: it didn't feel bad (it
+  came as the ship died), so it stays as it is unless it shows up in play.
+- [x] White hair's reddish strands on the woman's left side: the warm rim light on the hair's
+  outline now joins the hair mask (`RIM_HUE` in the slicer). Retest on the phone.
+- [x] Android reported the app as 0.0.1: the export preset's `version/name` is now empty, so it
+  follows `config/version`
 
 | # | Item | Sheets / canvases | Needed by |
 |---|---|---|---|

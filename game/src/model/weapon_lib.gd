@@ -108,6 +108,7 @@ static func from_table(table: Dictionary, xp_table := {}) -> WeaponLib:
 		def["heat_resume"] = clampf(float(raw.get("heat_resume", 0.3)), 0.0, 0.99)
 		def["rear_only"] = bool(raw.get("rear_only", false))
 		def["proximity_u"] = maxf(float(raw.get("proximity_u", 0.0)), 0.0)
+		def["hit_u"] = maxf(float(raw.get("hit_u", 0.4)), 0.0)
 		def["drag"] = maxf(float(raw.get("drag", 0.0)), 0.0)
 		def["life_s"] = maxf(float(raw.get("life_s", 0.0)), 0.0)
 		if def["beam"] and (def["heat_s"] <= 0.0 or def["cool_s"] <= 0.0):
@@ -151,7 +152,7 @@ func has_weapon(weapon_id: StringName) -> bool:
 ##   up: rate_start (shots/s when it starts), spin_up_s, spin_down_s (spin_up_s 0 if it doesn't);
 ##   pellets (shots per trigger), splash_u, splash_damage, splash_type, airburst, homing (rad/s),
 ##   rocket (can be shot down), anti_missile (also targets enemy rockets); family (palette group);
-##   beam, heat_s, cool_s, heat_resume (lasers); rear_only; proximity_u, drag, life_s (mines)
+##   beam, heat_s, cool_s, heat_resume (lasers); rear_only; proximity_u, hit_u, drag, life_s (mines)
 func weapon(weapon_id: StringName) -> Dictionary:
 	return _weapons.get(weapon_id, {})
 

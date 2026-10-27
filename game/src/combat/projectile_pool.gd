@@ -29,8 +29,11 @@ const LOOK_ID := &"vis.fx.projectiles"
 ## A blinking sprite's brightness, dim to bright.
 const BLINK_LOW := 0.9
 const BLINK_HIGH := 1.6
-## A life below this marks a rocket an explosion destroyed; it goes on its next step.
+## A life below this marks a rocket an explosion (or, for a mine, a shot) destroyed; it goes on
+## its next step, and a mine explodes as it goes.
 const DOWNED := -1000.0
+## A life below this marks a shot spent on a mine; it goes on its next step, quietly.
+const SPENT := -3000.0
 ## Per-shot flags for the rare extras, so a plain bullet's step never looks at its spec.
 const HOMES := 1
 const DRAGS := 2
@@ -121,7 +124,8 @@ func fire(shot: Dictionary, team: int, weapon_id: StringName, homing_target: Nod
 	count += 1
 
 
-## Every rocket in flight, as targets for anti-missile guns: [{"pos", "vel" (U, U/s), "team"}].
+## Every rocket in flight, as targets for anti-missile guns: [{"pos", "vel" (U, U/s), "team",
+## "mine"}]. Mines are rockets too, and every auto gun may shoot them (Gunnery.step).
 func rockets() -> Array:
 	var frame := Engine.get_physics_frames()
 	if _rockets_frame != frame:
@@ -129,7 +133,7 @@ func rockets() -> Array:
 		_rockets = []
 		for i in count:
 			if _specs[_spec[i]]["rocket"] and _life[i] > 0.0:
-				_rockets.append({"pos": _pos[i] / PX, "vel": _vel[i] / PX, "team": _team[i]})
+				_rockets.append({"pos": _pos[i] / PX, "vel": _vel[i] / PX, "team": _team[i], "mine": bool(_flags[i] & FUSED)})
 	return _rockets
 
 
@@ -148,12 +152,22 @@ func clear_team(team: int) -> void:
 func _physics_process(delta: float) -> void:
 	var started := Time.get_ticks_usec()
 	var space := get_world_2d().direct_space_state
+	_shoot_mines(delta)
 	var i := 0
 	while i < count:
+		if _life[i] <= SPENT:
+			_remove(i)
+			continue
 		if _life[i] <= DOWNED:
 			downed += 1
 			shot_down.emit(_pos[i])
+			var at := _pos[i]
+			var fused := _flags[i] & FUSED
+			var extra := _specs[_spec[i]]
+			var team := _team[i]
 			_remove(i)
+			if fused:  # a mine shot or caught in a blast goes off (and may set off its neighbours)
+				_explode(space, at, extra, team)
 			continue
 		if _flags[i]:
 			var extra := _specs[_spec[i]]
@@ -239,6 +253,31 @@ func _home(i: int, spec: Dictionary, delta: float) -> void:
 	_vel[i] = Gunnery.steer(_vel[i], toward, spec["homing"], delta)
 
 
+## Shots that pass within a mine's `hit` this step set it off (both go next step): a shot of
+## another team, over the segment it's about to fly. Mines are few, so this is a plain check of
+## each shot against each, skipped when there are none.
+func _shoot_mines(delta: float) -> void:
+	var mines := PackedInt32Array()
+	for k in count:
+		if _flags[k] & FUSED and _life[k] > 0.0:
+			mines.append(k)
+	if mines.is_empty():
+		return
+	for k in count:
+		if _flags[k] & FUSED or _life[k] <= 0.0:
+			continue
+		var from := _pos[k]
+		var to := from + _vel[k] * delta
+		for m in mines:
+			if _team[m] == _team[k] or _life[m] <= 0.0:
+				continue
+			var reach: float = _specs[_spec[m]]["hit"]
+			if Geometry2D.get_closest_point_to_segment(_pos[m], from, to).distance_squared_to(_pos[m]) <= reach * reach:
+				_life[m] = DOWNED - 1.0
+				_life[k] = SPENT - 1.0
+				break
+
+
 func _near_enemy(space: PhysicsDirectSpaceState2D, at: Vector2, radius: float, mask: int) -> bool:
 	_blast_shape.radius = radius
 	_blast_query.transform = Transform2D(0.0, at)
@@ -299,6 +338,7 @@ func _spec_for(shot: Dictionary, weapon_id: StringName, source: StringName) -> i
 		"splash_type": StringName(shot.get("splash_type", "explosive")), "airburst": bool(shot.get("airburst", false)),
 		"homing": float(shot.get("homing", 0.0)), "rocket": bool(shot.get("rocket", false)),
 		"proximity": float(shot.get("proximity_u", 0.0)) * PX, "drag": float(shot.get("drag", 0.0)),
+		"hit": float(shot.get("hit_u", 0.4)) * PX,
 	})
 	_spec_of[key] = _specs.size() - 1
 	return _specs.size() - 1

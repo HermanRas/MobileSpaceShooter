@@ -105,6 +105,7 @@ BROW_HUE = 360            # inside the eye box the hair band reaches this far: t
 MASK_GROW = {"hair": [(280, 360, 0.08)], "trim": [(40, 75, 0.2), (30, 40, 0.35), (25, 30, 0.7), (15, 25, 0.85)]}
 MASK_GROW_PX = 10
 RIM_PX = 4                # trim thinner than ~5 px this close to the silhouette's edge is rim light
+RIM_HUE = 50              # and warm light this close to the edge, beside the hair, is the hair's rim
 # More seeds for a region besides its band, where its paint goes deep or dim: (hue from, hue to,
 # min saturation, max value). Trim: its saturated orange shadows, and its dim lines in a suit's
 # shade (capped in value, so a skin highlight in the same hues stays skin).
@@ -404,6 +405,10 @@ def portrait_mask(rgba: np.ndarray, eyes: list[float], report: list[str], ident:
     rim = hards["trim"] & ~opened & near(~solid, RIM_PX)
     hards["trim"] &= ~rim
     hards["hair"] |= rim & near(hards["hair"], RIM_PX)
+    # The rim light's orange shades on the hair's outline fall in no band; left out, they show as
+    # reddish strands once the hair is white (owner's phone, 2026-10-27).
+    taken = hards["hair"] | hards["eyes"] | hards["outfit"] | hards["trim"]
+    hards["hair"] |= solid & ~taken & near(~solid, RIM_PX + 2) & near(hards["hair"], RIM_PX) & (h < RIM_HUE) & (s > 0.15)
     channels = []
     for region, hard in hards.items():
         means.append(float(v[hard].mean()) if hard.any() else 0.0)

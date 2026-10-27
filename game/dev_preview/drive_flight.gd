@@ -230,7 +230,7 @@ func _step_rockets_and_flak() -> void:
 
 ## Phase 4.6b: the specialist against the shield block. Its laser swivels beam the shield down,
 ## its EMP turrets knock the block out, and a mine dropped behind goes off when the block is put
-## on top of it.
+## on top of it, and another when it's shot.
 func _step_specials() -> void:
 	var errors: PackedStringArray = []
 	_hangar.load_blueprint(Blueprint.from_dict(Data.json_dir("blueprints")["specialist"], errors))
@@ -287,6 +287,27 @@ func _step_specials() -> void:
 	_teleport(sandbox.target, mine + Vector2(0, 0.8 * PX))
 	await _physics_frames(6)
 	_check(pool.explosions > blasts, "an enemy beside the mine sets it off")
+
+	# Owner, 2026-10-27: a mine can be shot, so a minefield never traps you. Drop another and
+	# fire one enemy bullet across it, from the side. (Held for a second: a mine every 1.4 s.) The
+	# block goes far off first, or the new mine would go off beside it.
+	_teleport(sandbox.target, sandbox.ship.global_position + Vector2(0, 30.0 * PX))
+	Input.action_press(&"fire")
+	await _physics_frames(60)
+	Input.action_release(&"fire")
+	await _physics_frames(30)
+	mine = Vector2.INF
+	for k in pool.count:
+		if pool._specs[pool._spec[k]]["proximity"] > 0.0:
+			mine = pool._pos[k]
+	if mine != Vector2.INF and is_instance_valid(sandbox.target):
+		blasts = pool.explosions
+		pool.fire({"from": mine / PX + Vector2(0, -3.0), "vel": Vector2(0, 40.0), "life": 1.0, "damage": 1.0,
+				"type": "kinetic"}, sandbox.target.team, &"gatling_single")
+		await _physics_frames(10)
+		_check(pool.explosions > blasts, "a shot across a mine sets it off")
+	else:
+		_check(false, "a second mine drops (mine %s, target %s)" % [mine != Vector2.INF, is_instance_valid(sandbox.target)])
 	_hangar.land()
 	await _frames(3)
 

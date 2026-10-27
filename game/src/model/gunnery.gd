@@ -106,7 +106,9 @@ func cycle() -> void:
 
 
 ## One tick. The ship's position (U), rotation and velocity (U/s) are in world space, and so are
-## `targets` and the enemy `missiles`: [{"pos", "vel"}]. Returns the shots fired, in world space:
+## `targets` and the enemy `missiles`: [{"pos", "vel", "mine"}]. An anti-missile gun weighs the
+## missiles with the ships; any other auto gun aims at a mine only when it has no ship to aim at
+## (a minefield can always be shot clear). Returns the shots fired, in world space:
 ## [{"gun": index, "from", "vel", "life", "damage", "type", "pierce", "splash_u",
 ## "splash_damage", "splash_type", "airburst", "homing", "rocket", "target"}], where `target`
 ## indexes `targets` then `missiles` (-1 for none).
@@ -114,11 +116,19 @@ func step(delta: float, ship_pos: Vector2, ship_rotation: float, ship_vel: Vecto
 		fire_held: bool, missiles: Array = []) -> Array[Dictionary]:
 	var shots: Array[Dictionary] = []
 	var everything := targets + missiles if not missiles.is_empty() else targets
+	var mine_ids: Array[int] = []  # where the mines are in `everything`
+	for k in missiles.size():
+		if missiles[k].get("mine", false):
+			mine_ids.append(targets.size() + k)
 	for i in layout.guns.size():
 		var gun := layout.guns[i]
 		var pivot := ship_pos + gun.pivot.rotated(ship_rotation)
 		var muzzle := pivot + Vector2.from_angle(angles[i] + ship_rotation) * gun.muzzle
 		var aim := _choose(gun, muzzle, ship_rotation, ship_vel, everything if gun.stats["anti_missile"] else targets)
+		if aim[0] < 0 and not mine_ids.is_empty() and gun.stats["proximity_u"] <= 0.0:
+			aim = _choose(gun, muzzle, ship_rotation, ship_vel, mine_ids.map(func(k: int) -> Dictionary: return everything[k]))
+			if aim[0] >= 0:
+				aim[0] = mine_ids[aim[0]]
 		aims[i] = aim[0]
 		var want: float = aim[1] if aim[0] >= 0 else gun.facing
 		angles[i] = _turn(gun, angles[i], want, delta)
@@ -257,5 +267,5 @@ func _shot(index: int, gun: GunLayout.Gun, pivot: Vector2, ship_rotation: float,
 		"life": life, "damage": stats["damage"], "type": stats["damage_type"], "pierce": stats["pierce"],
 		"splash_u": stats["splash_u"], "splash_damage": stats["splash_damage"], "splash_type": stats["splash_type"],
 		"airburst": stats["airburst"], "homing": stats["homing"], "rocket": stats["rocket"], "target": target,
-		"beam": stats["beam"], "proximity_u": stats["proximity_u"], "drag": stats["drag"],
+		"beam": stats["beam"], "proximity_u": stats["proximity_u"], "hit_u": stats["hit_u"], "drag": stats["drag"],
 	}

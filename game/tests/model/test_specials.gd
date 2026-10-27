@@ -1,6 +1,6 @@
 extends TestCase
 ## Phase 4.6b: the laser (a beam that overheats), EMP (a burst that knocks out shields and
-## thrusters) and mines (rear edges only, dropped behind, triggered by proximity).
+## thrusters) and mines (rear edges only, dropped behind, triggered by proximity, and shootable).
 
 const DT := 1.0 / 60.0
 
@@ -84,6 +84,24 @@ func test_mines_drop_behind_while_an_enemy_is_near() -> void:
 	assert_true(shots[0]["proximity_u"] > 0.0 and shots[0]["drag"] > 0.0)
 
 
+func test_auto_guns_shoot_an_enemy_mine_only_when_no_ship_is_in_reach() -> void:
+	# Owner, 2026-10-27: a minefield must never trap you, so mines can be shot.
+	var mine := {"pos": Vector2(6, 0), "vel": Vector2.ZERO, "mine": true}
+	var gunnery := _gunnery(&"gatling_single", &"turret", &"auto", Vector2.ZERO)
+	var shots := _shots(gunnery, [], [mine])
+	assert_true(shots.size() > 0, "no ship about: the turret shoots the mine")
+	if not shots.is_empty():
+		assert_eq(shots[0]["target"], 0, "aimed at the mine (targets, then missiles)")
+	gunnery = _gunnery(&"gatling_single", &"turret", &"auto", Vector2.ZERO)
+	shots = _shots(gunnery, [{"pos": Vector2(0, 8), "vel": Vector2.ZERO}], [mine])
+	assert_true(shots.size() > 0 and shots.all(func(shot: Dictionary) -> bool: return shot["target"] == 0),
+			"a ship in reach comes first")
+	gunnery = _gunnery(&"gatling_single", &"turret", &"auto", Vector2.ZERO)
+	assert_eq(_shots(gunnery, [], [{"pos": Vector2(6, 0), "vel": Vector2.ZERO, "mine": false}]).size(), 0,
+			"a rocket is only for anti-missile guns")
+	assert_true(lib.weapon(&"mines")["hit_u"] > 0.0, "a mine has a size to hit")
+
+
 func test_emp_bursts_where_its_target_is() -> void:
 	var gunnery := _gunnery(&"emp", &"turret", &"auto", Vector2.ZERO)
 	var shots: Array[Dictionary] = []
@@ -112,6 +130,14 @@ func _run(gunnery: Gunnery, seconds: float, fire: bool, targets: Array = []) -> 
 	for i in roundi(seconds / DT):
 		total += gunnery.step(DT, Vector2.ZERO, 0.0, Vector2.ZERO, targets, fire).size()
 	return total
+
+
+## 2 s of auto fire at `targets` and `missiles`.
+func _shots(gunnery: Gunnery, targets: Array, missiles: Array) -> Array[Dictionary]:
+	var shots: Array[Dictionary] = []
+	for i in 120:
+		shots.append_array(gunnery.step(DT, Vector2.ZERO, 0.0, Vector2.ZERO, targets, false, missiles))
+	return shots
 
 
 ## A core with a hardpoint behind it (so it has rear, top, bottom and no front edge) and one ahead.
