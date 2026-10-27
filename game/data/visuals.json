@@ -115,10 +115,10 @@
 		"vis.portraits": {
 			"_doc": "A.7's portraits (PLAN.md 6.5), drawn by PortraitView: vis.portrait.<sheet>_<mood> is one 512 px cell, cut whole from art_src/portraits/ by tools/slice_sheets.py, and the player bases' vis.portrait_mask.* their recolour masks (R hair, G eyes, B outfit, A trim). Per sheet: `head` is the head crop [x, y, side] in fractions of the cell (menus and the HUD; story dialogs show the whole cell), and `ref_v` the mean value of each masked region in the art (the slicer reports it), which the recolour shader scales the chosen colour by so the shading stays. Sheets: <base>_<outfit> for the players (jacket in menus, suit on story missions), npc_<id> for the stand-ins, which aren't recoloured.",
 			"sheets": {
-				"male_jacket": {"ref_v": [0.555, 0.505, 0.53, 0.775], "head": [0.22, 0.0, 0.58]},
-				"male_suit": {"ref_v": [0.53, 0.5, 0.55, 0.63], "head": [0.22, 0.0, 0.58]},
-				"female_jacket": {"ref_v": [0.53, 0.415, 0.58, 0.625], "head": [0.13, 0.0, 0.66]},
-				"female_suit": {"ref_v": [0.515, 0.395, 0.585, 0.465], "head": [0.13, 0.0, 0.66]},
+				"male_jacket": {"ref_v": [0.545, 0.505, 0.53, 0.66], "head": [0.22, 0.0, 0.58]},
+				"male_suit": {"ref_v": [0.522, 0.5, 0.552, 0.525], "head": [0.22, 0.0, 0.58]},
+				"female_jacket": {"ref_v": [0.515, 0.415, 0.578, 0.637], "head": [0.13, 0.0, 0.66]},
+				"female_suit": {"ref_v": [0.497, 0.395, 0.585, 0.487], "head": [0.13, 0.0, 0.66]},
 				"npc_villain": {"head": [0.2, 0.0, 0.6]},
 				"npc_ally": {"head": [0.2, 0.0, 0.6]}
 			}

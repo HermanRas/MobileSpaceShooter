@@ -61,7 +61,17 @@ static func build(tiles: Array, placement: Placement, bp: Blueprint = null, wear
 	return _to_mesh(vertices, colors, uvs)
 
 
-## One thruster's nozzle on its own, for showcases: `mount_frame` needs center, normal, length
+## One tile of `shape` (its polygon in units, about the origin) on its own, for the hangar's
+## palette, so a swatch shows the tile as the ship will.
+static func swatch_mesh(polygon: PackedVector2Array, type: StringName, paint: Color) -> ArrayMesh:
+	var vertices := PackedVector2Array()
+	var colors := PackedColorArray()
+	var uvs := PackedVector2Array()
+	_add_fan(vertices, colors, uvs, polygon, maxi(_cell_names().find(String(type)), 0), paint, 0, type == &"core")
+	return _to_mesh(vertices, colors, uvs)
+
+
+## One thruster's nozzle on its own, for showcases and the palette: `mount_frame` needs center, normal, length
 ## and depth (Mounting.frame()).
 static func nozzle_mesh(type_id: StringName, mount_frame: Dictionary, level: int) -> ArrayMesh:
 	var vertices := PackedVector2Array()

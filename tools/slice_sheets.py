@@ -51,12 +51,15 @@ A portrait (A.7) is a painted character on chroma green, keyed and despilled lik
 but it keeps its whole cell (past `inset`), scaled to `px`: the prompts pin where the head sits in
 the cell, so the game can crop the head with one rect per sheet, and the body runs off the
 bottom edge, where a dialog stands it on the screen's. With `mask`, it also gets a recolour mask
-(`<id>_mask`): R = hair, G = eyes, B = outfit, A = trim, each the pixels whose hue falls in that
-key hue's band (MASK_BANDS; the hair's also takes the pale strands next to it), grown by a pixel and softened so no key-coloured fringe survives at
-an edge. The eyes are only looked for inside `mask.eyes` (a box, in fractions of the cell),
-because a suit's cyan rim light is the irises' hue (and outside it, that hue is the outfit's);
-the box also takes in the brows, which are redder than the hair but share the lips' hue. The report gives each region's mean value,
-which the game's shader needs to keep the shading (visuals.json vis.portraits `ref_v`).
+(`<id>_mask`): R = hair, G = eyes, B = outfit, A = trim. Each region is the pixels whose hue falls
+in its key hue's band (MASK_BANDS, plus MASK_SEEDS for its deep and dim paint), grown through the
+shades of it the band misses (MASK_GROW) and over the see-through outline it touches, then by a
+pixel and softened, so no key-coloured fringe survives at an edge. The eyes are only looked for
+inside `mask.eyes` (a box, in fractions of the cell), because a suit's cyan rim light is the
+irises' hue (outside it, that hue is the outfit's); the box also takes in the brows, which are
+redder than the hair but share the lips' hue. The painting's warm rim light round the silhouette
+is in the trim's hue too, so thin trim on the outline isn't trim (RIM_PX). The report gives each
+region's mean value, which the game's shader needs to keep the shading (visuals.json vis.portraits `ref_v`).
 
 Atlas layout (the ship shader's contract): a column per entry of a row, a row per variant, every
 cell padded by cell_px / 16 on each side (wrapped for materials, edge-extended otherwise), so
@@ -92,7 +95,17 @@ GUN_TIP_X = 248           # and the barrel's tip
 MASK_BANDS = {"hair": (285, 340, 0.35), "eyes": (160, 215, 0.15), "outfit": (185, 255, 0.30),
               "trim": (40, 68, 0.55)}
 BROW_HUE = 360            # inside the eye box the hair band reaches this far: the brows are redder
-HAIR_PALE = (0.08, 6)     # pale strands in the hair's hue join it: min saturation, within this many px
+# What a region grows through from its band, up to MASK_GROW_PX: (hue from, hue to, min saturation).
+# Skin (hue ~10-30, saturation ~0.5) passes none of them. Hair: its pale strands and its warm rim
+# light, which reaches the lips' hue but never touches them. Trim: its pale highlights and its
+# deep orange shadows.
+MASK_GROW = {"hair": [(280, 360, 0.08)], "trim": [(40, 75, 0.2), (30, 40, 0.35), (25, 30, 0.7), (15, 25, 0.85)]}
+MASK_GROW_PX = 10
+RIM_PX = 4                # trim thinner than ~5 px this close to the silhouette's edge is rim light
+# More seeds for a region besides its band, where its paint goes deep or dim: (hue from, hue to,
+# min saturation, max value). Trim: its saturated orange shadows, and its dim lines in a suit's
+# shade (capped in value, so a skin highlight in the same hues stays skin).
+MASK_SEEDS = {"trim": [(30, 40, 0.75, 1.0), (40, 68, 0.3, 0.8)]}
 
 
 def luma(rgb: np.ndarray) -> np.ndarray:
@@ -322,29 +335,59 @@ def grow(m: np.ndarray) -> np.ndarray:
     return np.max([p[dy:dy + m.shape[0], dx:dx + m.shape[1]] for dy in range(3) for dx in range(3)], axis=0)
 
 
+def shrink(m: np.ndarray) -> np.ndarray:
+    """`m` eroded by one pixel (8-connected): the opposite of grow()."""
+    return 1.0 - grow(1.0 - m)
+
+
 def portrait_mask(rgba: np.ndarray, eyes: list[float], report: list[str], ident: str) -> np.ndarray:
     """The recolour mask of a cut portrait (RGBA 0..255): a channel per MASK_BANDS region."""
     h, s, v = hsv(rgba[..., :3])
     solid = rgba[..., 3] > 127
+    seen = rgba[..., 3] > 0
     size = rgba.shape[0]
     x0, y0, x1, y1 = (round(f * size) for f in eyes)
     in_eyes = np.zeros_like(solid)
     in_eyes[y0:y1, x0:x1] = True
-    channels, means = [], []
+    near = lambda m, px: _grown(m, px) > 0
+    hards, means = {}, []
     for region, (h0, h1, smin) in MASK_BANDS.items():
         hard = (h >= h0) & (h <= h1) & (s >= smin) & (v > 0.1) & solid
         if region == "hair":
             hard |= in_eyes & (h > h1) & (h <= BROW_HUE) & (s >= smin) & (v > 0.1) & solid
-            near = hard.astype(np.float32)
-            for _ in range(HAIR_PALE[1]):
-                near = grow(near)
-            hard |= (near > 0) & (h >= h0) & (h <= h1) & (s >= HAIR_PALE[0]) & solid
+        for g0, g1, gmin, vmax in MASK_SEEDS.get(region, []):
+            hard |= (h >= g0) & (h <= g1) & (s >= gmin) & (v > 0.1) & (v <= vmax) & solid
         # The irises' band overlaps the outfit's cyan rim light, so the eye box decides which.
         hard &= in_eyes if region == "eyes" else ~in_eyes if region == "outfit" else True
+        passable = np.zeros_like(solid)
+        for g0, g1, gmin in MASK_GROW.get(region, []):
+            passable |= (h >= g0) & (h <= g1) & (s >= gmin) & solid
+        for _ in range(MASK_GROW_PX):
+            hard |= near(hard, 1) & passable
+        hards[region] = hard
+    # The painting's warm rim light is a thin gold line round the silhouette, in the trim's hue.
+    # Trim that thin on the outline is rim light: next to the hair it's the hair's, elsewhere it
+    # keeps its paint.
+    trim = hards["trim"].astype(np.float32)
+    opened = grow(grow(shrink(shrink(trim)))) > 0
+    rim = hards["trim"] & ~opened & near(~solid, RIM_PX)
+    hards["trim"] &= ~rim
+    hards["hair"] |= rim & near(hards["hair"], RIM_PX)
+    channels = []
+    for region, hard in hards.items():
         means.append(float(v[hard].mean()) if hard.any() else 0.0)
-        channels.append(box_blur3(grow(hard.astype(np.float32))) * solid)
+        # And the see-through outline next to it, which still shows its key colour.
+        hard = hard | (seen & ~solid & near(hard, 2))
+        channels.append(box_blur3(grow(hard.astype(np.float32))) * seen)
     report.append(f"  {ident + '_mask':20s} mask      ref_v [{', '.join(f'{m:.2f}' for m in means)}]")
     return np.dstack(channels) * 255
+
+
+def _grown(m: np.ndarray, px: int) -> np.ndarray:
+    out = m.astype(np.float32)
+    for _ in range(px):
+        out = grow(out)
+    return out
 
 
 def cut_portrait(rgb: np.ndarray, options: dict, report: list[str], ident: str) -> np.ndarray:

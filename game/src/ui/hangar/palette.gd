@@ -125,6 +125,7 @@ func _refresh_shapes() -> void:
 		swatch.custom_minimum_size = BUTTON
 		swatch.polygon = shapes.polygon(shape_id, &"L", 0)
 		swatch.fill = TYPE_COLORS.get(type, Color.GRAY)
+		swatch.mesh = ShipMesh.swatch_mesh(swatch.polygon, type, HangarEditor.DEFAULT_PAINT)
 		swatch.scale_hint = {&"S": 0.45, &"M": 0.7, &"L": 1.0}[tile_size]
 		swatch.tooltip_text = String(shape_id)
 		swatch.gui_input.connect(func(event: InputEvent) -> void:
@@ -141,6 +142,7 @@ func _thruster_row() -> void:
 		swatch.custom_minimum_size = Vector2(96, BUTTON.y)
 		swatch.polygon = PackedVector2Array(NOZZLE)
 		swatch.fill = Color.from_string(str(tints.get(String(type_id), "#888888")), Color.GRAY)
+		swatch.mesh = _nozzle(type_id, level)
 		swatch.scale_hint = {&"S": 0.45, &"M": 0.7, &"L": 1.0}[tile_size]
 		swatch.caption = thrusters.display_name(type_id)
 		swatch.tooltip_text = String(type_id)
@@ -186,6 +188,8 @@ func _weapon_row() -> void:
 		swatch.custom_minimum_size = Vector2(90, BUTTON.y)
 		swatch.polygon = PackedVector2Array(GUN)
 		swatch.fill = Color(0.35, 0.38, 0.42)
+		swatch.weapon = weapon_id
+		swatch.mount = mount_type
 		swatch.caption = weapons.weapon(weapon_id)["name"]
 		swatch.tooltip_text = String(weapon_id)
 		swatch.disabled = not weapons.allows(weapon_id, mount_type)
@@ -273,6 +277,8 @@ func _stock_row() -> void:
 			continue
 		var swatch := _swatch(PackedVector2Array(GUN), Color(0.35, 0.38, 0.42),
 				"%s L%d" % [gun["name"], weapons.xp.level_for(item.xp)])
+		swatch.weapon = item.weapon
+		swatch.mount = item.mount
 		swatch.bar = weapons.xp.progress(item.xp)
 		swatch.corner = weapons.mount_type(item.mount).get("name", "")
 		swatch.name = item.id
@@ -291,6 +297,7 @@ func _stock_row() -> void:
 		var swatch := _swatch(PackedVector2Array(NOZZLE), Color.from_string(str(tints.get(String(parts[0]), "#888888")), Color.GRAY),
 				"%s %s L%d" % [thrusters.display_name(parts[0]), parts[1], parts[2]])
 		swatch.scale_hint = {&"S": 0.45, &"M": 0.7, &"L": 1.0}[parts[1]]
+		swatch.mesh = _nozzle(parts[0], parts[2])
 		swatch.corner = "×%d" % stock.thrusters[key]
 		swatch.name = key.replace(":", "_")
 		swatch.gui_input.connect(func(event: InputEvent) -> void:
@@ -326,6 +333,12 @@ func _stock_row() -> void:
 		refit_to = options[(options.find(refit_to) + 1) % options.size()]
 		_refresh_shapes())
 	_shape_row.add_child(refit)
+
+
+## A nozzle of `type_id` at `level`, one unit long, flange up (as NOZZLE), for a swatch.
+func _nozzle(type_id: StringName, level: int) -> ArrayMesh:
+	return ShipMesh.nozzle_mesh(type_id, {"center": Vector2(0, -0.25), "normal": Vector2.DOWN, "length": 1.0,
+			"depth": thrusters.depth_factor}, level)
 
 
 func _swatch(polygon: PackedVector2Array, fill: Color, caption: String) -> _ShapeSwatch:
@@ -371,29 +384,63 @@ func _spacer() -> Control:
 	return spacer
 
 
-## A palette cell that draws its shape.
+## A palette cell that shows its part: a gun's picture (`weapon` on `mount`, GunView.draw_icon),
+## or `mesh` (a tile or a nozzle, ShipMesh) in the ship's material, scaled as `polygon` would be;
+## without the art, `polygon` filled with `fill`.
 class _ShapeSwatch extends PanelContainer:
+	static var _ship_material: ShaderMaterial
+
 	var polygon: PackedVector2Array
 	var fill: Color
 	var scale_hint: float = 1.0
+	var weapon: StringName = &""
+	var mount: StringName = &"turret"
+	var mesh: Mesh
 	var caption: String = ""
 	## Small text in the top-left corner (a price, a mount type, a count).
 	var corner: String = ""
 	## An XP bar along the top (0..1), or none when negative.
 	var bar := -1.0
 	var disabled := false
+	var _mesh_view: MeshInstance2D
 
-	func _draw() -> void:
+	func _ready() -> void:
+		texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+		if mesh == null or not Assets.has_real_art(ShipMesh.ATLAS_ID):
+			return
+		if _ship_material == null:
+			_ship_material = ShipMesh.make_material()
+		_mesh_view = MeshInstance2D.new()
+		_mesh_view.mesh = mesh
+		_mesh_view.material = _ship_material
+		_mesh_view.modulate.a = 0.35 if disabled else 1.0
+		add_child(_mesh_view)
+		resized.connect(_place_mesh)
+		_place_mesh()
+
+	func _place_mesh() -> void:
+		_mesh_view.position = size * 0.5
+		_mesh_view.scale = Vector2.ONE * _px_per_u() / ShipMesh.PX_PER_U
+
+	## How big a unit of `polygon` is drawn, so the part fills the cell as its size says.
+	func _px_per_u() -> float:
 		var extent := 0.0
 		for p in polygon:
 			extent = maxf(extent, maxf(absf(p.x), absf(p.y)))
-		var s := (minf(size.x, size.y) * 0.4 / extent) * scale_hint
-		var center := size * 0.5
-		var points := PackedVector2Array()
-		for p in polygon:
-			points.append(center + p * s)
-		draw_colored_polygon(points, Color(fill, 0.35) if disabled else fill)
-		draw_polyline(points + PackedVector2Array([points[0]]), Color(0, 0, 0, 0.8), 2.0, true)
+		return (minf(size.x, size.y) * 0.4 / maxf(extent, 0.01)) * scale_hint
+
+	func _draw() -> void:
+		var side := minf(size.x, size.y)
+		var icon := Rect2((size - Vector2.ONE * side) * 0.5, Vector2.ONE * side)
+		var art := _mesh_view != null or (weapon != &"" and GunView.draw_icon(self, weapon, mount, icon,
+				0.35 if disabled else 1.0))
+		if not art:
+			var s := _px_per_u()
+			var points := PackedVector2Array()
+			for p in polygon:
+				points.append(size * 0.5 + p * s)
+			draw_colored_polygon(points, Color(fill, 0.35) if disabled else fill)
+			draw_polyline(points + PackedVector2Array([points[0]]), Color(0, 0, 0, 0.8), 2.0, true)
 		if not caption.is_empty():
 			var font := get_theme_default_font()
 			var font_size := 14

@@ -147,21 +147,51 @@ static func _art_mount(mount_type: StringName, art: String) -> String:
 static func _draw_head(canvas: CanvasItem, pivot: Vector2, angle: float, muzzle_px: float, cell: int, mount: String,
 		trim: Color) -> void:
 	var meta := Assets.meta(ATLAS_ID)
-	var mounts: Dictionary = meta.get("mounts", {})
-	var row_info: Dictionary = mounts.get(mount, {"row": 0, "pivot_px": [96, 128]})
-	var size := float(meta.get("cell_px", 256))
-	var pad := float(meta.get("pad_px", 16))
+	var row_info: Dictionary = meta.get("mounts", {}).get(mount, {"row": 0, "pivot_px": [96, 128]})
 	var at: Array = row_info["pivot_px"]
 	var cell_pivot := Vector2(float(at[0]), float(at[1]))
 	var k := muzzle_px / (float(meta.get("tip_x_px", 248)) - cell_pivot.x)
-	var stride := size + 2.0 * pad
-	var art := Rect2(cell * stride + pad, int(row_info["row"]) * stride + pad, size, size)
-	var drawn := Rect2(-cell_pivot * k, Vector2(size, size) * k)
-	var atlas := Assets.tex(ATLAS_ID)
+	var art := _cell_rect(cell, mount)
 	canvas.draw_set_transform(pivot, angle, Vector2.ONE)
-	canvas.draw_texture_rect_region(atlas, drawn, art)
-	canvas.draw_texture_rect_region(atlas, drawn, Rect2(art.position + Vector2(0, stride * mounts.size()), art.size), trim)
+	_draw_cell(canvas, Rect2(-cell_pivot * k, art.size * k), art, trim)
 	canvas.draw_set_transform_matrix(Transform2D.IDENTITY)
+
+
+## A gun as an icon (the hangar's palette): its picture for `mount_type`, pointing right, fitted
+## into `rect`. False when there's no atlas or no cell for it, so the caller draws its own.
+static func draw_icon(canvas: CanvasItem, weapon: StringName, mount_type: StringName, rect: Rect2, alpha := 1.0) -> bool:
+	var look := Assets.meta(LOOK_ID)
+	var own: Dictionary = look.get("guns", {}).get(String(weapon), {})
+	var art := str(own.get("art", weapon))
+	var cell := (look.get("atlas_cells", []) as Array).find(art)
+	if cell < 0 or not Assets.has_real_art(ATLAS_ID):
+		return false
+	var side := minf(rect.size.x, rect.size.y)
+	var trim := Color.from_string(str(own.get("trim", look.get("trim", "#c3cad2"))), Color.WHITE)
+	_draw_cell(canvas, Rect2(rect.get_center() - Vector2.ONE * side * 0.5, Vector2.ONE * side),
+			_cell_rect(cell, _art_mount(mount_type, art)), trim, alpha)
+	return true
+
+
+## Where `cell` of `mount`'s row is in the atlas, in its pixels.
+static func _cell_rect(cell: int, mount: String) -> Rect2:
+	var meta := Assets.meta(ATLAS_ID)
+	var row := int(meta.get("mounts", {}).get(mount, {"row": 0})["row"])
+	var size := float(meta.get("cell_px", 256))
+	var pad := float(meta.get("pad_px", 16))
+	var stride := size + 2.0 * pad
+	return Rect2(cell * stride + pad, row * stride + pad, size, size)
+
+
+## A cell drawn into `drawn`, then its trim mask (the same cell in the rows below) in `trim`.
+static func _draw_cell(canvas: CanvasItem, drawn: Rect2, art: Rect2, trim: Color, alpha := 1.0) -> void:
+	var meta := Assets.meta(ATLAS_ID)
+	var stride := float(meta.get("cell_px", 256)) + 2.0 * float(meta.get("pad_px", 16))
+	var atlas := Assets.tex(ATLAS_ID)
+	canvas.draw_texture_rect_region(atlas, drawn, art, Color(1, 1, 1, alpha))
+	canvas.draw_texture_rect_region(atlas, drawn,
+			Rect2(art.position + Vector2(0, stride * (meta.get("mounts", {}) as Dictionary).size()), art.size),
+			Color(trim, alpha))
 
 
 ## `count` barrels side by side from `from` to `tip`.
