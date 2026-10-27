@@ -1061,6 +1061,10 @@ All twelve were on style. The picks are the ones that survive 9-slicing:
 
 In the game, the "selected" state is too close to "normal" to mark a chosen tab, so UiTheme
 brightens it (`LIT`). Stretching smeared the rims' LED dots, so the edges tile instead.
+The owner's review caught three broken 9-slices: the bar track has steel straps at ~20% and ~80%
+of its length, which smeared in the stretched middle (now inside 16 px ends); the fill's crop
+ended in the gold-to-dark fade (now cut at 0.6); and a tall menu tile stretched the buttons' side
+LEDs (at 34% and 62% of the height) into ovals, so tiles use `TileButton` with `slice_tall`.
 
 ---
 

@@ -2,7 +2,7 @@ class_name UiTheme
 extends RefCounted
 ## The game's one theme (PLAN.md 6.1, A.5), merged into Godot's default theme by Assets so every
 ## Control has it: the flashy arcade chrome as 9-slice styleboxes. Buttons are gold, `GoButton`
-## and `DangerButton` the green and red ones; `ChromePanel`, `HeaderPanel` and `FramePanel` are PanelContainer
+## and `DangerButton` the green and red ones, `TileButton` the tall menu tiles; `ChromePanel`, `HeaderPanel` and `FramePanel` are PanelContainer
 ## variations for dialogs, title bars and picture cards. Sliders and progress bars use the bar.
 ##
 ## Each piece's margins come from data/visuals.json (vis.ui.*). The art is cut at `scale` texture
@@ -19,7 +19,8 @@ const OUTLINE_PX := 6
 const LIT := Color(1.35, 1.3, 1.15)
 ## Without the art, the green and red buttons are told apart by their text.
 const FALLBACK_TEXT: Dictionary[StringName, Color] = {&"GoButton": Color(0.6, 1.0, 0.55), &"DangerButton": Color(1.0, 0.5, 0.45)}
-const BUTTONS: Dictionary[StringName, StringName] = {&"Button": &"gold", &"GoButton": &"go", &"DangerButton": &"danger"}
+const BUTTONS: Dictionary[StringName, StringName] = {&"Button": &"gold", &"GoButton": &"go", &"DangerButton": &"danger",
+		&"TileButton": &"gold"}
 
 
 static func build() -> Theme:
@@ -31,7 +32,7 @@ static func build() -> Theme:
 		if type != &"Button":
 			theme.set_type_variation(type, &"Button")
 		if Assets.has_real_art(StringName("vis.ui.btn_%s_normal" % BUTTONS[type])):
-			_buttons(theme, type, BUTTONS[type])
+			_buttons(theme, type, BUTTONS[type], &"slice_tall" if type == &"TileButton" else &"slice")
 		elif FALLBACK_TEXT.has(type):
 			theme.set_color(&"font_color", type, FALLBACK_TEXT[type])
 	if Assets.has_real_art(&"vis.ui.bar_track"):
@@ -51,16 +52,16 @@ static func build() -> Theme:
 
 
 ## A Button type's styles: normal and hover the same (a touch leaves hover stuck), pressed and
-## toggled-on lit up, disabled dull, and no focus ring.
-static func _buttons(theme: Theme, type: StringName, kind: StringName) -> void:
-	var normal := _box(StringName("vis.ui.btn_%s_normal" % kind))
-	var lit := _box(StringName("vis.ui.btn_%s_selected" % kind))
+## toggled-on lit up, disabled dull, and no focus ring. `slice` names the margins to use.
+static func _buttons(theme: Theme, type: StringName, kind: StringName, slice: StringName) -> void:
+	var normal := _box(StringName("vis.ui.btn_%s_normal" % kind), slice)
+	var lit := _box(StringName("vis.ui.btn_%s_selected" % kind), slice)
 	lit.modulate_color = LIT
 	theme.set_stylebox(&"normal", type, normal)
 	theme.set_stylebox(&"hover", type, normal)
 	theme.set_stylebox(&"pressed", type, lit)
 	theme.set_stylebox(&"hover_pressed", type, lit)
-	theme.set_stylebox(&"disabled", type, _box(StringName("vis.ui.btn_%s_disabled" % kind)))
+	theme.set_stylebox(&"disabled", type, _box(StringName("vis.ui.btn_%s_disabled" % kind), slice))
 	theme.set_stylebox(&"focus", type, StyleBoxEmpty.new())
 	for colour: StringName in [&"font_color", &"font_hover_color", &"font_pressed_color",
 			&"font_hover_pressed_color", &"font_focus_color"]:
@@ -83,11 +84,11 @@ static func _flat_panel() -> StyleBoxFlat:
 	return box
 
 
-static func _box(id: StringName) -> StyleBoxTexture:
+static func _box(id: StringName, slice_key := &"slice") -> StyleBoxTexture:
 	var meta := Assets.meta(id)
 	var box := StyleBoxTexture.new()
 	box.texture = _texture(id)
-	var slice: Array = meta.get("slice", [0, 0, 0, 0])
+	var slice: Array = meta.get(slice_key, [0, 0, 0, 0])
 	var content: Array = meta.get("content", [0, 0, 0, 0])
 	for side: int in 4:
 		box.set_texture_margin(side as Side, slice[side])

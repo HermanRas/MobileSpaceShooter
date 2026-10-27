@@ -203,7 +203,7 @@
 				"11": ["btn_danger_disabled", "chrome", {"inset": 4, "h": 120}],
 				"12": ["btn_danger_selected", "chrome", {"inset": 4, "h": 120}],
 				"13": ["bar_track", "chrome", {"inset": 4, "h": 40}],
-				"14": ["bar_fill", "chrome", {"inset": 4, "h": 40, "crop": [0, 0, 0.633, 1]}],
+				"14": ["bar_fill", "chrome", {"inset": 4, "h": 40, "crop": [0, 0, 0.6, 1]}],
 				"15": ["btn_round", "chrome", {"inset": 4, "h": 96}]
 			}
 		},

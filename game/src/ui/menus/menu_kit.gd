@@ -7,6 +7,7 @@ static func tile(title: String, note: String, action: Callable, node_name: Strin
 		title_size := 32) -> Button:
 	var button := Button.new()
 	button.name = node_name
+	button.theme_type_variation = &"TileButton"
 	button.custom_minimum_size = tile_size
 	button.disabled = not action.is_valid()
 	if action.is_valid():
