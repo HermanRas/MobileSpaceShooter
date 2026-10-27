@@ -150,7 +150,7 @@ band for the colour the player picked and keeps the shading. Each hue is far fro
 | A.1 | `tiles_materials` | `art_src/tiles/` | 15 | ✅ in the game 2026-10-26: hull, armour, hardpoint |
 | A.1b | `tiles_cores_shields` | `art_src/tiles/` | 12 | ✅ in the game 2026-10-26: core, shields, damage |
 | A.2 | `parts_thrusters` | `art_src/parts/` | 12 | ✅ in the game 2026-10-27: a nozzle per type |
-| A.3 | `parts_guns` | `art_src/parts/` | 12, run ×3 | ✅ in the game 2026-10-27: 9 gun heads; flak and seeker re-roll open |
+| A.3 | `parts_guns` | `art_src/parts/` | 12, run ×3 | ✅ in the game 2026-10-27: 9 gun heads (A.3b re-rolled flak and seeker) |
 | A.4 | `icons_main` | `art_src/icons/` | 15, run ×3 | ✅ in the game 2026-10-27: pickups, FIRE, SWITCH, Pause |
 | A.5 | `chrome_*` | `art_src/ui/` | one canvas per piece | to write |
 | A.6 | `icons_map` | `art_src/icons/` | 1 sheet | to write |
@@ -658,6 +658,18 @@ gun, every gun points right, and rows 3 and 4 are empty.
 
 **What happens to it.** The best flak and seeker are cut as `gun` cells in place of run 2's,
 with no code change.
+
+### Review, 2026-10-27: what came back
+
+- **Run 1** did exactly what was asked (small housings, long guns), but it's plainer than the
+  first sheets. **Its seeker (#6) is used.**
+- **Run 3** is the owner's favourite and the most detailed, but its housings are still big
+  (tip 1.4–1.6 r). **Its flak (#1) is used:** its disc comes out 1.09 U, a little wider than its
+  tile, which suits a heavy gun. Its seekers are drawn angled up-right, about 10° off their line
+  of fire, so they're spares.
+- **Run 2** is pixel art on square bases: off-style, unused.
+- Asking for proportions relative to the housing worked in one run of three. Running ×3 is
+  what made it pay.
 
 ---
 

@@ -62,20 +62,36 @@
 				"1": ["gun_gatling", "gun"],
 				"2": ["gun_gatling_multi", "gun"],
 				"3": ["gun_cannon", "gun"],
-				"4": ["gun_flak", "gun"],
-				"6": ["gun_seeker", "gun"],
 				"7": ["gun_mines", "gun"],
 				"9": ["gun_laser", "gun"],
 				"10": ["gun_emp", "gun"]
 			},
-			"spares": {"5": "twin cannon", "11": "twin-rail laser", "12": "ring EMP"}
+			"spares": {"4": "twin flak (stood in until A.3b)", "5": "twin cannon", "6": "seeker pod with dome (stood in until A.3b)", "11": "twin-rail laser", "12": "ring EMP"}
 		},
 		"parts_guns_3": {
 			"file": "parts/parts_guns_3.jpeg",
 			"grid": [4, 4],
-			"_doc": "Run 3 of 3 (A.3). Heavier outlines, and housings so big (r 110 px) that the barrels end 1.1 r out: fitted to a muzzle, the disc would be wider than a tile. The owner's flak (4) and seeker (6) picks wait for a re-roll in sheet 2's proportions; sheet 2's stand in.",
+			"_doc": "Run 3 of 3 (A.3). Heavier outlines, and housings so big (r 110 px) that the barrels end 1.1 r out: fitted to a muzzle, the disc would be wider than a tile. The owner's flak (4) and seeker (6) picks were re-rolled as parts_guns_flak_seeker (A.3b).",
 			"cells": {},
 			"spares": {"4": "twin flak (owner's pick)", "6": "triple seeker (owner's pick)", "7": "missile rack", "9": "finned laser", "10": "wired EMP", "11": "twin-rail laser", "12": "quad EMP"}
+		},
+		"parts_guns_flak_seeker_1": {
+			"file": "parts/parts_guns_flak_seeker_1.jpeg",
+			"grid": [4, 4],
+			"_doc": "Generated 2026-10-27, run 1 of 3 of the A.3b re-roll: small housings and long guns as asked, plainer than run 3. Its seeker is used because run 3's missiles angle up-right (about 10 degrees off their line of fire) and its disc spills well past a tile.",
+			"cells": {
+				"6": ["gun_seeker", "gun"]
+			},
+			"spares": {"1": "twin flak, straight barrels", "2": "twin flak", "5": "triple seeker"}
+		},
+		"parts_guns_flak_seeker_3": {
+			"file": "parts/parts_guns_flak_seeker_3.jpeg",
+			"grid": [4, 4],
+			"_doc": "Run 3 of 3 of the A.3b re-roll; the owner's favourite. Housings still big (r 96 px, barrel tip 1.56 r), so the flak's disc is a little wider than its tile (1.09 U), which suits a heavy gun. Run 2 is pixel art on square bases and isn't used.",
+			"cells": {
+				"1": ["gun_flak", "gun"]
+			},
+			"spares": {"2": "twin flak, plated", "5": "triple seeker, angled", "8": "twin seeker, angled"}
 		},
 		"icons_main_2": {
 			"file": "icons/icons_main_2.jpeg",
