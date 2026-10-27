@@ -1670,7 +1670,7 @@ off, or note what broke). Everything here passed on the PC in previews and drive
 - [ ] A.2 nozzles on every side, and the trim colour at L1, L2 and L3
 - [ ] A.3 guns: turret, fixed and swivel easy to tell apart in the hangar; heads turn smoothly
 - [ ] A.4 icons: FIRE, SWITCH and Pause big enough under a thumb; loot pickups readable
-- [ ] Mines in space read as mines (the spiked placeholder until A.3d)
+- [ ] Mines in space read as mines (A.3d: 0.8 U, blinking), and the blink isn't too much
 - [ ] `tools/android.sh perf` in a busy fight: guns are now textured quads (one canvas item per ship), so check the frame time against §5.5
 
 | # | Item | Sheets / canvases | Needed by |

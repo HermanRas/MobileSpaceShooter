@@ -5,7 +5,8 @@ extends Node2D
 ## physics layer per team (ShipBody.TEAM_LAYER), so a shot's ray only sees the other side and
 ## never needs an exclusion list. Every shot draws in one MultiMesh as an additive streak,
 ## except a shot whose look names a `sprite` (a mine): those draw as that picture, turning
-## slowly, in one more MultiMesh per sprite, normally blended.
+## slowly and pulsing brighter `blink_hz` times a second, in one more MultiMesh per sprite,
+## normally blended.
 ##
 ## Brought forward from Phase 4.4 so the guns of 4.3 have something to fire; 4.4 stress-tested
 ## it at 600 shots on the phone. 4.6a: a shot with splash explodes where it hits (an airburst one
@@ -25,6 +26,9 @@ signal shot_down(point: Vector2)
 const CAPACITY := 1024
 const PX := ShipMesh.PX_PER_U
 const LOOK_ID := &"vis.fx.projectiles"
+## A blinking sprite's brightness, dim to bright.
+const BLINK_LOW := 0.9
+const BLINK_HIGH := 1.6
 ## A life below this marks a rocket an explosion destroyed; it goes on its next step.
 const DOWNED := -1000.0
 ## Per-shot flags for the rare extras, so a plain bullet's step never looks at its spec.
@@ -58,8 +62,8 @@ var _target: Array[Object] = []
 ## "weapon|damage" -> index there.
 var _specs: Array[Dictionary] = []
 var _spec_of := {}
-## [{"color", "length", "width", "group", "size", "spin"}] in pixels (spin in rad per second of
-## life; group -1 is a streak), and weapon id -> index there.
+## [{"color", "length", "width", "group", "size", "spin", "blink"}] in pixels (spin in rad per
+## second of life, blink in rad per second; group -1 is a streak), and weapon id -> index there.
 var _looks: Array[Dictionary] = []
 var _look_of := {}
 var _query := PhysicsRayQueryParameters2D.new()
@@ -208,7 +212,8 @@ func _process(_delta: float) -> void:
 			var size: float = look["size"]
 			_groups[group].multimesh.set_instance_transform_2d(in_group[group],
 					Transform2D(_life[i] * float(look["spin"]), Vector2(size, size), 0.0, _pos[i]))
-			_groups[group].multimesh.set_instance_color(in_group[group], Color.WHITE)
+			var pulse := 0.5 + 0.5 * sin(_life[i] * float(look["blink"]))
+			_groups[group].multimesh.set_instance_color(in_group[group], Color.WHITE * lerpf(BLINK_LOW, BLINK_HIGH, pulse))
 			in_group[group] += 1
 			continue
 		var along := _vel[i].normalized() if _vel[i].length_squared() > 1.0 else Vector2.RIGHT
@@ -352,7 +357,7 @@ func _look_for(weapon_id: StringName) -> int:
 		"color": Color.from_string(str(raw.get("color", "#ffd27a")), Color.ORANGE),
 		"length": float(raw.get("length_u", 0.5)) * PX, "width": float(raw.get("width_u", 0.07)) * PX,
 		"group": _group_for(StringName(raw.get("sprite", ""))), "size": float(raw.get("size_u", 0.4)) * PX,
-		"spin": deg_to_rad(float(raw.get("spin_deg_s", 0.0))),
+		"spin": deg_to_rad(float(raw.get("spin_deg_s", 0.0))), "blink": TAU * float(raw.get("blink_hz", 0.0)),
 	})
 	_look_of[weapon_id] = _looks.size() - 1
 	return _looks.size() - 1

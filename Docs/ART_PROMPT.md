@@ -152,7 +152,7 @@ band for the colour the player picked and keeps the shading. Each hue is far fro
 | A.2 | `parts_thrusters` | `art_src/parts/` | 12 | ✅ in the game 2026-10-27: a nozzle per type |
 | A.3 | `parts_guns` | `art_src/parts/` | 12, run ×3 | ✅ in the game 2026-10-27: 9 gun heads (A.3b re-rolled flak and seeker) |
 | A.3c | `parts_guns_edge` | `art_src/parts/` | edit of `ref_turrets.png`, run ×3 | ✅ in the game 2026-10-27: fixed and swivel pictures (v1 failed ×5) |
-| A.3d | `fx_mines` | `art_src/parts/` | 4, run ×3 | prompt ready 2026-10-27 (placeholder in the game) |
+| A.3d | `fx_mines` | `art_src/parts/` | 4, run ×3 | ✅ in the game 2026-10-27: run 1 #2 |
 | A.4 | `icons_main` | `art_src/icons/` | 15, run ×3 | ✅ in the game 2026-10-27: pickups, FIRE, SWITCH, Pause |
 | A.5 | `chrome_*` | `art_src/ui/` | one canvas per piece | to write |
 | A.6 | `icons_map` | `art_src/icons/` | 1 sheet | to write |
@@ -787,9 +787,16 @@ Remember: no text, no green in the art, no glow, round and the same from every
 side, and only row 1 is filled.
 ```
 
-**What happens to it.** The best mine is cut as a colour `sprite` off green (the slicer gets a
-green key for sprites) and staged as `assets/fx/mine.png`, which `vis.fx.mine` already points
-at. No code change.
+**What happens to it.** The best mine is cut as a colour `sprite` with `{"key": "green"}` and
+staged as `assets/fx/mine.png`, which `vis.fx.mine` points at.
+
+### Review, 2026-10-27: what came back
+
+All twelve were on brief: round, spiked, a painted lamp, no glow. **Run 1 #2 is used**: the
+spikes give the silhouette at 40 px, and the riveted ring makes it look built. In space it was
+too small and too dark at 0.6 U (dark steel on dark space), so the game draws it at 0.8 U and
+pulses it brighter 1.5 times a second, like an armed mine. See it with
+`tools/preview.sh res://dev_preview/art_mines.tscn 900x300 --frames=20`.
 
 ---
 

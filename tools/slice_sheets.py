@@ -36,7 +36,8 @@ bracket's flat left side, where it meets the hull, placed at EDGE_PIVOT. A "guns
 row of those per mount type (RGB = grey, A = coverage), then a trim-mask row (the white band,
 for the game to tint) per art row; "" leaves a cell empty.
 
-A sprite (A.4's icons) is colour artwork on black: keyed like `keyed` (a flood fill from the
+A sprite (A.4's icons, A.3d's mine) is colour artwork on black (or, with {"key": "green"}, on
+chroma green): keyed like `keyed` (a flood fill from the
 border, so a dark badge centre ringed by gold survives), kept in colour with its alpha, and
 fitted into a square. A "files" atlas writes each sprite as its own PNG, so a Button can use it.
 
@@ -230,15 +231,21 @@ def cut_gun(rgb: np.ndarray, report: list[str], ident: str, edge: bool = False) 
     return out_grey, out_cover
 
 
-def cut_sprite(rgb: np.ndarray, size: int, holes: bool, report: list[str], ident: str) -> np.ndarray:
-    """Key colour artwork off a black cell and fit it, centred, into SPRITE_FILL of a square.
-    With `holes`, enclosed black goes too (a crosshair's middle); without, it stays (a badge's
-    dark centre). Returns RGBA, size x size."""
-    lum = luma(rgb)
-    border = np.concatenate([lum[0, :], lum[-1, :], lum[:, 0], lum[:, -1]])
-    thresh = int(min(40, max(10, np.percentile(border, 99.5) + 8)))
-    dark = lum <= thresh
-    alpha = box_blur3((~(dark if holes else fill_from_border(dark))).astype(np.float32))
+def cut_sprite(rgb: np.ndarray, size: int, holes: bool, green: bool, report: list[str], ident: str) -> np.ndarray:
+    """Key colour artwork off a black cell (or with `green`, a chroma-green one, despilled by
+    capping G at max(R, B)) and fit it, centred, into SPRITE_FILL of a square. With `holes`,
+    enclosed black goes too (a crosshair's middle); without, it stays (a badge's dark centre).
+    Returns RGBA, size x size."""
+    if green:
+        alpha, thresh = key_green(rgb), "green"
+        rgb = rgb.copy()
+        rgb[..., 1] = np.minimum(rgb[..., 1], np.maximum(rgb[..., 0], rgb[..., 2]))
+    else:
+        lum = luma(rgb)
+        border = np.concatenate([lum[0, :], lum[-1, :], lum[:, 0], lum[:, -1]])
+        thresh = int(min(40, max(10, np.percentile(border, 99.5) + 8)))
+        dark = lum <= thresh
+        alpha = box_blur3((~(dark if holes else fill_from_border(dark))).astype(np.float32))
     ys, xs = np.nonzero(alpha > 0.5)
     x0, y0, x1, y1 = xs.min(), ys.min(), xs.max() + 1, ys.max() + 1
     rgba = np.dstack([rgb, alpha * 255])[y0:y1, x0:x1]
@@ -285,7 +292,8 @@ def slice_sheet(name: str, spec: dict, cells: dict[str, np.ndarray], kinds: dict
         elif kind == "overlay":
             cells[ident] = cut_overlay(window, size, report, ident)
         elif kind == "sprite":
-            cells[ident] = cut_sprite(window, SPRITE_PX, bool(options.get("holes", False)), report, ident)
+            cells[ident] = cut_sprite(window, SPRITE_PX, bool(options.get("holes", False)),
+                                      options.get("key") == "green", report, ident)
         elif kind in ("gun", "edge_gun"):
             cells[ident], covers[ident] = cut_gun(window, report, ident, kind == "edge_gun")
         elif kind == "part":

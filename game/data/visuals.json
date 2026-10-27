@@ -81,7 +81,7 @@
 			}
 		},
 		"vis.fx.projectiles": {
-			"_doc": "Shots in flight (Phase 4.3), drawn as additive tracer streaks in one MultiMesh; no files. Per weapon id, else default. length_u and width_u are the streak's size. A look with a `sprite` (a visual id) draws as that picture instead, size_u across, turning spin_deg_s over its life (mines).",
+			"_doc": "Shots in flight (Phase 4.3), drawn as additive tracer streaks in one MultiMesh; no files. Per weapon id, else default. length_u and width_u are the streak's size. A look with a `sprite` (a visual id) draws as that picture instead, size_u across, turning spin_deg_s and pulsing brighter blink_hz times a second (mines).",
 			"default": {"color": "#ffd27a", "length_u": 0.5, "width_u": 0.07},
 			"gatling_single": {"color": "#ffd890", "length_u": 0.55, "width_u": 0.07},
 			"gatling_multi": {"color": "#ffe6a8", "length_u": 0.45, "width_u": 0.06},
@@ -92,12 +92,12 @@
 			"rocket_homing_he": {"color": "#ffa850", "length_u": 1.1, "width_u": 0.16},
 			"rocket_homing_ap": {"color": "#ff7050", "length_u": 1.1, "width_u": 0.13},
 			"emp": {"color": "#70c8ff", "length_u": 0.4, "width_u": 0.35},
-			"mines": {"sprite": "vis.fx.mine", "size_u": 0.6, "spin_deg_s": 40}
+			"mines": {"sprite": "vis.fx.mine", "size_u": 0.8, "spin_deg_s": 40, "blink_hz": 1.5}
 		},
 		"vis.fx.mine": {
 			"path": "res://assets/fx/mine.png",
 			"placeholder": "res://assets/placeholders/mine.png",
-			"_doc": "A mine in space (PLAN.md 4.6b), drawn by ProjectilePool as a sprite. The placeholder is a spiked disc from tools/make_placeholders.py; the art is A.3d."
+			"_doc": "A mine in space (PLAN.md 4.6b), drawn by ProjectilePool as a sprite. The art is A.3d (art_src/parts/fx_mines_1.jpeg #2); the placeholder is a spiked disc from tools/make_placeholders.py."
 		},
 		"vis.fx.impacts": {
 			"_doc": "Where a shot strikes (Phase 4.5), drawn in code with one MultiMesh of soft dots; no files. A hit flashes flash_u across and throws `sparks` back the way the shot came, at up to speed_u U/s, shrinking out over life_s. Per weapon id, else default.",

@@ -131,6 +131,15 @@
 			"_doc": "Run 3 of 3 of the A.3c edit: like run 2 on wide plates with a white stripe. Bulkier; all spares.",
 			"cells": {}
 		},
+		"fx_mines_1": {
+			"file": "parts/fx_mines_1.jpeg",
+			"grid": [4, 4],
+			"_doc": "Generated 2026-10-27, run 1 of 3 (A.3d); all twelve were on brief. #2: spikes for the silhouette at 40 px, and a riveted ring so it looks built.",
+			"cells": {
+				"2": ["mine", "sprite", {"key": "green"}]
+			},
+			"spares": {"1": "plain spikes", "3": "capped spikes", "4": "segmented shell"}
+		},
 		"icons_main_2": {
 			"file": "icons/icons_main_2.jpeg",
 			"grid": [4, 4],
@@ -181,6 +190,12 @@
 			"_doc": "One 128 px RGBA PNG per icon (visuals.json vis.icon.<id>), for Buttons and the pickups.",
 			"files": ["hull", "alloy", "crystal", "tech", "gc", "fire", "switch", "pause", "boost",
 				"powerup_2", "powerup_3", "powerup_4", "powerup_5"]
+		},
+		"fx": {
+			"out": "game/assets/fx",
+			"layout": "files",
+			"_doc": "Sprites drawn by the flight effects (visuals.json vis.fx.<id>), one 128 px RGBA PNG each.",
+			"files": ["mine"]
 		},
 		"tile_damage": {
 			"out": "game/assets/tiles/tile_damage.png",
