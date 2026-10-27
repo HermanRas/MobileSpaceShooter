@@ -152,6 +152,7 @@ band for the colour the player picked and keeps the shading. Each hue is far fro
 | A.2 | `parts_thrusters` | `art_src/parts/` | 12 | ✅ in the game 2026-10-27: a nozzle per type |
 | A.3 | `parts_guns` | `art_src/parts/` | 12, run ×3 | ✅ in the game 2026-10-27: 9 gun heads (A.3b re-rolled flak and seeker) |
 | A.3c | `parts_guns_edge` | `art_src/parts/` | edit of `ref_turrets.png`, run ×3 | ✅ in the game 2026-10-27: fixed and swivel pictures (v1 failed ×5) |
+| A.3d | `fx_mines` | `art_src/parts/` | 4, run ×3 | prompt ready 2026-10-27 (placeholder in the game) |
 | A.4 | `icons_main` | `art_src/icons/` | 15, run ×3 | ✅ in the game 2026-10-27: pickups, FIRE, SWITCH, Pause |
 | A.5 | `chrome_*` | `art_src/ui/` | one canvas per piece | to write |
 | A.6 | `icons_map` | `art_src/icons/` | 1 sheet | to write |
@@ -740,6 +741,55 @@ pistol grips and triggers, partly in perspective. Runs 4 and 5 are top-down on b
 plain and blocky, and none matches its turret. The masters (`parts_guns_edge_1`–`5`) are
 kept, unused. **Lesson: to get a variant of art we already have, give Gemini that art and ask
 for one change**, rather than describing it again.
+
+---
+
+## fx_mines
+
+**A.3d: 4 cells, row 1 only. Run ×3. Save them as `art_src/parts/fx_mines_1.png`, `_2`, `_3`.**
+
+A mine dropped in space (`vis.fx.mine`). Until this lands, it's a spiked disc drawn by
+`tools/make_placeholders.py` (owner, 2026-10-27: "mines look like squares" when they were a
+streak). The game draws it about 0.6 U across, turning slowly. So it has to read as **a threat at
+40 px**, and look the same from every side.
+
+```
+A 1024x1024 sprite sheet for a top-down 2D space shooter, arranged on a strict
+4x4 grid of 256x256 cells. ONLY ROW 1 is filled, one object per cell, centred in
+its cell and filling about 80% of it. ROWS 2, 3 AND 4 ARE COMPLETELY EMPTY, flat
+chroma green.
+
+BACKGROUND: flat pure chroma green #00FF00 everywhere there is no artwork. No
+gradient, no shadow on the background, no grid lines, no borders or frames.
+
+STYLE: clean, crisp sci-fi machinery seen from DIRECTLY ABOVE, perfectly flat and
+orthographic, like an object floating in space in a top-down space game. Flat
+shading with a little bevel on edges, light from the upper left, a thin dark
+outline, fine readable detail that still reads when shrunk to 40 pixels. NOT
+perspective, NOT isometric, NOT a 3D render, NOT a photo, NOT pixel art. No cast
+shadows.
+
+ROW 1, four cells: FOUR SPACE MINES, variants of one design. Each is a ROUND
+armoured sphere seen from directly above, with six to eight short sharp spikes
+pointing outward evenly all round it, so it looks the same from every side. Dark
+steel greys, with ONE small round RED #E0452A warning lamp in its centre. The
+lamp is painted, NOT glowing: no light spills from it. Variants: plain spikes; a
+ring of rivets between the spikes; spikes with small caps; a segmented shell.
+
+COLOUR: greys and the red lamp only. NO GREEN anywhere in the artwork.
+
+ROWS 2, 3 AND 4: completely empty, flat chroma green.
+
+ABSOLUTELY NO TEXT of any kind: no labels, no numbers, no letters, no digits, no
+logos, no warning signs, no symbols.
+
+Remember: no text, no green in the art, no glow, round and the same from every
+side, and only row 1 is filled.
+```
+
+**What happens to it.** The best mine is cut as a colour `sprite` off green (the slicer gets a
+green key for sprites) and staged as `assets/fx/mine.png`, which `vis.fx.mine` already points
+at. No code change.
 
 ---
 

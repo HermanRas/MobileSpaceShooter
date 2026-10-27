@@ -1662,6 +1662,17 @@ at zero size.
 Prompts are written into `Docs/ART_PROMPT.md` (one `##` section per sheet, following the §6.1
 contract). The owner generates in Gemini, and then we review, slice and stage.
 
+**Owed on the phone** (owner, 2026-10-27: the phone is only free in the evenings; tick each one
+off, or note what broke). Everything here passed on the PC in previews and drives:
+- [ ] `tools/android.sh deploy`, and the build starts as v0.0.6
+- [ ] A.1 tiles in the hangar and in flight: materials, the core, the shield glow, all four damage steps
+- [ ] The texture sampling (mipmaps on the tile, gun and icon art): no shimmer or seams when zooming
+- [ ] A.2 nozzles on every side, and the trim colour at L1, L2 and L3
+- [ ] A.3 guns: turret, fixed and swivel easy to tell apart in the hangar; heads turn smoothly
+- [ ] A.4 icons: FIRE, SWITCH and Pause big enough under a thumb; loot pickups readable
+- [ ] Mines in space read as mines (the spiked placeholder until A.3d)
+- [ ] `tools/android.sh perf` in a busy fight: guns are now textured quads (one canvas item per ship), so check the frame time against §5.5
+
 | # | Item | Sheets / canvases | Needed by |
 |---|---|---|---|
 | A.0 | ✅ 2026-10-26. **Art direction** `[D3]`: the style sentence, four tiers (world, chrome and icons, portraits, backdrops), the palette (chrome sampled from Menu Theme) and the portrait key hues, all in `Docs/ART_PROMPT.md`'s header with the canvas contract and house rules | – | before A.1 |

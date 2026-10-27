@@ -10,6 +10,7 @@ by CELL / 16 on every side. Each cell is seamless. Channels follow the ship shad
     B = unused, A = 255
 And game/assets/placeholders/tile_damage.png: four damage overlays, darker speckle per step.
 And game/assets/placeholders/icon.png: one grey ring that stands in for every icon (A.4).
+And game/assets/placeholders/mine.png: a spiked dark disc with a red lamp, for mines in space.
 """
 from __future__ import annotations
 
@@ -26,6 +27,7 @@ PAD = CELL // 16
 OUT = Path(__file__).resolve().parent.parent / "game" / "assets" / "placeholders" / "tile_atlas.png"
 DAMAGE_OUT = OUT.with_name("tile_damage.png")
 ICON_OUT = OUT.with_name("icon.png")
+MINE_OUT = OUT.with_name("mine.png")
 ICON = 64
 
 yy, xx = np.mgrid[0:CELL, 0:CELL].astype(np.float32)
@@ -140,6 +142,25 @@ def main() -> None:
     icon[..., 3] = (ring * 255).astype(np.uint8)
     Image.fromarray(icon, "RGBA").save(ICON_OUT)
     print(f"wrote {ICON_OUT.relative_to(ICON_OUT.parents[3])}")
+
+    # The mine: a disc with eight spikes (its radius swells to 1 at each spike's tip), a rim
+    # and a red lamp in the middle, lit from the upper left.
+    c = ICON / 2 - 0.5
+    angle = np.arctan2(iy - c, ix - c)
+    d = np.hypot(ix - c, iy - c) / (ICON / 2)
+    spikes = np.clip(np.cos(angle * 8), 0, 1) ** 6
+    edge = 0.62 + 0.36 * spikes
+    inside = np.clip((edge - d) * ICON / 2, 0, 1)
+    light = 0.55 + 0.35 * np.clip(((c - ix) + (c - iy)) / ICON, -1, 1)
+    grey = np.where(np.abs(d - 0.6) < 0.05, 0.3, light)
+    lamp = np.clip((0.2 - d) * ICON / 2, 0, 1)
+    mine = np.zeros((ICON, ICON, 4), dtype=np.uint8)
+    mine[..., 0] = np.clip((grey * (1 - lamp) + 0.95 * lamp) * 255, 0, 255)
+    mine[..., 1] = np.clip(grey * (1 - lamp) * 255 + lamp * 40, 0, 255)
+    mine[..., 2] = np.clip(grey * (1 - lamp) * 255 + lamp * 30, 0, 255)
+    mine[..., 3] = (inside * 255).astype(np.uint8)
+    Image.fromarray(mine, "RGBA").save(MINE_OUT)
+    print(f"wrote {MINE_OUT.relative_to(MINE_OUT.parents[3])}")
 
 
 if __name__ == "__main__":

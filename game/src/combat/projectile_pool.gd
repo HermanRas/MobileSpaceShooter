@@ -3,7 +3,9 @@ extends Node2D
 ## Every shot in flight (PLAN.md 5.5): plain arrays, not a node per bullet. Each physics tick a
 ## shot moves on, and a ray along that step finds the first hull it crosses. Ships sit on a
 ## physics layer per team (ShipBody.TEAM_LAYER), so a shot's ray only sees the other side and
-## never needs an exclusion list. Every shot draws in one MultiMesh as an additive streak.
+## never needs an exclusion list. Every shot draws in one MultiMesh as an additive streak,
+## except a shot whose look names a `sprite` (a mine): those draw as that picture, turning
+## slowly, in one more MultiMesh per sprite, normally blended.
 ##
 ## Brought forward from Phase 4.4 so the guns of 4.3 have something to fire; 4.4 stress-tested
 ## it at 600 shots on the phone. 4.6a: a shot with splash explodes where it hits (an airburst one
@@ -56,13 +58,17 @@ var _target: Array[Object] = []
 ## "weapon|damage" -> index there.
 var _specs: Array[Dictionary] = []
 var _spec_of := {}
-## [{"color", "length", "width"}] in pixels, and weapon id -> index there.
+## [{"color", "length", "width", "group", "size", "spin"}] in pixels (spin in rad per second of
+## life; group -1 is a streak), and weapon id -> index there.
 var _looks: Array[Dictionary] = []
 var _look_of := {}
 var _query := PhysicsRayQueryParameters2D.new()
 var _blast_query := PhysicsShapeQueryParameters2D.new()
 var _blast_shape := CircleShape2D.new()
 var _view := MultiMeshInstance2D.new()
+## One MultiMesh per sprite (a visuals.json id), and id -> index there.
+var _groups: Array[MultiMeshInstance2D] = []
+var _group_of := {}
 ## Live rockets as targets for anti-missile guns: [{"pos", "vel" (U), "team"}], built once a tick.
 var _rockets: Array = []
 var _rockets_frame := -1
@@ -78,15 +84,7 @@ func _ready() -> void:
 	_flags.resize(CAPACITY)
 	_look.resize(CAPACITY)
 	_target.resize(CAPACITY)
-	var quad := QuadMesh.new()
-	quad.size = Vector2.ONE
-	var multimesh := MultiMesh.new()
-	multimesh.transform_format = MultiMesh.TRANSFORM_2D
-	multimesh.use_colors = true
-	multimesh.mesh = quad
-	multimesh.instance_count = CAPACITY
-	multimesh.visible_instance_count = 0
-	_view.multimesh = multimesh
+	_view.multimesh = _multimesh()
 	_view.texture = _streak()
 	var additive := CanvasItemMaterial.new()
 	additive.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
@@ -200,15 +198,29 @@ func _physics_process(delta: float) -> void:
 func _process(_delta: float) -> void:
 	var started := Time.get_ticks_usec()
 	var multimesh := _view.multimesh
-	multimesh.visible_instance_count = count
+	var streaks := 0
+	var in_group := PackedInt32Array()
+	in_group.resize(_groups.size())
 	for i in count:
 		var look := _looks[_look[i]]
-		var along := _vel[i].normalized() if _vel[i].length_squared() > 1.0 else Vector2.RIGHT  # a mine at rest
+		var group: int = look["group"]
+		if group >= 0:
+			var size: float = look["size"]
+			_groups[group].multimesh.set_instance_transform_2d(in_group[group],
+					Transform2D(_life[i] * float(look["spin"]), Vector2(size, size), 0.0, _pos[i]))
+			_groups[group].multimesh.set_instance_color(in_group[group], Color.WHITE)
+			in_group[group] += 1
+			continue
+		var along := _vel[i].normalized() if _vel[i].length_squared() > 1.0 else Vector2.RIGHT
 		var length: float = look["length"]
 		# A streak trailing back from the shot's head.
-		multimesh.set_instance_transform_2d(i, Transform2D(along * length, along.orthogonal() * float(look["width"]),
+		multimesh.set_instance_transform_2d(streaks, Transform2D(along * length, along.orthogonal() * float(look["width"]),
 				_pos[i] - along * length * 0.5))
-		multimesh.set_instance_color(i, look["color"])
+		multimesh.set_instance_color(streaks, look["color"])
+		streaks += 1
+	multimesh.visible_instance_count = streaks
+	for group in _groups.size():
+		_groups[group].multimesh.visible_instance_count = in_group[group]
 	draw_usec = Time.get_ticks_usec() - started
 
 
@@ -290,6 +302,19 @@ func _spec_for(shot: Dictionary, weapon_id: StringName, source: StringName) -> i
 static var _streak_texture: GradientTexture2D
 
 
+## Room for every shot, as unit quads placed by their transforms.
+static func _multimesh() -> MultiMesh:
+	var quad := QuadMesh.new()
+	quad.size = Vector2.ONE
+	var multimesh := MultiMesh.new()
+	multimesh.transform_format = MultiMesh.TRANSFORM_2D
+	multimesh.use_colors = true
+	multimesh.mesh = quad
+	multimesh.instance_count = CAPACITY
+	multimesh.visible_instance_count = 0
+	return multimesh
+
+
 ## A streak that fades in from its tail (u = 0) to a bright head (u = 1).
 static func _streak() -> GradientTexture2D:
 	if _streak_texture == null:
@@ -303,6 +328,21 @@ static func _streak() -> GradientTexture2D:
 	return _streak_texture
 
 
+## The MultiMesh index for shots drawn as the sprite `id`, made on first use; -1 for none.
+func _group_for(id: StringName) -> int:
+	if id == &"":
+		return -1
+	if not _group_of.has(id):
+		var view := MultiMeshInstance2D.new()
+		view.multimesh = _multimesh()
+		view.texture = Assets.tex(id)
+		view.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+		add_child(view)
+		_groups.append(view)
+		_group_of[id] = _groups.size() - 1
+	return _group_of[id]
+
+
 func _look_for(weapon_id: StringName) -> int:
 	if _look_of.has(weapon_id):
 		return _look_of[weapon_id]
@@ -311,6 +351,8 @@ func _look_for(weapon_id: StringName) -> int:
 	_looks.append({
 		"color": Color.from_string(str(raw.get("color", "#ffd27a")), Color.ORANGE),
 		"length": float(raw.get("length_u", 0.5)) * PX, "width": float(raw.get("width_u", 0.07)) * PX,
+		"group": _group_for(StringName(raw.get("sprite", ""))), "size": float(raw.get("size_u", 0.4)) * PX,
+		"spin": deg_to_rad(float(raw.get("spin_deg_s", 0.0))),
 	})
 	_look_of[weapon_id] = _looks.size() - 1
 	return _looks.size() - 1

@@ -272,6 +272,8 @@ func _step_specials() -> void:
 		if pool._specs[pool._spec[k]]["proximity"] > 0.0:
 			mine = pool._pos[k]
 	_check(mine != Vector2.INF, "FIRE drops a mine behind")
+	await _frames(2)
+	_save_shot("drive_mines.png")
 	if mine == Vector2.INF or sandbox.target == null:
 		_hangar.land()
 		return
