@@ -19,6 +19,13 @@ draws them 4-8 px wide and not always centred) and its edges are evened out so i
 pulling each edge pair toward their mean over a narrow band. That fixes Gemini's near-seamless
 textures without the ghosting a cross-fade puts on straight panel lines.
 
+A part (A.2's thruster nozzles) is drawn on chroma green, because its nozzle mouth is as dark
+as a black background. Green is keyed the same way, by a flood fill from the border, and its
+spill is removed by reading the grey from R and B only (the art is greyscale, so G is the only
+channel the green bleeds into). The art is stretched to fill the whole cell, since the game
+samples a part in its own frame (flange to mouth, along the edge), and its coverage goes into B
+inverted: B = 255 is cut out, so the placeholder atlas (B = 0) stays solid.
+
 Atlas layout (the ship shader's contract): a column per entry of a row, a row per variant, every
 cell padded by cell_px / 16 on each side (wrapped for materials, edge-extended otherwise), so
 mipmaps and linear filtering never read a neighbouring cell. The pad is 1/18 of the stride
@@ -42,6 +49,7 @@ GUTTER_LUMA = 40          # a gutter column/row is darker than this on average
 INSET_PX = 3              # cut this far inside the gutters, past the JPEG ringing
 EVEN_BAND_PX = 16         # how far in from each edge the seam correction reaches
 TRIM_FROM, TRIM_TO = 225, 250   # near-white becomes the untinted trim mask (G)
+GREEN_MARGIN = 60         # chroma key: G exceeds both R and B by more than this
 
 
 def luma(rgb: np.ndarray) -> np.ndarray:
@@ -150,8 +158,28 @@ def cut_keyed(rgb: np.ndarray, size: int, base: np.ndarray, fill: float,
     return np.asarray(out).astype(np.float32)
 
 
+def cut_part(rgb: np.ndarray, size: int, report: list[str], ident: str) -> tuple[np.ndarray, np.ndarray]:
+    """Key a part off its chroma-green background and stretch it over the whole cell. Returns
+    (grey, coverage 0..1)."""
+    r, g, b = rgb[..., 0], rgb[..., 1], rgb[..., 2]
+    green = (g - np.maximum(r, b)) > GREEN_MARGIN
+    # Gemini sometimes rules a thin dark grid line on the cell border: treat it as background.
+    green[:INSET_PX, :] = green[-INSET_PX:, :] = True
+    green[:, :INSET_PX] = green[:, -INSET_PX:] = True
+    cover = box_blur3((~fill_from_border(green)).astype(np.float32))
+    ys, xs = np.nonzero(cover > 0.5)
+    x0, y0, x1, y1 = xs.min(), ys.min(), xs.max() + 1, ys.max() + 1
+    grey = (r + b) / 2.0
+    stretch = lambda a: np.asarray(Image.fromarray(np.clip(a, 0, 255).astype(np.uint8), "L")
+                                   .resize((size, size), Image.Resampling.LANCZOS)).astype(np.float32)
+    out_grey, out_cover = stretch(grey[y0:y1, x0:x1]), stretch(cover[y0:y1, x0:x1] * 255) / 255
+    report.append(f"  {ident:16s} part      {x1 - x0}x{y1 - y0} -> {size}x{size}  "
+                  f"covers {out_cover.mean():.0%}  trim {(out_grey * out_cover >= TRIM_FROM).mean():.1%}")
+    return out_grey, out_cover
+
+
 def slice_sheet(name: str, spec: dict, cells: dict[str, np.ndarray], kinds: dict[str, str],
-                size: int, report: list[str]) -> None:
+                covers: dict[str, np.ndarray], size: int, report: list[str]) -> None:
     src = ART / spec["file"]
     rgb = np.asarray(Image.open(src).convert("RGB")).astype(np.float32)
     rows, cols = spec["grid"]
@@ -168,6 +196,8 @@ def slice_sheet(name: str, spec: dict, cells: dict[str, np.ndarray], kinds: dict
             cells[ident] = cut_material(window, size, report, ident)
         elif kind == "overlay":
             cells[ident] = cut_overlay(window, size, report, ident)
+        elif kind == "part":
+            cells[ident], covers[ident] = cut_part(window, size, report, ident)
         elif kind == "keyed":
             cells[ident] = cut_keyed(window, size, cells[options["base"]], float(options.get("fill", 0.9)),
                                      report, ident)
@@ -197,7 +227,8 @@ def review(name: str, spec: dict, cells: dict[str, np.ndarray], path: Path) -> N
     sheet.save(path)
 
 
-def pack(name: str, spec: dict, cells: dict[str, np.ndarray], kinds: dict[str, str], report: list[str]) -> None:
+def pack(name: str, spec: dict, cells: dict[str, np.ndarray], kinds: dict[str, str],
+         covers: dict[str, np.ndarray], report: list[str]) -> None:
     size = int(spec["cell_px"])
     pad = size // 16
     stride = size + 2 * pad
@@ -216,6 +247,10 @@ def pack(name: str, spec: dict, cells: dict[str, np.ndarray], kinds: dict[str, s
             if spec.get("trim", False):
                 trim = np.clip((padded - TRIM_FROM) / (TRIM_TO - TRIM_FROM), 0, 1)
                 block[..., 1] = (trim * 255).astype(np.uint8)
+            if ident in covers:
+                cover = np.pad(covers[ident], pad, mode="edge")
+                block[..., 1] = (block[..., 1] * cover).astype(np.uint8)
+                block[..., 2] = ((1 - cover) * 255).astype(np.uint8)
     path = ROOT / spec["out"]
     path.parent.mkdir(parents=True, exist_ok=True)
     Image.fromarray(out, "RGBA").save(path)
@@ -228,15 +263,16 @@ def main() -> int:
     size = max(int(a["cell_px"]) for a in config["atlases"].values())
     cells: dict[str, np.ndarray] = {}
     kinds: dict[str, str] = {}
+    covers: dict[str, np.ndarray] = {}
     report: list[str] = []
     for name, spec in config["sheets"].items():
-        slice_sheet(name, spec, cells, kinds, size, report)
+        slice_sheet(name, spec, cells, kinds, covers, size, report)
     for name, spec in config["atlases"].items():
         missing = [i for row in spec["rows"] for i in row if i not in cells]
         if missing:
             print(f"{name}: no cell called {', '.join(sorted(set(missing)))}", file=sys.stderr)
             return 1
-        pack(name, spec, cells, kinds, report)
+        pack(name, spec, cells, kinds, covers, report)
     print("\n".join(report))
     return 0
 

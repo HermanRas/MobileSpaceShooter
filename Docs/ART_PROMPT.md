@@ -144,7 +144,7 @@ band for the colour the player picked and keeps the shading. Each hue is far fro
 |---|---|---|---|---|
 | A.1 | `tiles_materials` | `art_src/tiles/` | 15 | ✅ in the game 2026-10-26: hull, armour, hardpoint |
 | A.1b | `tiles_cores_shields` | `art_src/tiles/` | 12 | ✅ in the game 2026-10-26: core, shields, damage |
-| A.2 | `parts_thrusters` | `art_src/parts/` | 9 | to write |
+| A.2 | `parts_thrusters` | `art_src/parts/` | 12 | ✅ in the game 2026-10-27: a nozzle per type |
 | A.3 | `parts_weapons_*` | `art_src/parts/` | 2–3 sheets | to write |
 | A.4 | `icons_*` | `art_src/icons/` | 2 sheets | to write |
 | A.5 | `chrome_*` | `art_src/ui/` | one canvas per piece | to write |
@@ -344,6 +344,122 @@ Exactly what was asked, row by row, so asking one kind per row worked.
 
 Cut and packed by `tools/slice_sheets.py` (cells and kinds in `art_src/sheets.json`). See it
 with `tools/preview.sh res://dev_preview/art_tiles.tscn 1800x700 --ship=gunboat --zoom=2.2`.
+
+---
+
+## parts_thrusters
+
+**A.2: 12 cells, rows 1–3; row 4 stays empty. Save it as `art_src/parts/parts_thrusters.png`.**
+
+The nozzles currently borrow a ribbed panel, tinted per type. This sheet gives each type its
+own part, **one type per row** (the A.1b lesson), with four variants per row to pick from.
+
+**Why not 9 cells (type × S/M/L):** a nozzle is the same shape at every size. It covers
+0.25 / 0.5 / 1 U of a hardpoint edge and sticks out half that (`Mounting.nozzle()`: a
+trapezoid that narrows by 15% each side away from the hull). A Small one is 16 × 8 px at
+rest zoom, so a separate Small drawing would never be seen. Size is geometry, not art.
+
+Its shape is fixed by that trapezoid. **The exhaust points right** (house rule), so the edge it
+bolts to runs up and down: a nozzle is **twice as tall as it is long**, full height at the
+flange on the left, about 70% at the mouth on the right.
+
+| Row | Type | What sells it (§4.3) |
+|---|---|---|
+| 1 | Pulse | Cheap, blocky, industrial: a thumper that kicks every half second |
+| 2 | Jet | Hot and mechanical: a ribbed combustion nozzle with petal flaps |
+| 3 | Ion | The best: smooth, precise, wrapped in coils |
+
+```
+A 1024x1024 sprite sheet of spaceship thruster nozzles for a top-down 2D spaceship
+building game, arranged on a strict 4x4 grid of 256x256 cells. Rows 1 to 3 are
+filled, 4 cells each, one nozzle per cell, centred in its cell. ROW 4 IS
+COMPLETELY EMPTY, flat chroma green.
+
+BACKGROUND: flat pure chroma green #00FF00 everywhere there is no artwork: around
+every nozzle, between the nozzles and in all of row 4. No gradient, no shadow on
+the background, no grid lines, no borders or frames.
+
+STYLE: clean, crisp sci-fi machinery seen from DIRECTLY ABOVE, perfectly flat and
+orthographic, like an engine part bolted to the edge of a starship in a top-down
+space game. Flat shading with a little bevel on edges, light from the upper left,
+fine readable detail that still reads when shrunk to 32 pixels. NOT perspective,
+NOT isometric, NOT a 3D render, NOT a photo, NOT pixel art. No cast shadows.
+
+COLOUR: STRICTLY GREYSCALE. No colour at all, no tint, no hue, and NO GREEN
+anywhere in the artwork. Light-to-mid greys (around 55% to 80% brightness); dark
+greys and black only in recesses and inside the nozzle mouth. Each nozzle has
+exactly ONE thin band of PURE WHITE #FFFFFF running across its body from top to
+bottom, like a painted trim ring; nothing else on it is pure white.
+
+EVERY NOZZLE HAS THE SAME SHAPE AND FACING. It lies flat, seen from above, with
+its exhaust pointing RIGHT, so we see its outline side-on:
+- It is TALL AND NARROW: about 230 pixels tall and 115 pixels wide, twice as tall
+  as it is wide.
+- Its LEFT side is a flat, straight mounting flange running its full height,
+  where it bolts onto the ship.
+- It narrows evenly towards the RIGHT. Its right end, the nozzle mouth, is about
+  70% as tall as the flange.
+- The mouth is a dark opening with a bevelled rim. NO flame, NO glow, NO exhaust,
+  NO light coming out of it.
+
+EACH ROW IS ONE TYPE OF THRUSTER, four variants of one design family per row:
+
+ROW 1, four cells: PULSE THRUSTERS. Chunky and blocky: a heavy squared-off
+housing with thick riveted reinforcing bands and a short square mouth with a row
+of small round vent ports, like an industrial piston thumper. The cheapest,
+toughest-looking engine.
+
+ROW 2, four cells: JET THRUSTERS. A combustion engine: the housing tapers in
+clear stacked segments with ribbed cooling fins, into a mouth ringed by
+overlapping petal-shaped nozzle flaps. Mechanical and powerful.
+
+ROW 3, four cells: ION THRUSTERS. A high-tech drive: a smooth rounded housing
+wrapped in two or three raised magnetic coil bands, ending in a mouth covered by
+a fine grid of tiny holes. Sleek, precise, the most advanced engine.
+
+The three rows must be easy to tell apart at a glance by shape alone: pulse is
+blocky and square, jet is ribbed with petal flaps, ion is smooth and coiled.
+
+ROW 4: completely empty, flat chroma green.
+
+ABSOLUTELY NO TEXT of any kind: no labels, no numbers, no letters, no digits, no
+logos, no emblems, no insignia, no warning signs.
+
+Original designs only: nothing resembling a thruster or ship from any film, TV
+show or game.
+
+Remember: no text, no colour, no green in the art, no flames or glow, every
+exhaust points right, and row 4 is empty.
+```
+
+**What happens to it.**
+- The slicer keys off the green (flood-filled from the border, as `keyed` does with black;
+  the green key gets added when the sheet arrives) and keeps the cut-out as a coverage mask,
+  so the nozzle is drawn with the art's own silhouette, not a plain trapezoid.
+- The best variant of each type goes into the thruster column of `tile_atlas.png`, **one type
+  per variant row** (pulse, jet, ion), in place of `ribs`. No new texture, so the ship stays one
+  draw call.
+- The game samples it in the **nozzle's own frame**: across from the flange to the mouth, and
+  along the edge. So it turns with the mount, and the same picture serves S, M and L.
+- The white band becomes the trim mask (G), coloured **by level** (L1–3, §8 A.2) in place of
+  today's whole-nozzle type tint. Type then reads from the shape.
+
+### Review, 2026-10-27: what came back
+
+Right on the first try where it mattered: three rows that read as three types at a glance,
+greyscale, no glow, every exhaust pointing right, and most cells with the white band.
+- **Gemini ignored the proportions.** It drew each nozzle about as long as it is tall,
+  filling the cell, not half as long. Squashed to the game's 2:1 they still read, because the
+  slicer stretches a part over its whole cell anyway. **Pixel sizes in a prompt are ignored;
+  the cell's shape wins.** If a later part needs a set proportion, ask for it relative to
+  something drawn in the same cell.
+- It ruled thin dark grid lines on the cell borders. The `part` cut treats a 3 px border as
+  background.
+- **Used:** pulse 2 (vent ports and a white band; 1 has no band), jet 7, ion 11 (the hole grid).
+  The rest are spares in the master.
+
+Seen with `tools/preview.sh res://scenes/debug/thruster_fx_showcase.tscn 1560x720 --frames=45`
+(every type × size × level) and `art_tiles.tscn --ship=meteor` (ion) or `--ship=harrier` (jet).
 
 ---
 

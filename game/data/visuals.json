@@ -8,7 +8,11 @@
 			"cells": ["core", "hull", "armor", "shield", "hardpoint", "thruster"],
 			"variants": 3,
 			"thruster_tints": {"pulse": "#d9822b", "jet": "#c0392b", "ion": "#3a7bd5"},
-			"_doc": "A column per tile type (in `cells` order), a row per variant, each cell padded by 1/18 of its stride; thruster nozzles are tinted by type. R = detail, G = untinted trim (PLAN.md 6.2). Built by tools/slice_sheets.py from art_src/sheets.json (A.1)."
+			"thruster_rows": ["pulse", "jet", "ion"],
+			"thruster_body": "#b8bec6",
+			"thruster_tint_share": 0.35,
+			"thruster_level_trims": ["#c07a2c", "#e6ebf0", "#f3cd37"],
+			"_doc": "A column per tile type (in `cells` order), a row per variant, each cell padded by 1/18 of its stride. R = detail, G = untinted trim (PLAN.md 6.2), B = cut out (parts only). The thruster column holds one nozzle per type, a row each in `thruster_rows` order (A.2); a nozzle is thruster_body tinted thruster_tint_share of the way to its type's tint (the hangar's swatches use the full tint), and its trim band shows its level, L1-3 bronze, silver, gold. Built by tools/slice_sheets.py from art_src/sheets.json (A.1, A.2)."
 		},
 		"vis.tiles.damage": {
 			"path": "res://assets/tiles/tile_damage.png",

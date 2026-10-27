@@ -29,6 +29,10 @@ static func make_material() -> ShaderMaterial:
 	material.set_shader_parameter(&"columns", float(_cell_names().size()))
 	material.set_shader_parameter(&"variants", float(_variants()))
 	material.set_shader_parameter(&"core_column", float(maxi(_cell_names().find("core"), 0)))
+	material.set_shader_parameter(&"part_column", float(maxi(_cell_names().find("thruster"), 0)))
+	var trims: Array = Assets.meta(ATLAS_ID).get("thruster_level_trims", [])
+	for i in mini(trims.size(), 3):
+		material.set_shader_parameter(StringName("level_trim_%d" % (i + 1)), Color.from_string(str(trims[i]), Color.WHITE))
 	return material
 
 
@@ -49,14 +53,25 @@ static func build(tiles: Array, placement: Placement, bp: Blueprint = null, wear
 		_add_fan(vertices, colors, uvs, polygon, maxi(cells.find(String(tile.type)), 0), tile.paint,
 				wear.get(tile.id, 0) * variants + variant_of(polygon, variants), tile.type == placement.tiles.core_id())
 	if bp != null and not bp.mounts.is_empty():
-		var thruster_cell := maxi(cells.find("thruster"), 0)
-		var tints: Dictionary = Assets.meta(ATLAS_ID).get("thruster_tints", {})
 		for mount in bp.mounts:
 			var type_id := ThrusterLib.type_of_part(str(mount.get("part", "")))
 			var mount_frame := Mounting.frame(placement, bp, mount) if on_ship.has(int(mount.get("tile", -1))) else {}
 			if type_id != &"" and not mount_frame.is_empty():
-				_add_fan(vertices, colors, uvs, Mounting.nozzle(mount_frame), thruster_cell,
-						Color.from_string(str(tints.get(String(type_id), "#888888")), Color.GRAY))
+				_add_thruster(vertices, colors, uvs, type_id, mount_frame, int(mount.get("level", 1)))
+	return _to_mesh(vertices, colors, uvs)
+
+
+## One thruster's nozzle on its own, for showcases: `mount_frame` needs center, normal, length
+## and depth (Mounting.frame()).
+static func nozzle_mesh(type_id: StringName, mount_frame: Dictionary, level: int) -> ArrayMesh:
+	var vertices := PackedVector2Array()
+	var colors := PackedColorArray()
+	var uvs := PackedVector2Array()
+	_add_thruster(vertices, colors, uvs, type_id, mount_frame, level)
+	return _to_mesh(vertices, colors, uvs)
+
+
+static func _to_mesh(vertices: PackedVector2Array, colors: PackedColorArray, uvs: PackedVector2Array) -> ArrayMesh:
 	var mesh := ArrayMesh.new()
 	if vertices.is_empty():
 		return mesh
@@ -103,6 +118,40 @@ static func _add_fan(vertices: PackedVector2Array, colors: PackedColorArray, uvs
 			colors.append(Color(paint.r, paint.g, paint.b, corner[1]))
 			var at := (p - box_center) / box_size if local else p
 			uvs.append(Vector2(cell * PACK + LOCAL_OFFSET + at.x, code * PACK + LOCAL_OFFSET + at.y))
+
+
+## A thruster's nozzle in its type's look: thruster_body, tinted part of the way to the type's
+## colour, in the type's row of the atlas's thruster column.
+static func _add_thruster(vertices: PackedVector2Array, colors: PackedColorArray, uvs: PackedVector2Array,
+		type_id: StringName, mount_frame: Dictionary, level: int) -> void:
+	var meta := Assets.meta(ATLAS_ID)
+	var tint := Color.from_string(str(meta.get("thruster_tints", {}).get(String(type_id), "#888888")), Color.GRAY)
+	var body := Color.from_string(str(meta.get("thruster_body", "#b8bec6")), Color.GRAY)
+	var row := clampi((meta.get("thruster_rows", []) as Array).find(String(type_id)), 0, _variants() - 1)
+	_add_part(vertices, colors, uvs, mount_frame, maxi(_cell_names().find("thruster"), 0), row,
+			body.lerp(tint, float(meta.get("thruster_tint_share", 0.0))), level)
+
+
+## A thruster's nozzle (A.2): its whole footprint box, textured in the nozzle's own frame (x from
+## the flange out to the mouth, y along the edge, turned the same way for every mount), so one
+## picture serves every size and side. The art's cut-out (atlas B) gives it its silhouette.
+## `row` is the type's row in the atlas column, and vertex alpha carries the level (L1-3 as
+## 0, 0.5, 1) for the trim colour, since a part has no bevel to keep an edge distance for.
+static func _add_part(vertices: PackedVector2Array, colors: PackedColorArray, uvs: PackedVector2Array,
+		mount_frame: Dictionary, cell: int, row: int, body: Color, level: int) -> void:
+	var normal: Vector2 = mount_frame["normal"]
+	var side := Vector2(-normal.y, normal.x)
+	var half := side * float(mount_frame["length"]) * 0.5
+	var base: Vector2 = mount_frame["center"]
+	var out := normal * float(mount_frame["depth"])
+	var corners := [[base - half, Vector2(-0.5, -0.5)], [base + half, Vector2(-0.5, 0.5)],
+			[base + half + out, Vector2(0.5, 0.5)], [base - half + out, Vector2(0.5, -0.5)]]
+	var level_code := clampf((level - 1) * 0.5, 0.0, 1.0)
+	for i: int in [0, 1, 2, 0, 2, 3]:
+		vertices.append(corners[i][0] * PX_PER_U)
+		colors.append(Color(body.r, body.g, body.b, level_code))
+		var at: Vector2 = corners[i][1]
+		uvs.append(Vector2(cell * PACK + LOCAL_OFFSET + at.x, row * PACK + LOCAL_OFFSET + at.y))
 
 
 static func _distance_to_line(p: Vector2, a: Vector2, b: Vector2) -> float:

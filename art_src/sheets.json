@@ -34,6 +34,16 @@
 				"11": ["damage_3", "overlay"],
 				"12": ["damage_4", "overlay"]
 			}
+		},
+		"parts_thrusters": {
+			"file": "parts/parts_thrusters.jpeg",
+			"grid": [4, 4],
+			"_doc": "Generated 2026-10-27. Gemini drew the nozzles about as long as tall, not half as long; squashed to the game's 2:1 they still read (ART_PROMPT.md review). One per type: pulse 2 (vents and a white band), jet 7, ion 11 (the hole grid).",
+			"cells": {
+				"2": ["nozzle_pulse", "part"],
+				"7": ["nozzle_jet", "part"],
+				"11": ["nozzle_ion", "part"]
+			}
 		}
 	},
 	"atlases": {
@@ -41,11 +51,11 @@
 			"out": "game/assets/tiles/tile_atlas.png",
 			"cell_px": 256,
 			"trim": true,
-			"_doc": "The ship shader's materials: a column per tile type (visuals.json vis.tiles.material_atlas `cells`), a row per variant. R = detail, G = untinted trim (the art's near-white). The thruster column borrows the ribbed panel until A.2.",
+			"_doc": "The ship shader's materials: a column per tile type (visuals.json vis.tiles.material_atlas `cells`), a row per variant. R = detail, G = untinted trim (the art's near-white). The thruster column holds one nozzle per type, a row each (visuals.json `thruster_rows`), with B = cut out (A.2).",
 			"rows": [
-				["core_a", "hull_a", "armor_a", "shield_hex", "hardpoint_a", "ribs"],
-				["core_a", "hull_b", "armor_b", "shield_diamond", "hardpoint_b", "ribs"],
-				["core_a", "hull_c", "armor_c", "shield_circuit", "hardpoint_c", "ribs"]
+				["core_a", "hull_a", "armor_a", "shield_hex", "hardpoint_a", "nozzle_pulse"],
+				["core_a", "hull_b", "armor_b", "shield_diamond", "hardpoint_b", "nozzle_jet"],
+				["core_a", "hull_c", "armor_c", "shield_circuit", "hardpoint_c", "nozzle_ion"]
 			]
 		},
 		"tile_damage": {
