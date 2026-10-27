@@ -1688,13 +1688,15 @@ contract). The owner generates in Gemini, and then we review, slice and stage.
 
 **Owed on the phone** (owner, 2026-10-27: the phone is only free in the evenings; tick each one
 off, or note what broke). Everything here passed on the PC in previews and drives:
-- [ ] `tools/android.sh deploy`, and the build starts as v0.0.6
+- [ ] `tools/android.sh deploy` (from main: v0.0.6 plus 7.1, 7.2 and the chrome)
 - [ ] A.1 tiles in the hangar and in flight: materials, the core, the shield glow, all four damage steps
 - [ ] The texture sampling (mipmaps on the tile, gun and icon art): no shimmer or seams when zooming
 - [ ] A.2 nozzles on every side, and the trim colour at L1, L2 and L3
 - [ ] A.3 guns: turret, fixed and swivel easy to tell apart in the hangar; heads turn smoothly
 - [ ] A.4 icons: FIRE, SWITCH and Pause big enough under a thumb; loot pickups readable
 - [ ] Mines in space read as mines (A.3d: 0.8 U, blinking), and the blink isn't too much
+- [ ] A.5 chrome: crisp, not soft (the 2× art through a size override); the chosen hangar tab stands out; buttons still easy to hit
+- [ ] 7.1/7.2: the Creative gun-level slider drags smoothly; a test fight and its results card
 - [ ] `tools/android.sh perf` in a busy fight: guns are now textured quads (one canvas item per ship), so check the frame time against §5.5
 
 | # | Item | Sheets / canvases | Needed by |
