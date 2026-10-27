@@ -193,6 +193,11 @@ func _weapon_row() -> void:
 		swatch.caption = weapons.weapon(weapon_id)["name"]
 		swatch.tooltip_text = String(weapon_id)
 		swatch.disabled = not weapons.allows(weapon_id, mount_type)
+		if swatch.disabled:
+			var names: PackedStringArray = []
+			for each: String in weapons.weapon(weapon_id)["mounts"]:
+				names.append(weapons.mount_type(StringName(each)).get("name", each))
+			swatch.note = "%s only" % " / ".join(names)
 		if stock != null:
 			swatch.corner = "%d GC" % weapons.weapon(weapon_id)["price_gc"]
 		swatch.gui_input.connect(func(event: InputEvent) -> void:
@@ -402,6 +407,8 @@ class _ShapeSwatch extends PanelContainer:
 	## An XP bar along the top (0..1), or none when negative.
 	var bar := -1.0
 	var disabled := false
+	## Why it's disabled ("Fixed only"), written across the dimmed part.
+	var note: String = ""
 	var _mesh_view: MeshInstance2D
 
 	func _ready() -> void:
@@ -441,6 +448,11 @@ class _ShapeSwatch extends PanelContainer:
 				points.append(size * 0.5 + p * s)
 			draw_colored_polygon(points, Color(fill, 0.35) if disabled else fill)
 			draw_polyline(points + PackedVector2Array([points[0]]), Color(0, 0, 0, 0.8), 2.0, true)
+		if not note.is_empty():
+			draw_string_outline(get_theme_default_font(), Vector2(0, size.y * 0.5 + 4), note, HORIZONTAL_ALIGNMENT_CENTER,
+					size.x, 12, 4, Color(0, 0, 0, 0.9))
+			draw_string(get_theme_default_font(), Vector2(0, size.y * 0.5 + 4), note, HORIZONTAL_ALIGNMENT_CENTER,
+					size.x, 12, Color(1, 0.85, 0.5))
 		if not caption.is_empty():
 			var font := get_theme_default_font()
 			var font_size := 14

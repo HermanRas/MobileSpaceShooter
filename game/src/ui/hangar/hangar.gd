@@ -1062,6 +1062,9 @@ func preview_setup(args: Dictionary) -> void:
 		for button in _palette.find_children("*", "Button", true, false):
 			if (button as Button).text.to_lower() == String(args["tab"]).to_lower():
 				(button as Button).button_pressed = true
+	if args.has("family"):
+		_palette.family = String(args["family"])
+		_palette._refresh_shapes()
 	if args.has("ghost"):
 		var parts: PackedStringArray = (args["ghost"] as String).split(",")
 		_carry = {"type": _palette.type, "shape": StringName(parts[0]), "size": StringName(parts[1]),
