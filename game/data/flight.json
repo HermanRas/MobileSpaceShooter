@@ -82,5 +82,17 @@
 		"half_size_u": 120.0,
 		"warn_margin_u": 25.0,
 		"push_back": 3.0
+	},
+	"bench": {
+		"_doc": "The performance test (PLAN.md 7.5, Creative's Fly panel): section 5.5's worst case flown with the Creative ship, which takes no damage. A station stand-in (cols x rows Large squares round a core, a turret every 4th column and 3rd row with guns taken in turn from guns) sits ahead; `enemies` roster ships at `level` come in round the player, spawns_per_tick at a time, and are replaced as they fall; the projectile pool is topped up to `shots` with zero-damage sprays from the player (shot_speed_u, out to shot_range_u). After warmup_s, every frame is timed for `seconds`. Runs are kept in user://perf_runs.json.",
+		"enemies": 40,
+		"level": 20,
+		"spawns_per_tick": 4,
+		"station": {"cols": 15, "rows": 10, "guns": ["gatling_single", "flak", "cannon", "rocket_homing_he", "laser"]},
+		"shots": 600,
+		"shot_speed_u": 40.0,
+		"shot_range_u": 24.0,
+		"warmup_s": 3.0,
+		"seconds": 20.0
 	}
 }

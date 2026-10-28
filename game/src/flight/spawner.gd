@@ -93,6 +93,16 @@ func spawn_ship(from: StringName, id: String, level: int, gun_level := 0, where 
 	var entry := roster.entry(StringName(id)) if from == FROM_ENEMIES else null
 	if entry != null and entry.ally:
 		return spawn_carrier(bp, entry, [])
+	return _spawn_placed(bp, entry, level, gun_level, where)
+
+
+## `bp` itself (already valid) as an enemy at encounter `level`, placed as spawn_ship places one:
+## the performance test's station comes this way (7.5).
+func spawn_design(bp: Blueprint, level: int, where := AHEAD) -> ShipBody:
+	return _spawn_placed(bp, null, level, 0, where)
+
+
+func _spawn_placed(bp: Blueprint, entry: EnemyRoster.Entry, level: int, gun_level: int, where: StringName) -> ShipBody:
 	var place := _place_ahead.bind(bp)
 	if where == AROUND:
 		var sizes: Array[float] = [reach_u(bp, _placement) * 2.0]

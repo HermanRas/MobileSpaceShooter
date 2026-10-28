@@ -22,6 +22,7 @@ tools/drive.sh res://dev_preview/drive_stocked.tscn      # the stocked hangar: w
 tools/drive.sh res://dev_preview/drive_testflight.tscn   # Creative test fights: L1 easy, L100 brutal, results card
 tools/drive.sh res://dev_preview/drive_shop.tscn         # pilot A publishes a ship, pilot B buys it in the shop
 tools/drive.sh res://dev_preview/drive_share.tscn        # ships to and from a file and a share code, and Save as enemy
+tools/drive.sh res://dev_preview/drive_bench.tscn        # the performance test runs and keeps its result (container fps are meaningless)
 $GODOT --headless --path game res://dev_preview/trace_flight.tscn -- --ship=starter --stick=0,-1 --seconds=6
                                   # frame-by-frame flight trace (add --from=4.0 for every frame)
 tools/run.sh python3 -I tools/licence_audit.py            # every asset declared?
@@ -30,6 +31,7 @@ tools/run.sh python3 -I tools/slice_sheets.py             # Gemini sheets in art
 tools/preview.sh res://dev_preview/art_tiles.tscn 1800x700 --ship=gunboat --zoom=2.2   # tile art, wear 0-4
 tools/android.sh export|devices|deploy|logcat             # see Docs/MOBILE_DEPLOY.md
 tools/android.sh perf                                     # phone fps / frame time / refresh (debug builds)
+tools/android.sh runs                                     # every performance test run kept on the phone (JSON)
 tools/android.sh shot NAME                                # phone screenshot -> build/phone_NAME.png
 tools/android.sh adb shell input tap X Y                  # drive the phone (screen px, landscape)
 ```

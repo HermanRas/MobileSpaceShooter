@@ -31,6 +31,9 @@ extends Node
 ## Test fight (7.2, Creative): with `test_level` set before `open()`, there's no practice target,
 ## no Spawn or Guns button and no respawn: a generated fight at that level comes in, and when it's
 ## cleared or the ship is destroyed, the results card (TestResults) shows how it went.
+##
+## Performance test (7.5, Creative): `test_level` BENCH flies §5.5's worst case instead (BenchRun),
+## the player's ship taking no damage, and the results card shows the frame times.
 
 signal closed
 ## Fly again, from the results card: the hangar flies a fresh copy at `level`.
@@ -135,6 +138,9 @@ var _spawn_button := Button.new()
 var _fight_level := 0
 ## A test fight's level (Creative, 7.2), or 0 for free flight; set before `open()`.
 var test_level := 0
+## `test_level` for the performance test (7.5).
+const BENCH := -1
+var bench_run: BenchRun
 ## The test fight under way, or null.
 var test: TestFlight
 var results := TestResults.new()
@@ -191,12 +197,24 @@ func open(bp: Blueprint, placement: Placement) -> void:
 	_camera.make_current()
 	if test_level > 0:
 		test = TestFlight.start(test_level, spawn_encounter(test_level).spawns.size())
+	elif test_level == BENCH:
+		bench_run = BenchRun.new()
+		bench_run.name = "BenchRun"
+		add_child(bench_run)
+		bench_run.start(self)
+		bench_run.finished.connect(func(run: Dictionary) -> void:
+			_touches.clear()
+			controls.stick.reset()
+			controls.fire.reset()
+			pause_menu.visible = false
+			results.show_report("Performance test", bench_run.lines, run["summary"]["slow"] == 0)
+			get_tree().paused = true)
 	else:
 		spawn(SPAWN_ENEMIES, str(_sandbox.get("start_target", "target_barge")))
 	var stars := Starfield.new()
 	stars.camera = _camera
 	add_child(stars)
-	stars.use_nebula(randi() if test_level <= 0 else test_level)  # a test fight keeps its sky
+	stars.use_nebula(randi() if test_level == 0 else absi(test_level))  # a test fight keeps its sky
 	_build_ui()
 	_show_status()
 
@@ -213,6 +231,7 @@ func _spawn_player() -> void:
 		ship.guns = GunLayout.compute(ship.blueprint, _placement, ship.gun_level, {}, 1.0, ship.own_levels)
 	last_spawn_usec = Time.get_ticks_usec() - started
 	ship.enable_damage(damage_table)
+	ship.invulnerable = test_level == BENCH  # the performance test's scenario holds while the player lives
 	_world.add_child(ship)
 	pickups.target = ship
 	pickups.reach_u = Spawner.extent_u(_bp, _placement) * 0.5

@@ -1,10 +1,10 @@
 class_name LaunchPanel
 extends ColorRect
-## Fly, in Creative (PLAN.md 7.2): free flight in the sandbox as before, or a test fight, a
-## generated encounter at the level on the slider (1 to the top of data/levels.json). The back
-## gesture closes it (the hangar's on_back). It keeps the level between flights.
+## Fly, in Creative (PLAN.md 7.2): free flight in the sandbox as before, a test fight (a generated
+## encounter at the level on the slider, 1 to the top of data/levels.json), or the performance
+## test (7.5). The back gesture closes it (the hangar's on_back). It keeps the level between flights.
 
-## 0 for free flight, else the test fight's level.
+## 0 for free flight, FlightSandbox.BENCH for the performance test, else the test fight's level.
 signal launched(level: int)
 
 var level := 1
@@ -44,6 +44,9 @@ func _ready() -> void:
 	var fight := MenuKit.button("Test fight", func() -> void: launched.emit(level), size, 24)
 	fight.theme_type_variation = &"GoButton"
 	column.add_child(fight)
+	var bench := MenuKit.button("Performance test", func() -> void: launched.emit(FlightSandbox.BENCH), size, 24)
+	bench.name = "PerformanceTest"
+	column.add_child(bench)
 	_show_level()
 
 

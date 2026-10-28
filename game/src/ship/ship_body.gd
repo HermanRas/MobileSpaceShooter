@@ -51,6 +51,8 @@ var level := 1
 ## The damage each gun item has dealt this ship (item id -> shield + hull), for splitting the
 ## XP its kill is worth (4.8b).
 var damage_by := {}
+## Hits land (and are tested) but do nothing: the performance test's player ship (7.5).
+var invulnerable := false
 ## Which side it's on (0 is the player's). Shots only hit the other teams.
 var team := 0:
 	set(value):
@@ -154,7 +156,7 @@ func enable_damage(table: DamageTable) -> void:
 
 ## `raw` damage of `type_id` striking `tile_id` (from `tile_at_shape`), credited to `source`.
 func take_hit(tile_id: int, raw: float, type_id: StringName, pierce := 0.0, source := &"") -> ShipDamage.Result:
-	if damage == null or damage.dead or is_wreck():
+	if damage == null or damage.dead or is_wreck() or invulnerable:
 		return ShipDamage.Result.new()
 	var result := damage.hit(tile_id, raw, type_id, pierce)
 	_credit(source, result)
@@ -165,7 +167,7 @@ func take_hit(tile_id: int, raw: float, type_id: StringName, pierce := 0.0, sour
 ## An explosion at `world_point` reaching `radius_u`.
 func take_splash(world_point: Vector2, radius_u: float, raw: float, type_id: StringName,
 		source := &"") -> ShipDamage.Result:
-	if damage == null or damage.dead or is_wreck():
+	if damage == null or damage.dead or is_wreck() or invulnerable:
 		return ShipDamage.Result.new()
 	var result := damage.splash(to_local(world_point) / PX, radius_u, raw, type_id)
 	_credit(source, result)

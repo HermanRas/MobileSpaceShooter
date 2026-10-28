@@ -9,6 +9,7 @@
 #   tools/android.sh logcat     # follow the game's log (Ctrl+C to stop)
 #   tools/android.sh log        # print the game's log so far and exit
 #   tools/android.sh perf       # the debug build's fps/frame-time log (Honor drops it from logcat)
+#   tools/android.sh runs       # every performance test run kept on the phone (7.5), as JSON
 #   tools/android.sh shot NAME  # screenshot the phone to build/phone_NAME.png
 #   tools/android.sh adb ARGS   # any adb command, e.g. adb shell input tap 500 300
 #
@@ -73,7 +74,8 @@ case "${1:-}" in
   logcat)  adb_cmd "adb logcat -s godot:V" ;;
   log)     adb_cmd "adb logcat -d -s godot:V" ;;
   perf)    adb_cmd "adb shell run-as $PACKAGE cat files/perf.log" ;;
+  runs)    adb_cmd "adb shell run-as $PACKAGE cat files/perf_runs.json" ;;
   shot)    adb_cmd "adb exec-out screencap -p > build/phone_${2:-shot}.png; chown $(id -u):$(id -g) build/phone_${2:-shot}.png" && ls -l "$ROOT/build/phone_${2:-shot}.png" ;;
   adb)     shift; adb_cmd "adb $(printf '%q ' "$@")" ;;
-  *) sed -n '2,16p' "$0"; exit 2 ;;
+  *) sed -n '2,17p' "$0"; exit 2 ;;
 esac

@@ -502,6 +502,15 @@ app uses about 40 MB. A scene change costs one ~150 ms frame. A 150-tile edit re
 GDScript, so a PC timing × 3.5 is a fair guess before deploying. Read these numbers with
 `tools/android.sh perf` (the debug-only `Perf` autoload).
 
+**The performance test on the phone (7.5, 2026-10-28, debug build, v0.0.7, Gunboat):** §5.5's
+worst case runs at **10 fps, 99 ms a frame** (95% under 143, worst 177); 197 of 209 frames are
+under 30 fps. Draw calls stay ~110, so it isn't rendering: **one physics tick costs ~19 ms**,
+more than a 60 fps frame, so each frame runs ~5.8 ticks to catch up (the spiral the catch-up cap
+stops). The pool's 600 shots take ~5 ms a tick; AI, flight, gunnery and Godot's physics (~330
+collision pairs, the 40 chasers in one heap round the player) take the rest. Per-frame scripts
+(gun views, exhaust, HUD) add ~12 ms. Open: the performance pass this calls for (15.1, or before
+WaveTime fills a screen).
+
 **Android's bottom gesture strip** (130 px on this phone, ~78 canvas px) sends the game home
 on any drag that starts there, even in immersive mode. Only taps belong in that strip; no drag
 may start there.
@@ -1443,9 +1452,21 @@ Tested in `tests/model/test_ship_code.gd` (every sample round-trips exactly) and
 - [ ] **Done when:** a ship saved on one phone, sent to a second phone and loaded there rebuilds identically.
 
 #### 7.5 Performance test `[D15]`
-- [ ] A Creative button that runs a scripted worst case (40 ships, 600 projectiles, a large station) and reports fps and frame time
-- [ ] Results are kept, so runs on the reference phone can be compared phase by phase
-- **Done when:** it runs on the reference phone and the numbers are recorded in §5.5.
+✅ 2026-10-28. Creative's Fly panel has **Performance test**. `BenchRun` (`src/flight/`) flies §5.5's
+worst case in the real flight sandbox, from `flight.json` → `bench`:
+- the Creative ship, `invulnerable`, so the scenario holds;
+- a 150-tile station stand-in with 12 turrets (`Bench.station`);
+- 40 roster enemies at level 20, replaced as they fall;
+- the projectile pool topped up to 600 with zero-damage sprays, which cost the hit tests without
+  killing anything.
+
+After 3 s it times 20 s of frames: mean, 95th percentile and worst, frames under 30 fps, and where a
+frame went (physics ticks and their cost, scripts, the pool, collision pairs). Each run is appended
+to `user://perf_runs.json` with date, version and device, shown on the results card against the
+earlier ones, and written to `perf.log`. `tools/android.sh runs` prints the phone's runs. Tested in
+`tests/model/test_bench.gd`; `drive_bench` runs it through. ⚠️ The tools container renders on
+the CPU, so the drive's frame times mean nothing; only the phone's (or a native PC run's) count.
+Phone numbers are in §5.5.
 
 **M2 — Creative mode is playable end to end.**
 

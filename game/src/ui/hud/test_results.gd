@@ -1,7 +1,8 @@
 class_name TestResults
 extends ColorRect
 ## The results card at the end of a Creative test fight (PLAN.md 7.2): cleared or destroyed, the
-## time, the kills and the damage taken, over a dimmed, paused game. Fly again restarts the same
+## time, the kills and the damage taken, over a dimmed, paused game; or the performance test's
+## frame times (7.5). Fly again restarts the same
 ## level; Return to hangar (or the back gesture) leaves. Whoever shows it pauses the tree; it runs
 ## while paused.
 
@@ -37,11 +38,15 @@ func _ready() -> void:
 
 
 func show_flight(flight: TestFlight) -> void:
-	_title.text = flight.title()
-	_title.add_theme_color_override(&"font_color", Color(0.6, 1.0, 0.55) if flight.outcome == TestFlight.Outcome.CLEARED
-			else Color(1.0, 0.5, 0.45))
+	show_report(flight.title(), flight.lines(), flight.outcome == TestFlight.Outcome.CLEARED)
+
+
+## `title` (green if `good`, else red) over `lines`.
+func show_report(title: String, lines: PackedStringArray, good: bool, font_size := 24) -> void:
+	_title.text = title
+	_title.add_theme_color_override(&"font_color", Color(0.6, 1.0, 0.55) if good else Color(1.0, 0.5, 0.45))
 	for child in _lines.get_children():
 		child.queue_free()
-	for line in flight.lines():
-		_lines.add_child(MenuKit.label(line, 24))
+	for line in lines:
+		_lines.add_child(MenuKit.label(line, font_size if not line.begins_with("  ") else font_size - 6))
 	visible = true
