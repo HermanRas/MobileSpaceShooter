@@ -27,6 +27,8 @@ var beam_ends := {}
 var _ship: ShipBody
 var _pool: ProjectilePool
 var _ray := PhysicsRayQueryParameters2D.new()
+## How many of the nearest enemies the guns weigh (WeaponLib.nearest_targets; 0 for all).
+var _nearest := 0
 
 
 func attach(ship: ShipBody, pool: ProjectilePool, weapons: WeaponLib, enemy_list: Callable) -> void:
@@ -34,16 +36,18 @@ func attach(ship: ShipBody, pool: ProjectilePool, weapons: WeaponLib, enemy_list
 	_pool = pool
 	enemies = enemy_list
 	gunnery = Gunnery.create(ship.guns, weapons)
+	_nearest = weapons.nearest_targets
 	gunnery.all_auto = all_auto
 	ship.rebuilt.connect(func() -> void: gunnery.set_layout(ship.guns))
 
 
 func _physics_process(delta: float) -> void:
+	var started := Time.get_ticks_usec()
 	if _ship == null or gunnery.layout.guns.is_empty():
 		return
 	var targets := []
 	var bodies: Array[ShipBody] = []
-	for body: Variant in enemies.call():
+	for body: Variant in ShipBody.nearest(enemies.call(), _ship.global_position, _nearest):
 		var enemy := body as ShipBody
 		if is_instance_valid(enemy) and not enemy.is_wreck() and enemy.damage != null and not enemy.damage.dead:
 			targets.append({"pos": enemy.global_transform * enemy.center_of_mass / PX, "vel": enemy.linear_velocity / PX})
@@ -60,6 +64,7 @@ func _physics_process(delta: float) -> void:
 		var aimed: int = shot["target"]
 		_pool.fire(shot, _ship.team, gun.weapon, bodies[aimed] if aimed >= 0 and aimed < bodies.size() else null,
 				StringName(gun.item))
+	BenchRun.spent(&"guns", started)
 
 
 ## A ray down every beam that's on: fills `beam_ends` and returns gun index -> the ray's hit.

@@ -126,6 +126,31 @@ func build(bp: Blueprint, placement_rules: Placement) -> void:
 
 
 ## The physics mask a shot from `team` looks for: every other team's hulls.
+## The `count` of `bodies` (Node2Ds) nearest `to` (world px), nearest first; all of them, as
+## they are, when `count` is 0 or there are no more than that. Guns and pilots look at only the
+## nearest few (7.5: 40 of them each, every tick, adds up). One pass, no sort.
+static func nearest(bodies: Array, to: Vector2, count: int) -> Array:
+	if count <= 0 or bodies.size() <= count:
+		return bodies
+	var near: Array = []
+	var dist := PackedFloat32Array()
+	for body: Variant in bodies:
+		if not is_instance_valid(body):
+			continue
+		var d := (body as Node2D).global_position.distance_squared_to(to)
+		if near.size() == count and d >= dist[count - 1]:
+			continue
+		var at := 0
+		while at < dist.size() and dist[at] <= d:
+			at += 1
+		near.insert(at, body)
+		dist.insert(at, d)
+		if near.size() > count:
+			near.pop_back()
+			dist.remove_at(count)
+	return near
+
+
 static func enemy_mask(from_team: int) -> int:
 	var mask := 0
 	for other in TEAMS:

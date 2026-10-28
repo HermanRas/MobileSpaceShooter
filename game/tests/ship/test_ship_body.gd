@@ -121,3 +121,18 @@ static func _rounded(points: PackedVector2Array) -> Array:
 	for p in points:
 		out.append(Vector2i(roundi(p.x * 100.0), roundi(p.y * 100.0)))
 	return out
+
+
+func test_nearest_keeps_the_closest_few_in_order() -> void:
+	var nodes: Array = []
+	for x in [9.0, 2.0, 7.0, 1.0, 5.0, 3.0]:
+		var node := Node2D.new()
+		node.position = Vector2(x, 0)
+		nodes.append(node)
+	var near := ShipBody.nearest(nodes, Vector2.ZERO, 3)
+	assert_eq(near.map(func(n: Node2D) -> float: return n.position.x), [1.0, 2.0, 3.0])
+	assert_eq(ShipBody.nearest(nodes, Vector2.ZERO, 0).size(), 6, "0 keeps them all")
+	assert_eq(ShipBody.nearest(nodes, Vector2.ZERO, 10).size(), 6, "as does asking for more than there are")
+	for node: Node2D in nodes:
+		node.free()
+

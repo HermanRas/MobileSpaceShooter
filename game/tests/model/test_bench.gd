@@ -48,6 +48,7 @@ func test_the_breakdown_is_averaged_per_frame() -> void:
 	assert_almost_eq(parts["physics_ms"], 12.0, 0.001)
 	var lines := Bench.report({"date": "", "version": "", "device": "", "size": "", "summary": bench.summary()}, [])
 	assert_true(lines[3].begins_with("2.5 physics ticks a frame"), lines[3])
+	assert_true(lines[4].begins_with("a tick 12.0 ms"), lines[4])
 
 
 func test_no_frames_is_no_crash() -> void:

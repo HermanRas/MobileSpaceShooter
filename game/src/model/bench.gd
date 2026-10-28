@@ -115,9 +115,9 @@ static func report(run: Dictionary, earlier: Array, keep := 4) -> PackedStringAr
 		"%.0f ships and %.0f shots live on average" % [s["ships"], s["shots"]],
 		"%s  ·  v%s  ·  %s" % [run["device"], run["version"], run["size"]],
 	])
-	var parts := _parts_line(s.get("parts", {}))
-	if not parts.is_empty():
-		lines.insert(3, parts)
+	var parts := _parts_lines(s)
+	for i in parts.size():
+		lines.insert(3 + i, parts[i])
 	var shown := 0
 	for i in range(earlier.size() - 1, -1, -1):
 		if shown >= keep:
@@ -133,11 +133,21 @@ static func report(run: Dictionary, earlier: Array, keep := 4) -> PackedStringAr
 	return lines
 
 
-## "6.7 physics ticks a frame at 15.2 ms  ·  scripts 9.1 ms  ·  shots 3.0 ms  ·  420 contacts",
-## or "" without a breakdown.
-static func _parts_line(parts: Dictionary) -> String:
+## Where a frame went, from `summary`'s parts: the ticks it ran and the game speed that left,
+## then what one tick cost by system, the engine's own physics being the rest. [] without parts.
+static func _parts_lines(s: Dictionary) -> PackedStringArray:
+	var parts: Dictionary = s.get("parts", {})
 	if parts.is_empty():
-		return ""
-	return "%.1f physics ticks a frame at %.1f ms  ·  scripts %.1f ms  ·  shots %.1f ms  ·  %.0f contacts" % [
-		float(parts.get("ticks", 0.0)), float(parts.get("physics_ms", 0.0)), float(parts.get("process_ms", 0.0)),
-		float(parts.get("pool_ms", 0.0)), float(parts.get("pairs", 0.0))]
+		return PackedStringArray()
+	var ticks := float(parts.get("ticks", 0.0))
+	var physics := float(parts.get("physics_ms", 0.0))
+	var systems := 0.0
+	for key in ["ai_ms", "flight_ms", "guns_ms", "pool_ms"]:
+		systems += float(parts.get(key, 0.0))
+	return PackedStringArray([
+		"%.1f physics ticks a frame (game at %.0f%% speed)  ·  frame scripts %.1f ms  ·  %.0f contacts" % [
+			ticks, ticks * float(s["fps"]) / 60.0 * 100.0, float(parts.get("process_ms", 0.0)), float(parts.get("pairs", 0.0))],
+		"a tick %.1f ms: AI %.1f  ·  flight %.1f  ·  guns %.1f  ·  shots %.1f  ·  engine %.1f" % [physics,
+			float(parts.get("ai_ms", 0.0)), float(parts.get("flight_ms", 0.0)), float(parts.get("guns_ms", 0.0)),
+			float(parts.get("pool_ms", 0.0)), maxf(physics - systems, 0.0)],
+	])

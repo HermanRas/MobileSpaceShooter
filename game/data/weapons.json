@@ -8,7 +8,9 @@
 	},
 	"aim": {
 		"_doc": "A gun fires once its barrel is within fire_within_deg of its aim. A fixed gun on auto fires when a target's lead point is that close to straight ahead.",
-		"fire_within_deg": 3.0
+		"fire_within_deg": 3.0,
+		"_nearest": "7.5, the performance pass: a ship's guns weigh only its nearest_targets nearest enemies (0 for all of them).",
+		"nearest_targets": 5
 	},
 	"weapons": {
 		"gatling_single": {

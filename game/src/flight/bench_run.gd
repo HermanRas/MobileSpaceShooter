@@ -10,6 +10,11 @@ extends Node
 
 signal finished(run: Dictionary)
 
+## While a run is on, each system adds what its ticks cost here (`spent`), by name; the run reads
+## and clears it every frame. Off, it costs a branch.
+static var timing := false
+static var costs := {}
+
 ## Every run kept on this device, oldest first: {"format", "runs": [{"date", "version",
 ## "device", "size", "ship_tiles", "scenario", "summary"}]}.
 const RUNS_PATH := "user://perf_runs.json"
@@ -32,8 +37,16 @@ var _angle := 0.0
 var _last_physics_frame := 0
 
 
+## Adds the time since `since_usec` to `key`'s cost, while a run is timing.
+static func spent(key: StringName, since_usec: int) -> void:
+	if timing:
+		costs[key] = int(costs.get(key, 0)) + Time.get_ticks_usec() - since_usec
+
+
 func start(sandbox: FlightSandbox) -> void:
 	_sandbox = sandbox
+	timing = true
+	costs.clear()
 	_cfg = Data.table(&"flight").get("bench", {})
 	var station_cfg: Dictionary = _cfg.get("station", {})
 	_station_bp = Bench.station(int(station_cfg.get("cols", 15)), int(station_cfg.get("rows", 10)),
@@ -60,15 +73,22 @@ func _process(delta: float) -> void:
 	var now := Time.get_ticks_usec()
 	if _last_tick > 0 and _clock >= float(_cfg.get("warmup_s", 3.0)):
 		bench.add_frame(now - _last_tick, _sandbox.spawner.live().size(), _sandbox.pool.count)
-		# Physics runs at a fixed rate, so a slow frame runs several ticks to catch up: the tick
-		# count and a tick's cost say whether that spiral is what makes it slow.
+		# Physics runs at a fixed rate, so a slow frame runs several ticks to catch up (at most
+		# max_physics_steps_per_frame; past that the game slows): the tick count and a tick's
+		# cost say whether that's what makes it slow, and the systems' costs say which part.
+		var ticks := Engine.get_physics_frames() - _last_physics_frame
+		var per_tick := 1000.0 * maxi(ticks, 1)
 		bench.add_parts({
-			"ticks": Engine.get_physics_frames() - _last_physics_frame,
+			"ticks": ticks,
 			"physics_ms": Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0,
 			"process_ms": Performance.get_monitor(Performance.TIME_PROCESS) * 1000.0,
 			"pool_ms": _sandbox.pool.step_usec / 1000.0,
+			"ai_ms": int(costs.get(&"ai", 0)) / per_tick,
+			"flight_ms": int(costs.get(&"flight", 0)) / per_tick,
+			"guns_ms": int(costs.get(&"guns", 0)) / per_tick,
 			"pairs": Performance.get_monitor(Performance.PHYSICS_2D_COLLISION_PAIRS),
 		})
+	costs.clear()
 	_last_tick = now
 	_last_physics_frame = Engine.get_physics_frames()
 	_clock += delta
@@ -104,7 +124,12 @@ func _top_up_shots() -> void:
 				"damage": 0.0, "type": &"kinetic"}, 0, &"default")
 
 
+func _exit_tree() -> void:
+	timing = false
+
+
 func _finish() -> void:
+	timing = false
 	var size := get_viewport().get_visible_rect().size
 	run = {
 		"date": Time.get_datetime_string_from_system(false, true),

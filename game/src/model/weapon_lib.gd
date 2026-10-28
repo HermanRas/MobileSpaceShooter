@@ -12,6 +12,8 @@ const NUMBERS := ["damage", "rate", "speed_u", "range_u", "edge_u", "length_u", 
 
 ## A gun fires once its barrel is within this of its aim (radians).
 var fire_within := deg_to_rad(3.0)
+## A ship's guns weigh only this many of the nearest enemies (0: all of them; 7.5).
+var nearest_targets := 0
 ## The top gun level; a gun's spread narrows from L1 to here.
 var max_level := 999
 ## Levels from XP, and what they do (Phase 4.8b).
@@ -26,6 +28,7 @@ var _weapons: Dictionary = {}  # weapon id -> read-only def
 static func from_table(table: Dictionary, xp_table := {}) -> WeaponLib:
 	var lib := WeaponLib.new()
 	lib.fire_within = deg_to_rad(float(table.get("aim", {}).get("fire_within_deg", 3.0)))
+	lib.nearest_targets = int(table.get("aim", {}).get("nearest_targets", 0))
 	lib.xp = WeaponXp.from_table(xp_table)
 	lib.errors.append_array(lib.xp.errors)
 	lib.max_level = lib.xp.max_level

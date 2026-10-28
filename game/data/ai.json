@@ -13,6 +13,10 @@
 	"edge_margin_u": 30.0,
 	"edge_push": 2.0,
 	"separation_u": 3.0,
+	"_think": "7.5, the performance pass: a pilot thinks every think_every_ticks physics ticks, each ship on its own beat, and holds its stick in between (at 60 ticks a second, 3 is 20 thoughts a second).",
+	"think_every_ticks": 3,
+	"_friends": "7.5: a pilot keeps clear of only its separation_friends nearest friends (0 for all of them).",
+	"separation_friends": 5,
 	"behaviours": {
 		"chase": {"_doc": "Close to stand_off_u behind the lead point and hold there, nose on it.", "stand_off_u": 6.0, "slow_within_u": 14.0},
 		"strafe": {"_doc": "Circle the target at radius_share of range, at speed_share of top speed.", "radius_share": 0.55, "speed_share": 0.8, "pull": 0.8},

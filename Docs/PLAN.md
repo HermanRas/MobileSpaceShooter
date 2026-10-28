@@ -508,8 +508,21 @@ under 30 fps. Draw calls stay ~110, so it isn't rendering: **one physics tick co
 more than a 60 fps frame, so each frame runs ~5.8 ticks to catch up (the spiral the catch-up cap
 stops). The pool's 600 shots take ~5 ms a tick; AI, flight, gunnery and Godot's physics (~330
 collision pairs, the 40 chasers in one heap round the player) take the rest. Per-frame scripts
-(gun views, exhaust, HUD) add ~12 ms. Open: the performance pass this calls for (15.1, or before
-WaveTime fills a screen).
+(gun views, exhaust, HUD) add ~12 ms.
+
+**First performance steps (owner, 2026-10-28), each measured on the phone:**
+
+| Step | fps | frame | worst | a tick: AI · flight · guns · shots · engine (ms) |
+|---|---|---|---|---|
+| Before | 10 | 99 ms | 177 | ~19 ms in all, 5.8 ticks a frame |
+| 1. Catch-up capped at 2 ticks a frame (`max_physics_steps_per_frame`) | 25 | 39 ms | 65 | 1.3 · 1.3 · 2.9 · 4.8 · 7.5 |
+| 2. A pilot thinks every 3rd tick, on its own beat (`ai.json`) | 23 | 44 ms | 89 | **0.6** · 1.5 · 3.4 · 7.2 · 9.3 |
+| 3. Guns and pilots weigh their 5 nearest ships (`weapons.json`, `ai.json`) | 26 | 39 ms | 46 | 0.6 · 1.3 · **2.7** · 5.7 · 5.8 |
+
+The cap trades the spiral for slow motion: two ticks a frame at ~25 fps is the game at ~84%
+speed. Back-to-back runs vary ±15% (the phone warms up), more than steps 2 and 3 save, so judge a
+step by its own column. What's left is Godot's physics (41 bodies of one shape per tile), the 600
+shots' rays, and ~12 ms a frame of per-frame scripts. Open: those, before WaveTime fills a screen.
 
 **Android's bottom gesture strip** (130 px on this phone, ~78 canvas px) sends the game home
 on any drag that starts there, even in immersive mode. Only taps belong in that strip; no drag

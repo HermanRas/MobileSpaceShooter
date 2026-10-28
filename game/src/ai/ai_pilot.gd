@@ -7,6 +7,9 @@ extends Node
 ##
 ## Whoever spawns the ship says who it fights (`target`), who it keeps clear of (`friends`) and,
 ## for an escort, whom it guards (`charge`). The guns aim themselves (WeaponController, all auto).
+##
+## It thinks every `think_every_ticks` (ai.json) and holds the stick in between, each ship on its
+## own beat so they don't all think on the same tick (7.5: 40 pilots thinking every tick add up).
 
 const PX := ShipMesh.PX_PER_U
 
@@ -21,6 +24,7 @@ var charge: ShipBody
 var _ship: ShipBody
 var _pilot: FlightController
 var _hull := 1.0
+var _beat := 0
 
 
 func attach(ship: ShipBody, pilot: FlightController, ship_brain: AiBrain) -> void:
@@ -28,26 +32,34 @@ func attach(ship: ShipBody, pilot: FlightController, ship_brain: AiBrain) -> voi
 	_pilot = pilot
 	brain = ship_brain
 	process_physics_priority = pilot.process_physics_priority - 1
+	_beat = randi() % maxi(int(brain.tuning.get("think_every_ticks", 1)), 1)
 	ship.damaged.connect(func(_result: ShipDamage.Result) -> void: _count_hull())
 	ship.rebuilt.connect(_count_hull)
 
 
 func _physics_process(_delta: float) -> void:
+	var started := Time.get_ticks_usec()
 	if _ship == null or _ship.is_wreck():
 		return
+	_beat += 1
+	if _beat % maxi(int(brain.tuning.get("think_every_ticks", 1)), 1) != 0:
+		return  # the stick holds
 	var me := {"pos": _where(_ship), "vel": _ship.linear_velocity / PX, "heading": _ship.global_rotation, "hull": _hull}
 	var foe: ShipBody = target.call()
 	var seen := {}
 	if _alive(foe):
 		seen = {"pos": _where(foe), "vel": foe.linear_velocity / PX}
 	var near: Array = []
-	for friend: Variant in friends.call():
+	var keep := int(brain.tuning.get("separation_friends", 0))
+	# +1: the list holds this ship too.
+	for friend: Variant in ShipBody.nearest(friends.call(), _ship.global_position, keep + 1 if keep > 0 else 0):
 		if friend != _ship and _alive(friend as ShipBody):
 			near.append({"pos": _where(friend as ShipBody)})
 	var guarded := {}
 	if _alive(charge):
 		guarded = {"pos": _where(charge), "vel": charge.linear_velocity / PX, "heading": charge.global_rotation}
 	_pilot.stick = brain.think(me, seen, near, guarded)
+	BenchRun.spent(&"ai", started)
 
 
 static func _where(body: ShipBody) -> Vector2:

@@ -39,6 +39,7 @@ func attach(ship: ShipBody, tuning: Dictionary) -> void:
 
 
 func _physics_process(delta: float) -> void:
+	var started := Time.get_ticks_usec()
 	if _ship == null or model == null:
 		return
 	if _fresh:
@@ -56,6 +57,7 @@ func _physics_process(delta: float) -> void:
 	for j: Dictionary in out["impulses"]:
 		_ship.apply_impulse(turn * ((j["impulse"] as Vector2) * PX), turn * _offset(j["pos"]))
 		kicked.emit(j["index"], throttles[j["index"]])
+	BenchRun.spent(&"flight", started)
 
 
 ## A thruster's position (U from the centre of mass, ship-local) as Godot wants it for
