@@ -730,12 +730,12 @@ func _step_zoom_and_markers() -> void:
 
 	camera.zoom_by(1.0 / camera.view_zoom)
 	var carrier := sandbox.spawn(FlightSandbox.SPAWN_ENEMIES, "pike")
-	await _frames(2)
+	await _frames(4)  # the edge marks update every other frame
 	var on_screen := _carrier_arrow(sandbox)
 	if carrier != null:
 		_teleport(carrier, sandbox.ship.global_position + Vector2(0, 120) * PX)
 	await _physics_frames(2)
-	await _frames(2)
+	await _frames(4)  # the edge marks update every other frame
 	_check(not on_screen and _carrier_arrow(sandbox), "a carrier off screen gets an arrow at the edge (beside us: %s, %s)"
 			% [on_screen, sandbox.markers._marks])
 	var far: float = sandbox.markers._marks[0][2] if not sandbox.markers._marks.is_empty() else 0.0
@@ -746,20 +746,20 @@ func _step_zoom_and_markers() -> void:
 
 	# 5.5: an enemy you've seen gets a fixed-size dot off screen, until it's beyond sight range.
 	var enemy := sandbox.spawn(FlightSandbox.SPAWN_ENEMIES, "target_barge")
-	await _frames(2)
+	await _frames(4)  # the edge marks update every other frame
 	var home := sandbox.ship.global_position
 	var sight := sandbox.markers.sight_range_u
 	_teleport(enemy, home + Vector2(-sight * 0.5, 0) * PX)
 	await _physics_frames(2)
-	await _frames(2)
+	await _frames(4)  # the edge marks update every other frame
 	var dotted := _enemy_dot(sandbox)
 	_teleport(enemy, home + Vector2(-sight * 1.5, 0) * PX)
 	await _physics_frames(2)
-	await _frames(2)
+	await _frames(4)  # the edge marks update every other frame
 	var beyond := _enemy_dot(sandbox)
 	_teleport(enemy, home + Vector2(-sight * 0.5, 0) * PX)
 	await _physics_frames(2)
-	await _frames(2)
+	await _frames(4)  # the edge marks update every other frame
 	_check(dotted and not beyond and not _enemy_dot(sandbox),
 			"a seen enemy gets a dot off screen (%s), lost beyond sight range (%s) until seen again (%s)"
 			% [dotted, beyond, _enemy_dot(sandbox)])

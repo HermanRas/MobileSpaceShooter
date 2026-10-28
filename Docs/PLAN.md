@@ -529,6 +529,10 @@ The test now times each frame script too (owner, 2026-10-28). Of ~12 ms a frame,
 exhaust 0.5, edge markers 0.6 and the HUD 0.1; the other ~4.5 is Godot's own. 4. The HUD now
 updates on even frames and the edge markers on odd ones: markers 0.6 → 0.4 ms, as small as expected.
 Shots ran 5–9 ms a tick across runs: their step includes the damage hits do.
+5. A ship's gun view is redrawn only while it's on screen (or has a beam on): gun views 4.3 → 2.3
+ms, frame scripts 12 → 9 ms, 24 fps. What's left is mostly real drawing, as the 40 chasers heap
+round the player on screen. ⚠️ With the marks every other frame, a drive must wait ≥ 4 frames
+after moving a ship before reading them (`drive_flight` was flaky at 2).
 
 **Android's bottom gesture strip** (130 px on this phone, ~78 canvas px) sends the game home
 on any drag that starts there, even in immersive mode. Only taps belong in that strip; no drag

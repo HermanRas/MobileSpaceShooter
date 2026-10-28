@@ -9,6 +9,10 @@ extends Node2D
 ## more canvas item per ship, above the hull. The hangar draws with `draw_gun()` too. Each shot
 ## flashes at the muzzle for `flash_s` (4.5). A laser draws its beam to where it ends and a heat
 ## arc round its base that turns red as it nears overheating (4.6b).
+##
+## Off screen it isn't redrawn (7.5: every ship's guns every frame was 4.3 ms of a 40-ship frame
+## on the phone); the flashes are still counted, so it's right the frame it comes into view. A
+## beam reaches far, so a gun view with one on always draws.
 
 const PX := ShipMesh.PX_PER_U
 const LOOK_ID := &"vis.weapons"
@@ -20,6 +24,8 @@ var _look: Dictionary
 ## Per gun: the shot count last frame, and the flash time left.
 var _seen := PackedInt32Array()
 var _flash := PackedFloat32Array()
+## How far its guns reach from the ship's origin, in pixels, beams aside.
+var _reach_px := 0.0
 
 
 func attach(controller: WeaponController) -> void:
@@ -28,6 +34,8 @@ func attach(controller: WeaponController) -> void:
 	_look = Assets.meta(LOOK_ID)
 	z_index = 1
 	texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	for gun in _gunnery.layout.guns:  # losing tiles only takes guns away, so this stays enough
+		_reach_px = maxf(_reach_px, (gun.pivot.length() + gun.muzzle + 0.5) * PX)
 
 
 func _process(delta: float) -> void:
@@ -44,8 +52,17 @@ func _process(delta: float) -> void:
 		if _gunnery.fired[i] != _seen[i]:
 			_flash[i] = float(_look.get("flash_s", 0.05))
 			_seen[i] = _gunnery.fired[i]
-	queue_redraw()
+	if on_screen():
+		queue_redraw()
 	BenchRun.spent(&"gun_views", started)
+
+
+## Whether any of it can be seen: its reach overlaps the view, or a beam is on.
+func on_screen() -> bool:
+	if not _controller.beam_ends.is_empty():
+		return true
+	var view := get_viewport().get_canvas_transform().affine_inverse() * get_viewport_rect()
+	return view.grow(_reach_px).has_point(global_position)
 
 
 func _draw() -> void:
