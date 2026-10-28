@@ -38,6 +38,8 @@ func use_nebula(index: int) -> void:
 
 
 func _process(_delta: float) -> void:
+	var started := Time.get_ticks_usec()
 	_material.set_shader_parameter(&"camera_position", camera.get_screen_center_position() if camera != null else scroll)
 	_material.set_shader_parameter(&"camera_zoom", camera.zoom.x if camera != null else 1.0)
 	_material.set_shader_parameter(&"screen_size", _rect.size)
+	BenchRun.spent(&"stars", started)

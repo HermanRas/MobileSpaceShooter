@@ -68,6 +68,7 @@ static func edge_point(point: Vector2, screen: Vector2, inset: float = INSET) ->
 
 
 func _draw() -> void:
+	var started := Time.get_ticks_usec()
 	for mark: Array in _marks:
 		var spot: Variant = edge_point(mark[0], size)
 		if spot == null:
@@ -86,3 +87,4 @@ func _draw() -> void:
 				tip - facing * length * 0.6 - side * length * 0.8])
 		draw_colored_polygon(points, mark[1])
 		draw_polyline(points + PackedVector2Array([points[0]]), outline, 2.0, true)
+	BenchRun.spent(&"markers", started)

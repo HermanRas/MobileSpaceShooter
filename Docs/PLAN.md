@@ -524,6 +524,12 @@ speed. Back-to-back runs vary ±15% (the phone warms up), more than steps 2 and 
 step by its own column. What's left is Godot's physics (41 bodies of one shape per tile), the 600
 shots' rays, and ~12 ms a frame of per-frame scripts. Open: those, before WaveTime fills a screen.
 
+The test now times each frame script too (owner, 2026-10-28). Of ~12 ms a frame, **gun views take
+4.3** (every ship's guns redrawn every frame, on screen or not), shot drawing 0.9, impacts 0.6,
+exhaust 0.5, edge markers 0.6 and the HUD 0.1; the other ~4.5 is Godot's own. 4. The HUD now
+updates on even frames and the edge markers on odd ones: markers 0.6 → 0.4 ms, as small as expected.
+Shots ran 5–9 ms a tick across runs: their step includes the damage hits do.
+
 **Android's bottom gesture strip** (130 px on this phone, ~78 canvas px) sends the game home
 on any drag that starts there, even in immersive mode. Only taps belong in that strip; no drag
 may start there.

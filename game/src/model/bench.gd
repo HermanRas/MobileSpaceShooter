@@ -134,7 +134,8 @@ static func report(run: Dictionary, earlier: Array, keep := 4) -> PackedStringAr
 
 
 ## Where a frame went, from `summary`'s parts: the ticks it ran and the game speed that left,
-## then what one tick cost by system, the engine's own physics being the rest. [] without parts.
+## what one tick cost by system (the engine's own physics being the rest), and what each
+## per-frame script cost. [] without parts.
 static func _parts_lines(s: Dictionary) -> PackedStringArray:
 	var parts: Dictionary = s.get("parts", {})
 	if parts.is_empty():
@@ -150,4 +151,18 @@ static func _parts_lines(s: Dictionary) -> PackedStringArray:
 		"a tick %.1f ms: AI %.1f  ·  flight %.1f  ·  guns %.1f  ·  shots %.1f  ·  engine %.1f" % [physics,
 			float(parts.get("ai_ms", 0.0)), float(parts.get("flight_ms", 0.0)), float(parts.get("guns_ms", 0.0)),
 			float(parts.get("pool_ms", 0.0)), maxf(physics - systems, 0.0)],
-	])
+	]) + _frame_line(parts)
+
+
+## The per-frame scripts ("frame:<name>" parts), costliest first: "a frame's scripts: gun views
+## 4.1  ·  exhaust 2.0 ...", or nothing if none were timed.
+static func _frame_line(parts: Dictionary) -> PackedStringArray:
+	var named: Array = []
+	for key: String in parts:
+		if key.begins_with("frame:"):
+			named.append([float(parts[key]), key.trim_prefix("frame:").replace("_", " ")])
+	if named.is_empty():
+		return PackedStringArray()
+	named.sort_custom(func(a: Array, b: Array) -> bool: return a[0] > b[0])
+	return PackedStringArray(["a frame's scripts: " + "  ·  ".join(named.map(func(n: Array) -> String:
+			return "%s %.1f" % [n[1], n[0]]))])

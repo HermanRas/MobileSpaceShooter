@@ -41,11 +41,15 @@ func attach(ship: ShipBody, weapons: WeaponController, camera: FollowCamera, tun
 
 
 func _process(delta: float) -> void:
+	var started := Time.get_ticks_usec()
 	flash_left = maxf(flash_left - delta, 0.0)
-	queue_redraw()
+	if Engine.get_process_frames() % 2 == 0:  # the bars on the HUD's frames (FlightSandbox._process)
+		queue_redraw()
+	BenchRun.spent(&"hud", started)
 
 
 func _draw() -> void:
+	var started := Time.get_ticks_usec()
 	if is_instance_valid(_ship) and _ship.damage != null:
 		var damage := _ship.damage
 		var shield_share := damage.shield / damage.shield_cap if damage.shield_cap > 0.0 else 0.0
@@ -62,6 +66,7 @@ func _draw() -> void:
 	if flash_left > 0.0:
 		var alpha := float(_tuning.get("flash_alpha", 0.28)) * flash_left / float(_tuning.get("flash_s", 0.3))
 		_vignette(Color(flash_color, alpha))
+	BenchRun.spent(&"hud", started)
 
 
 func _on_damaged(result: ShipDamage.Result) -> void:

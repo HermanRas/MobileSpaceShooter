@@ -589,6 +589,14 @@ func _process(delta: float) -> void:
 	weapons.all_auto = Settings.get_value(&"control_scheme") != "2-stick"
 	if _picked >= 0:
 		_overlay.queue_redraw()  # the highlight follows its ship
+	# Nobody reads the status line or the edge marks 60 times a second (owner, 2026-10-28): the
+	# HUD takes the even frames and the marks the odd ones. The stick and FIRE stay every frame.
+	if Engine.get_process_frames() % 2 == 1:
+		var marking := Time.get_ticks_usec()
+		markers.point_at(_camera, _marks())
+		BenchRun.spent(&"markers", marking)
+		return
+	var started := Time.get_ticks_usec()
 	var warning := arena.warning(ship.global_position / PX)
 	_edge_glow.strength = warning
 	var parts: PackedStringArray = ["%.1f U/s" % (ship.linear_velocity.length() / PX)]
@@ -609,7 +617,7 @@ func _process(delta: float) -> void:
 	if Time.get_ticks_msec() < _note_until:
 		parts.append(_note)
 	_hud.text = "  ·  ".join(parts)
-	markers.point_at(_camera, _marks())
+	BenchRun.spent(&"hud", started)
 
 
 ## The edge marks: the carrier's arrow, and a dot for each enemy seen and still in sight range.

@@ -74,6 +74,7 @@ func pop(point: Vector2) -> void:
 
 
 func _process(delta: float) -> void:
+	var started := Time.get_ticks_usec()
 	var i := 0
 	while i < count:
 		_life[i] -= delta
@@ -89,6 +90,7 @@ func _process(delta: float) -> void:
 		var size := _size[k] * (0.4 + 0.6 * share)
 		multimesh.set_instance_transform_2d(k, Transform2D(0.0, Vector2(size, size), 0.0, _pos[k]))
 		multimesh.set_instance_color(k, Color(_color[k], share))
+	BenchRun.spent(&"impacts", started)
 
 
 func _add(at: Vector2, vel: Vector2, life: float, size: float, color: Color) -> void:

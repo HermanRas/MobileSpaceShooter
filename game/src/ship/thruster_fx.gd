@@ -86,6 +86,7 @@ func kick(throttle: float) -> void:
 
 
 func _draw() -> void:
+	var started := Time.get_ticks_usec()
 	if type != &"ion" or _torch <= 0.01:
 		return
 	# A long tapered plume: soft glows anchored at the nozzle, wide and deep blue outside
@@ -101,6 +102,7 @@ func _draw() -> void:
 		var half := Vector2(length * share, half_width * (0.25 + 0.75 * share))
 		draw_texture_rect(_plume(), Rect2(Vector2(start, -half.y), Vector2(half.x, half.y * 2.0)), false,
 				Color(_colors[i], _torch * (0.5 + 0.5 * (1.0 - share))))
+	BenchRun.spent(&"exhaust", started)
 
 
 func _make_particles(amount: int, lifetime: float, explosiveness: float) -> CPUParticles2D:

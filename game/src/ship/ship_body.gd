@@ -227,6 +227,7 @@ func _physics_process(delta: float) -> void:
 
 
 func _process(delta: float) -> void:
+	var started := Time.get_ticks_usec()
 	if _mesh_stale:
 		_refresh_wear()
 		_mesh.mesh = ShipMesh.build(blueprint.tiles, placement, blueprint, _wear)
@@ -237,6 +238,7 @@ func _process(delta: float) -> void:
 		modulate.a = clampf(wreck_left / (_wreck_fade_s * 0.5), 0.0, 1.0)
 		if wreck_left <= 0.0:
 			queue_free()
+	BenchRun.spent(&"ships", started)
 
 
 func _after_hit(result: ShipDamage.Result) -> void:

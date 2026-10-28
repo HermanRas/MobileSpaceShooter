@@ -241,6 +241,7 @@ func _process(_delta: float) -> void:
 	for group in _groups.size():
 		_groups[group].multimesh.visible_instance_count = in_group[group]
 	draw_usec = Time.get_ticks_usec() - started
+	BenchRun.spent(&"shot_drawing", started)
 
 
 ## Steers shot `i` toward its target, or lets it fly straight on once the target is gone.

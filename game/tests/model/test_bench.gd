@@ -42,13 +42,14 @@ func test_the_breakdown_is_averaged_per_frame() -> void:
 	bench.add_frame(20000, 40, 600)
 	bench.add_parts({"ticks": 1, "physics_ms": 10.0})
 	bench.add_frame(60000, 40, 600)
-	bench.add_parts({"ticks": 4, "physics_ms": 14.0})
+	bench.add_parts({"ticks": 4, "physics_ms": 14.0, "frame:gun_views": 4.0, "frame:hud": 1.0})
 	var parts: Dictionary = bench.summary()["parts"]
 	assert_almost_eq(parts["ticks"], 2.5, 0.001)
 	assert_almost_eq(parts["physics_ms"], 12.0, 0.001)
 	var lines := Bench.report({"date": "", "version": "", "device": "", "size": "", "summary": bench.summary()}, [])
 	assert_true(lines[3].begins_with("2.5 physics ticks a frame"), lines[3])
 	assert_true(lines[4].begins_with("a tick 12.0 ms"), lines[4])
+	assert_eq(lines[5], "a frame's scripts: gun views 2.0  ·  hud 0.5", "costliest first, averaged per frame")
 
 
 func test_no_frames_is_no_crash() -> void:

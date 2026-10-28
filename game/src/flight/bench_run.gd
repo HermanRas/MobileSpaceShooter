@@ -14,6 +14,8 @@ signal finished(run: Dictionary)
 ## and clears it every frame. Off, it costs a branch.
 static var timing := false
 static var costs := {}
+## The costs counted per physics tick; the rest (gun views, exhaust, HUD...) are per frame.
+const TICK_KEYS: Array[StringName] = [&"ai", &"flight", &"guns"]
 
 ## Every run kept on this device, oldest first: {"format", "runs": [{"date", "version",
 ## "device", "size", "ship_tiles", "scenario", "summary"}]}.
@@ -78,6 +80,11 @@ func _process(delta: float) -> void:
 		# cost say whether that's what makes it slow, and the systems' costs say which part.
 		var ticks := Engine.get_physics_frames() - _last_physics_frame
 		var per_tick := 1000.0 * maxi(ticks, 1)
+		var frame_parts := {}
+		for key: StringName in costs:
+			if not key in TICK_KEYS:
+				frame_parts["frame:" + String(key)] = int(costs[key]) / 1000.0
+		bench.add_parts(frame_parts)
 		bench.add_parts({
 			"ticks": ticks,
 			"physics_ms": Performance.get_monitor(Performance.TIME_PHYSICS_PROCESS) * 1000.0,

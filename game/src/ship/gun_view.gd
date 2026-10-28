@@ -31,6 +31,7 @@ func attach(controller: WeaponController) -> void:
 
 
 func _process(delta: float) -> void:
+	var started := Time.get_ticks_usec()
 	if _gunnery == null or _gunnery.layout.guns.is_empty():
 		return
 	var count := _gunnery.layout.guns.size()
@@ -44,9 +45,11 @@ func _process(delta: float) -> void:
 			_flash[i] = float(_look.get("flash_s", 0.05))
 			_seen[i] = _gunnery.fired[i]
 	queue_redraw()
+	BenchRun.spent(&"gun_views", started)
 
 
 func _draw() -> void:
+	var started := Time.get_ticks_usec()
 	if _gunnery == null:
 		return
 	for i in _gunnery.layout.guns.size():
@@ -58,6 +61,7 @@ func _draw() -> void:
 			_draw_heat(gun, _gunnery.heats[i], _gunnery.overheated[i])
 		if i < _flash.size() and _flash[i] > 0.0 and not gun.stats["beam"]:
 			_draw_flash(gun, _gunnery.angles[i], _flash[i] / float(_look.get("flash_s", 0.05)))
+	BenchRun.spent(&"gun_views", started)
 
 
 ## A star of light at the muzzle, `share` (1 → 0) of the way through its flash.

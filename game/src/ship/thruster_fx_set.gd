@@ -35,8 +35,10 @@ func _build(ship: ShipBody) -> void:
 
 
 func _process(_delta: float) -> void:
+	var started := Time.get_ticks_usec()
 	if _pilot == null or _pilot.throttles.size() != _fx.size():
 		return
 	var ramps := _pilot.model.ramp_shares()
 	for i in _fx.size():
 		_fx[i].set_state(_pilot.throttles[i], ramps[i])
+	BenchRun.spent(&"exhaust", started)

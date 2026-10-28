@@ -70,6 +70,7 @@ func save_zoom() -> void:
 
 
 func _process(delta: float) -> void:
+	var started := Time.get_ticks_usec()
 	_shake = maxf(_shake - _shake * _shake_decay * delta - delta, 0.0)
 	offset = Vector2.from_angle(randf() * TAU) * _shake / zoom.x if _shake > 0.0 else Vector2.ZERO
 	if not is_instance_valid(target):
@@ -83,3 +84,4 @@ func _process(delta: float) -> void:
 		position = wanted
 	else:
 		position = position.lerp(wanted, minf(follow_rate * delta, 1.0))
+	BenchRun.spent(&"camera", started)

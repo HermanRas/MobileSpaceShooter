@@ -52,14 +52,17 @@ func _ready() -> void:
 
 
 func _process(delta: float) -> void:
+	var started := Time.get_ticks_usec()
 	_age += delta
 	if _age >= _duration:
 		queue_free()
 		return
 	queue_redraw()
+	BenchRun.spent(&"explosions", started)
 
 
 func _draw() -> void:
+	var started := Time.get_ticks_usec()
 	var t := _age / _duration
 	# The flash: big and white at once, shrinking and cooling fast.
 	var flash := 1.0 - smoothstep(0.0, 0.45, t)
@@ -72,3 +75,4 @@ func _draw() -> void:
 	var ring := 1.0 - t
 	draw_arc(Vector2.ZERO, size_px * (0.3 + 1.2 * sqrt(t)), 0.0, TAU, 64,
 			Color(_colors[1], ring * ring * 0.5), maxf(size_px * 0.025 * ring, 2.0), true)
+	BenchRun.spent(&"explosions", started)
