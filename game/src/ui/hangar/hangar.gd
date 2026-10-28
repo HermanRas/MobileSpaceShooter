@@ -14,8 +14,8 @@ extends Node
 ## stock, and every edit is paid for (HangarEditor). Delete becomes Remove, Sell sells the
 ## selected part (or a part dropped on it), a part dragged off the ship onto the palette goes in
 ## the inventory, and the Inventory tab holds what's loose. Tapping the wallet opens the market
-## (4.8c), and Ships the ship shop (7.3), where buying a published library ship swaps the pilot's
-## ship for it. Without a profile it's Creative, whose library can publish ships to the shops.
+## (4.8c), and Ships the pilot's ships and the shop (7.3): buying a published library ship parks the
+## one being flown. Without a profile it's Creative, whose library can publish ships to the shops.
 
 const PX := ShipMesh.PX_PER_U
 const GHOST_LIFT_PX := 90.0
@@ -97,6 +97,7 @@ func _ready() -> void:
 		editor.economy = Economy.from_table(Data.table(&"economy"))
 		editor.stock = _store.inventory
 		editor.load_blueprint(_store.ship)
+		editor.parked = _store.parked
 	editor.changed.connect(_on_changed)
 
 	_world = Node2D.new()
@@ -220,50 +221,82 @@ func _on_ship_arrived(bp: Blueprint) -> void:
 	_library_panel.refresh()
 
 
-## Stocked: the ship shop (7.3).
+## Stocked: the Ships screen (7.3): the pilot's ships, with fresh pictures, above the ones for sale.
 func _open_shop(open: bool) -> void:
 	_shop.visible = open
-	if open:
-		_end_carry()
-		_shop.show_ships(_library.for_sale(placement), _library.thumbnail_path)
-		if not _shop.selected_id().is_empty():
-			_quote_ship(_shop.selected_id())
+	if not open:
+		return
+	_end_carry()
+	var folder := _store.path.get_base_dir()
+	var owned: Array[Dictionary] = []
+	var ships: Array[Blueprint] = [editor.blueprint]
+	ships.append_array(editor.parked_ships())
+	for i in ships.size():
+		var thumb := folder.path_join("ship_%d.png" % i)
+		await _thumbs.render(ships[i], placement, thumb)
+		owned.append({"key": "flying" if i == 0 else "parked:%d" % (i - 1), "name": ships[i].name,
+				"tiles": ships[i].tiles.size(), "thumb": thumb, "note": "Flying" if i == 0 else "Parked"})
+	var for_sale := _library.for_sale(placement)
+	for entry in for_sale:
+		entry["thumb"] = _library.thumbnail_path(entry["id"])
+	_shop.show_ships(owned, for_sale)
+	if not _shop.selected_key().is_empty():
+		_offer(_shop.selected_key())
 
 
-## The shop's line for ship `id`: what buying it costs now, after the trade-in.
-func _quote_ship(id: String) -> void:
-	var bp := _library.load_ship(id)
-	if bp == null:
-		return
-	var quote := editor.quote_swap(bp)
-	if quote["refusal"] != "":
-		_shop.show_quote(quote["refusal"], false)
-		return
-	var pay := {}
-	var back := {}
-	for resource: StringName in quote["pay"]:
-		if int(quote["pay"][resource]) > 0:
-			pay[resource] = quote["pay"][resource]
+## What the selected card offers: Buy (with what it costs now), Fly this, or Sell ship.
+func _offer(key: String) -> void:
+	if key == "flying":
+		if editor.parked.is_empty():
+			_shop.show_offer("Your only ship: buy another to sell this one", "", true)
 		else:
-			back[resource] = -int(quote["pay"][resource])
-	var parts: PackedStringArray = ["You pay " + StatsPanel.format_cost(pay) if not pay.is_empty() else "Nothing to pay"]
-	if not back.is_empty():
-		parts.append("back: " + StatsPanel.format_cost(back))
-	_shop.show_quote("  ·  ".join(parts), true)
+			_shop.show_offer("Sell it: back %s, and its parts go in the Inventory"
+					% StatsPanel.format_cost(Economy.tiles_cost(placement, editor.blueprint)), "Sell ship", true)
+	elif key.begins_with("parked:"):
+		_shop.show_offer("Parked: fly it, and park the %s" % editor.blueprint.name, "Fly this", true)
+	elif key.begins_with("sale:"):
+		var bp := _library.load_ship(key.trim_prefix("sale:"))
+		if bp == null:
+			return
+		var quote := editor.quote_buy(bp)
+		if quote["refusal"] != "":
+			_shop.show_offer(quote["refusal"], "Buy", false)
+		else:
+			_shop.show_offer("You pay %s; the %s is parked" % [StatsPanel.format_cost(quote["pay"]), editor.blueprint.name],
+					"Buy", true)
 
 
-## Buys library ship `id` (7.3): it replaces the pilot's ship, whose tiles are refunded and whose
-## parts go in the inventory (HangarEditor.swap_to).
+## Does what the selected card offers; Buy and Sell ask first.
+func _on_shop_action(key: String) -> void:
+	if key == "flying":
+		_confirm.ask("Sell your %s?\nIts tiles are refunded and its parts go in the Inventory." % editor.blueprint.name,
+				"Sell", func() -> void: _after_fleet_change(editor.sell_ship()), "ConfirmSell")
+	elif key.begins_with("parked:"):
+		_after_fleet_change(editor.fly_parked(int(key.trim_prefix("parked:"))))
+	elif key.begins_with("sale:"):
+		var bp := _library.load_ship(key.trim_prefix("sale:"))
+		if bp != null:
+			_confirm.ask("Buy the %s?\nYour %s is parked in Your ships." % [bp.name, editor.blueprint.name],
+					"Buy", buy_ship.bind(key.trim_prefix("sale:")), "ConfirmBuy")
+
+
+## Buys library ship `id` (7.3) and flies it; the pilot's ship is parked (HangarEditor.buy_ship).
 func buy_ship(id: String) -> bool:
 	var bp := _library.load_ship(id)
 	if bp == null:
 		return false
-	if not editor.swap_to(bp):
-		_quote_ship(id)
-		return false
+	var bought := editor.buy_ship(bp)
+	_after_fleet_change(bought)
+	return bought
+
+
+## After a ship is bought, sold or taken out: show the one now flown, or why it didn't happen.
+func _after_fleet_change(done: bool) -> void:
+	if not done:
+		_offer(_shop.selected_key())
+		return
 	_select(-1)
 	_open_shop(false)
-	return true
 
 
 ## Fly: in Creative, the launch panel (free flight or a test fight, 7.2); stocked, straight up.
@@ -818,6 +851,7 @@ var last_refresh_parts := {}
 func _save_stock() -> void:
 	_store.inventory = editor.stock
 	_store.ship = editor.blueprint
+	_store.parked = editor.parked
 	_store.save()
 
 
@@ -1028,7 +1062,9 @@ func _build_ui() -> void:
 	paint_button.toggle_mode = true
 
 	_paint = PaintPanel.new()
-	_paint.position = Vector2(16, 56)
+	# Stocked, the wallet takes the line under the ship's name, and the panels below move down.
+	var below_wallet := 36.0 if stocked() else 0.0
+	_paint.position = Vector2(16, 56 + below_wallet)
 	_paint.visible = false
 	_paint.ship_paint_requested.connect(func(color: Color) -> void: editor.paint_all(color))
 	root.add_child(_paint)
@@ -1044,7 +1080,7 @@ func _build_ui() -> void:
 	root.add_child(_status)
 
 	_stats = StatsPanel.new()
-	_stats.position = Vector2(16, 48)
+	_stats.position = Vector2(16, 48 + below_wallet)
 	_stats.self_modulate = Color(1, 1, 1, 0.85)
 	root.add_child(_stats)
 
@@ -1053,9 +1089,8 @@ func _build_ui() -> void:
 
 	_wallet = Button.new()
 	_wallet.flat = true
-	_wallet.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
-	_wallet.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	_wallet.position.y = 4
+	_wallet.position = Vector2(8, 38)
+	_wallet.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	_wallet.add_theme_font_size_override(&"font_size", 18)
 	_wallet.add_theme_color_override(&"font_color", Color(1, 0.85, 0.5))
 	_wallet.visible = stocked()
@@ -1096,12 +1131,8 @@ func _build_ui() -> void:
 		_tool_button(corner, "Ships", _open_shop.bind(true)).name = "ShipShop"
 		_shop = ShipShopPanel.new()
 		_shop.visible = false
-		_shop.selected.connect(_quote_ship)
-		_shop.buy_requested.connect(func(id: String) -> void:
-			var bp := _library.load_ship(id)
-			if bp != null:
-				_confirm.ask("Swap your %s for the %s?\nIts tiles are refunded and its parts go in the Inventory."
-						% [editor.blueprint.name, bp.name], "Buy", buy_ship.bind(id), "ConfirmBuy"))
+		_shop.selected.connect(_offer)
+		_shop.action_requested.connect(_on_shop_action)
 		root.add_child(_shop)
 	_thumbs = ThumbnailRenderer.new()
 	add_child(_thumbs)

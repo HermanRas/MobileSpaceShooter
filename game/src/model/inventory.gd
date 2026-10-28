@@ -23,6 +23,18 @@ class GunItem:
 	func to_dict() -> Dictionary:
 		return {"id": id, "weapon": String(weapon), "mount": String(mount), "xp": xp}
 
+	## A gun from to_dict(), or null (and a message in `errors`).
+	static func from_dict(raw: Variant, errors: PackedStringArray) -> GunItem:
+		if typeof(raw) != TYPE_DICTIONARY or not (raw as Dictionary).has_all(["id", "weapon", "mount"]):
+			errors.append("inventory: bad gun %s" % [raw])
+			return null
+		var item := GunItem.new()
+		item.id = str(raw["id"])
+		item.weapon = StringName(str(raw["weapon"]))
+		item.mount = StringName(str(raw["mount"]))
+		item.xp = int(raw.get("xp", 0))
+		return item
+
 
 ## Material or GC -> amount.
 var wallet: Dictionary = {}
@@ -162,15 +174,9 @@ static func from_dict(data: Dictionary, errors: PackedStringArray) -> Inventory:
 			continue
 		inv.wallet[name] = int(data["wallet"][resource])
 	for raw: Variant in data.get("guns", []):
-		if typeof(raw) != TYPE_DICTIONARY or not (raw as Dictionary).has_all(["id", "weapon", "mount"]):
-			errors.append("inventory: bad gun %s" % [raw])
-			continue
-		var item := GunItem.new()
-		item.id = str(raw["id"])
-		item.weapon = StringName(str(raw["weapon"]))
-		item.mount = StringName(str(raw["mount"]))
-		item.xp = int(raw.get("xp", 0))
-		inv.guns[item.id] = item
+		var item := GunItem.from_dict(raw, errors)
+		if item != null:
+			inv.guns[item.id] = item
 	for key: String in data.get("thrusters", {}):
 		if key.split(":").size() == 3 and int(data["thrusters"][key]) > 0:
 			inv.thrusters[key] = int(data["thrusters"][key])

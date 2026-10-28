@@ -1,7 +1,8 @@
 extends "res://dev_preview/drive_hangar.gd"
 ## Drives 7.3's "done when": pilot Ada publishes a ship from the Creative library, and pilot Bo's
 ## WaveTime hangar has it in its Ships shop, signed by Ada. Bo can't afford it at first, then
-## buys it: the ship is swapped, and the trade-in lands in the inventory and is saved.
+## buys it, and the starter is parked in Your ships (owner, 2026-10-28); Bo flies the starter
+## again, then sells it, and its parts land in the inventory.
 ## Run with `tools/drive.sh res://dev_preview/drive_shop.tscn`. Exit code 0 = every step passed.
 ##
 ## Pilots live in a scratch folder, and the published ship is deleted at the end.
@@ -76,41 +77,80 @@ func _step_bo_buys_it_in_the_shop() -> void:
 	Profiles.active_id = bo.id
 	await _open_hangar()
 	_check(_hangar.stocked(), "Bo's WaveTime hangar is stocked")
-	var starter: Blueprint = _hangar.editor.blueprint
 	var shop_button := _find(_hangar._ui, "Ships", HBoxContainer)
 	_check(shop_button != null and shop_button.visible, "Ships is up beside Undo")
-	await _tap_button(shop_button)
-	_check(_hangar._shop.visible, "it opens the shop")
-	var card := _hangar._shop.find_child("ship_" + _ship_id, true, false) as Button
+	_check(not _hangar._wallet.get_global_rect().intersects(shop_button.get_global_rect()), "clear of the wallet")
+	await _open_ships(shop_button)
+	var flying := _shop_card("flying")
+	_check(flying != null and _labels(flying).has("Flying"), "Your ships has the starter, Flying")
+	await _tap_button(flying)
+	_check(not _action().visible and "only ship" in _offer_text(), "your only ship can't be sold: %s" % _offer_text())
+	var card := _shop_card("sale_" + _ship_id)
 	_check(card != null, "Ada's ship is for sale in Bo's shop")
 	if card == null:
 		return
 	_check(_labels(card).has("by Ada"), "signed by Ada (%s)" % ", ".join(_labels(card)))
-	var buy := _hangar._shop.find_child("Buy", true, false) as Button
 	await _tap_button(card)
-	_check(buy.disabled and "Not enough" in _hangar._shop._quote.text,
-			"a new pilot can't afford it: %s" % _hangar._shop._quote.text)
+	_check(_action().text == "Buy" and _action().disabled and "Not enough" in _offer_text(),
+			"a new pilot can't afford it: %s" % _offer_text())
 
 	_hangar.editor.stock.wallet = {&"hull": 5000, &"alloy": 3000, &"crystal": 1000, &"tech": 1000, &"gc": 40000}
 	var before: Dictionary = _hangar.editor.stock.wallet.duplicate()
 	await _tap_button(card)
-	_check(not buy.disabled and _hangar._shop._quote.text.begins_with("You pay"), "with money it can: %s" % _hangar._shop._quote.text)
+	_check(not _action().disabled and _offer_text().begins_with("You pay"), "with money it can: %s" % _offer_text())
 	_save_shot("drive_shop_shop.png")
-	await _tap_button(buy)
-	var confirm := _hangar._confirm.find_child("ConfirmBuy", true, false) as Button
-	_check(_hangar._confirm.visible and confirm != null, "Buy asks first")
-	if confirm == null:
-		return
-	await _tap_button(confirm)
-	_check(_hangar.editor.blueprint.name == SHIP_NAME and _hangar.editor.blueprint != starter, "Bo flies Ada's ship now")
+	await _tap_button(_action())
+	await _tap_button(_hangar._confirm.find_child("ConfirmBuy", true, false))
+	_check(_hangar.editor.blueprint.name == SHIP_NAME, "Bo flies Ada's ship now")
 	_check(not _hangar._shop.visible, "and the shop closes")
 	_check(_hangar.editor.stock.amount(&"gc") < int(before[&"gc"]), "it was paid for")
-	_check(int(_hangar.editor.stock.thrusters.get(Inventory.thruster_key(&"pulse", &"L", 1), 0)) == 1,
-			"the starter's spare thruster is in the inventory")
 	var saved := StockStore.open(Profiles.profile_dir(bo.id), {}, {})
-	_check(saved != null and saved.ship.name == SHIP_NAME, "and it's saved")
+	_check(saved != null and saved.ship.name == SHIP_NAME and saved.parked.size() == 1, "it's saved, with the starter parked")
+
+	await _open_ships(shop_button)
+	var parked := _shop_card("parked_0")
+	_check(parked != null and _labels(parked).has("Parked") and _labels(parked).any(func(t: String) -> bool: return t.begins_with("Starter")),
+			"Your ships has the starter, Parked")
+	_save_shot("drive_shop_owned.png")
+	if parked == null:
+		return
+	await _tap_button(parked)
+	_check(_action().text == "Fly this", "a parked ship offers Fly this")
+	await _tap_button(_action())
+	_check(_hangar.editor.blueprint.name == "Starter" and _hangar.editor.parked.size() == 1, "and Bo flies the starter again")
+
+	await _open_ships(shop_button)
+	await _tap_button(_shop_card("flying"))
+	_check(_action().text == "Sell ship" and not _action().disabled, "with another ship owned, the flown one can be sold")
+	var hull: int = _hangar.editor.stock.amount(&"hull")
+	await _tap_button(_action())
+	await _tap_button(_hangar._confirm.find_child("ConfirmSell", true, false))
+	_check(_hangar.editor.blueprint.name == SHIP_NAME and _hangar.editor.parked.is_empty(), "selling the starter leaves Ada's ship")
+	_check(_hangar.editor.stock.amount(&"hull") > hull, "its tiles were refunded")
+	_check(_hangar.editor.stock.loose_guns(_hangar.editor.blueprint).size() == 1, "and its gun is loose in the inventory")
 	await _frames(3)
 	_save_shot("drive_shop_bought.png")
+
+
+func _open_ships(button: Button) -> void:
+	await _tap_button(button)
+	await _frames(8)  # the owned ships' pictures render first
+	_check(_hangar._shop.visible, "Ships opens")
+
+
+func _shop_card(card_name: String) -> Button:
+	for card in _hangar._shop.find_children(card_name, "Button", true, false):
+		if not card.is_queued_for_deletion():
+			return card
+	return null
+
+
+func _action() -> Button:
+	return _hangar._shop.find_child("Action", true, false) as Button
+
+
+func _offer_text() -> String:
+	return _hangar._shop._offer.text
 
 
 func _open_hangar() -> void:

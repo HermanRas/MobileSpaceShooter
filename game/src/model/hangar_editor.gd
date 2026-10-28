@@ -31,6 +31,9 @@ var mirror: bool = false
 ## The profile's stock, or null in Creative, where everything is free. Undo replaces the object,
 ## so read it from here each time.
 var stock: Inventory
+## Stocked: the other ships the pilot owns, not being flown (owner, 2026-10-28), each
+## {"ship": blueprint dict, "guns": [Inventory.GunItem dicts]}. A parked ship keeps its parts.
+var parked: Array[Dictionary] = []
 var economy: Economy
 ## Why the last refused edit was refused ("Not enough alloy"), or "".
 var refusal := ""
@@ -283,11 +286,12 @@ func move_mount(index: int, slot: Dictionary) -> bool:
 	return true
 
 
-## Stocked: rebuilds the ship as `design`, a library ship bought in the shop (PLAN.md 7.3), as one
-## undo step. The old ship's tiles are refunded and its parts go in the inventory; the new one
-## takes loose parts first (the most experienced gun of each kind) and buys the rest. Gun items
-## and Creative gun levels in `design` are ignored. False, with `refusal`, if it can't be paid for.
-func swap_to(design: Blueprint) -> bool:
+## Stocked: buys `design`, a library ship from the shop (PLAN.md 7.3), and flies it. The ship
+## being flown is parked, parts and all (owner, 2026-10-28). The new one takes loose parts first
+## (the most experienced gun of each kind) and buys the rest. Gun items and Creative gun levels in
+## `design` are ignored. It isn't an edit, so it clears undo, as landing does. False, with
+## `refusal`, if it can't be paid for.
+func buy_ship(design: Blueprint) -> bool:
 	refusal = ""
 	var errors: PackedStringArray = []
 	var ship := Blueprint.from_dict(design.to_dict(), errors) if stock != null else null
@@ -299,33 +303,29 @@ func swap_to(design: Blueprint) -> bool:
 			mount.erase("gun")
 			mount.erase("level")
 	var before := _snapshot()
-	# Strip the old ship first, so its guns are loose for the new one to take.
-	_checkpoint()
-	var stripped := Blueprint.new()
-	stripped.id = blueprint.id  # an undo snapshot needs one to parse
-	blueprint = stripped
-	_settle(&"")
+	var parked_before := parked.duplicate(true)
+	_park_current()
 	_checkpoint()
 	blueprint = ship
 	if not _settle(EITHER):
-		_undo.pop_back()
 		var why := refusal
+		parked = parked_before  # before _restore, whose `changed` saves
 		_restore(before)
 		refusal = why
 		return false
-	_undo.pop_back()  # the stripped state; one undo goes back to the old ship
+	clear_history()
 	changed.emit()
 	return true
 
 
-## What swap_to(`design`) would cost now, without doing it: {"pay": {resource: net amount}, where
-## a negative amount comes back, "refusal": why it can't be paid for, or ""}.
-func quote_swap(design: Blueprint) -> Dictionary:
+## What buy_ship(`design`) would cost now, without doing it: {"pay": {resource: amount},
+## "refusal": why it can't be paid for, or ""}.
+func quote_buy(design: Blueprint) -> Dictionary:
 	var errors: PackedStringArray = []
 	var trial := HangarEditor.create(placement, Blueprint.from_dict(blueprint.to_dict(), errors))
 	trial.economy = economy
 	trial.stock = Inventory.from_dict(stock.to_dict(), errors) if stock != null else null
-	if not trial.swap_to(design):
+	if not trial.buy_ship(design):
 		return {"pay": {}, "refusal": trial.refusal if not trial.refusal.is_empty() else "Can't buy it here"}
 	var pay := {}
 	for resource: StringName in Economy.add(stock.wallet, trial.stock.wallet):
@@ -333,6 +333,67 @@ func quote_swap(design: Blueprint) -> Dictionary:
 		if spent != 0:
 			pay[resource] = spent
 	return {"pay": pay, "refusal": ""}
+
+
+## Stocked: flies parked ship `index` and parks the one being flown in its place.
+func fly_parked(index: int) -> bool:
+	if stock == null or index < 0 or index >= parked.size():
+		return false
+	_park_current()
+	_unpark(index)
+	clear_history()
+	changed.emit()
+	return true
+
+
+## Stocked: sells the ship being flown, while another is owned (owner, 2026-10-28). Like Remove,
+## its tiles come back 1:1 and its parts go in the inventory; then the last ship parked is flown.
+func sell_ship() -> bool:
+	if stock == null or parked.is_empty():
+		return false
+	_checkpoint()
+	var stripped := Blueprint.new()
+	stripped.id = blueprint.id
+	blueprint = stripped
+	_settle(&"")
+	_unpark(parked.size() - 1)
+	clear_history()
+	changed.emit()
+	return true
+
+
+## The parked ships as blueprints, in order.
+func parked_ships() -> Array[Blueprint]:
+	var out: Array[Blueprint] = []
+	var errors: PackedStringArray = []
+	for record in parked:
+		out.append(Blueprint.from_dict(record["ship"], errors))
+	return out
+
+
+## Parks the ship being flown with its guns, which leave the inventory with it (so they can't be
+## fitted twice), and leaves an empty ship in its place.
+func _park_current() -> void:
+	var guns: Array = []
+	for id: String in Inventory.fitted_ids(blueprint):
+		if stock.guns.has(id):
+			guns.append((stock.guns[id] as Inventory.GunItem).to_dict())
+			stock.guns.erase(id)
+	parked.append({"ship": blueprint.to_dict(), "guns": guns})
+	var empty := Blueprint.new()
+	empty.id = blueprint.id  # an undo snapshot needs one to parse
+	blueprint = empty
+
+
+## Takes parked ship `index` out to fly, its guns back into the inventory.
+func _unpark(index: int) -> void:
+	var record: Dictionary = parked.pop_at(index)
+	var errors: PackedStringArray = []
+	blueprint = Blueprint.from_dict(record["ship"], errors)
+	for raw: Variant in record.get("guns", []):
+		var item := Inventory.GunItem.from_dict(raw, errors)
+		if item != null:
+			stock.guns[item.id] = item
 
 
 ## Index of the mount in that place ({"tile", "edge", "port"} or {"tile", "face"}), or -1.

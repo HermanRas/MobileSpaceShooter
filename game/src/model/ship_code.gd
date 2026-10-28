@@ -4,7 +4,7 @@ extends RefCounted
 ## code to paste into a chat (CODE_PREFIX, then the JSON deflated and in base64). Either way it's
 ## the shared form: no gun item ids (they name guns in the sender's inventory, §5.4) and not for
 ## sale (publishing is the receiver's call, 7.3). Creative gun levels are part of the design, so
-## they come along; buying a ship drops them (HangarEditor.swap_to).
+## they come along; buying a ship drops them (HangarEditor.buy_ship).
 ##
 ## What comes in is untrusted: `read` never crashes, caps the size, and says what's wrong.
 

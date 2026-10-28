@@ -1413,16 +1413,20 @@ grace before they fire, or spawning beyond range.
 signs it with the chosen pilot's name; only a ship that can fly goes up, and cards show "For sale ·
 by …". There's no second store: `BlueprintLibrary.for_sale()` lists every published ship that still
 validates, priced at `Economy.build_cost` (tiles' materials plus parts' GC). The stocked hangar's
-**Ships** (top right, beside Undo) opens `ShipShopPanel`. Selecting a ship quotes what it costs
-*now*, and Buy (after a confirmation) **swaps** the pilot's ship for it (owner, 2026-10-28):
-`HangarEditor.swap_to` strips the old ship, refunding tiles 1:1 and putting parts in the inventory,
-then builds the new one taking loose parts first (the most experienced gun of each kind) and buying
-the rest. It's one undo step, and `quote_swap` dry-runs it on a copy. Gun ids and Creative gun
-levels never come along. Tested in `tests/model/test_ship_shop.gd` and
-`tests/ship/test_library_publish.gd`. `drive_shop` has pilot A publish and pilot B find it signed,
-fail to afford it, then buy it. ⚠️ Publishing a ship that's open in the hangar copies the tag onto
-the open blueprint too, or its next Save would quietly unpublish it.
-- [ ] Owner, on the phone: publish a Creative ship, then buy it in another pilot's WaveTime hangar
+**Ships** (top right, beside Undo; the wallet moved under the ship's name to make room) opens
+`ShipShopPanel`: **Your ships** above **For sale**. Owned ships (owner, 2026-10-28, replacing a
+first cut that swapped the old ship away): **Buy** (after a confirmation) parks the ship being
+flown, parts and all, and builds the new one taking loose parts first, buying the rest
+(`HangarEditor.buy_ship`; `quote_buy` dry-runs it on a copy). A parked ship offers **Fly this**.
+**Sell ship** is offered only while another ship is owned, and works like Remove: tiles back 1:1,
+parts into the inventory. These clear undo, as landing does. A parked ship's guns leave the
+inventory with it (`HangarEditor.parked`, saved in `hangar.json` format 2), so they can't be fitted
+twice. Gun ids and Creative gun levels never come along. Tested in `tests/model/test_ship_shop.gd`,
+`tests/ship/test_library_publish.gd` and `test_stock_store.gd`. `drive_shop` has pilot A publish;
+pilot B finds it signed, can't afford it, buys it, flies the parked starter again, and sells it.
+⚠️ Publishing a ship that's open in the hangar copies the tag onto the open blueprint too, or its
+next Save would quietly unpublish it.
+- [ ] Owner, on the phone: publish a Creative ship, buy it in another pilot's WaveTime hangar, switch back, sell one
 
 #### 7.4 Save ships to files and share them
 Built 2026-10-28; waiting on the phone. The Creative library's **Share** menu: Save to file, Load
