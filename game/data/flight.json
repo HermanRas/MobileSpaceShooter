@@ -93,6 +93,8 @@
 		"shot_speed_u": 40.0,
 		"shot_range_u": 24.0,
 		"warmup_s": 3.0,
-		"seconds": 20.0
+		"seconds": 20.0,
+		"_breakdown": "breakdown: time each system (AI, flight, guns, frame scripts) as well; false for the lowest-overhead run, when comparing two builds.",
+		"breakdown": true
 	}
 }

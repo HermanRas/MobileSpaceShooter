@@ -34,6 +34,8 @@ const BLINK_HIGH := 1.6
 const DOWNED := -1000.0
 ## A life below this marks a shot spent on a mine; it goes on its next step, quietly.
 const SPENT := -3000.0
+## The mine grid's cell size (`_shoot_mines`), in pixels: a few steps of the fastest shot.
+const MINE_CELL_PX := 2.0 * ShipMesh.PX_PER_U
 ## Per-shot flags for the rare extras, so a plain bullet's step never looks at its spec.
 const HOMES := 1
 const DRAGS := 2
@@ -255,21 +257,45 @@ func _home(i: int, spec: Dictionary, delta: float) -> void:
 
 
 ## Shots that pass within a mine's `hit` this step set it off (both go next step): a shot of
-## another team, over the segment it's about to fly. Mines are few, so this is a plain check of
-## each shot against each, skipped when there are none.
+## another team, over the segment it's about to fly. Skipped when there are no mines. Checking
+## every shot against every mine was 3.2 ms a tick at 600 shots in the performance test (7.5), so
+## the mines are filed on a grid each tick: each in every cell within its reach plus half the
+## longest step, so a shot need only look in the cell of its step's middle (if the step passes
+## within reach of a mine, its middle is within reach plus half a step).
 func _shoot_mines(delta: float) -> void:
 	var mines := PackedInt32Array()
+	var reach_max := 0.0
+	var step_max := 0.0
 	for k in count:
-		if _flags[k] & FUSED and _life[k] > 0.0:
-			mines.append(k)
+		if _flags[k] & FUSED:
+			if _life[k] > 0.0:
+				mines.append(k)
+				reach_max = maxf(reach_max, float(_specs[_spec[k]]["hit"]))
+		else:
+			step_max = maxf(step_max, _vel[k].length_squared())
 	if mines.is_empty():
 		return
+	step_max = sqrt(step_max) * delta
+	var grow := reach_max + step_max * 0.5
+	var grid := {}
+	for m in mines:
+		var low := _mine_cell(_pos[m] - Vector2(grow, grow))
+		var high := _mine_cell(_pos[m] + Vector2(grow, grow))
+		for x in range(low.x, high.x + 1):
+			for y in range(low.y, high.y + 1):
+				var key := Vector2i(x, y)
+				if not grid.has(key):
+					grid[key] = PackedInt32Array()
+				grid[key].append(m)
 	for k in count:
 		if _flags[k] & FUSED or _life[k] <= 0.0:
 			continue
 		var from := _pos[k]
 		var to := from + _vel[k] * delta
-		for m in mines:
+		var near: Variant = grid.get(_mine_cell((from + to) * 0.5))
+		if near == null:
+			continue
+		for m: int in near:
 			if _team[m] == _team[k] or _life[m] <= 0.0:
 				continue
 			var reach: float = _specs[_spec[m]]["hit"]
@@ -277,6 +303,11 @@ func _shoot_mines(delta: float) -> void:
 				_life[m] = DOWNED - 1.0
 				_life[k] = SPENT - 1.0
 				break
+
+
+## The mine grid's cell holding `point` (pixels): floored, so cells meet cleanly at 0.
+static func _mine_cell(point: Vector2) -> Vector2i:
+	return Vector2i(floori(point.x / MINE_CELL_PX), floori(point.y / MINE_CELL_PX))
 
 
 func _near_enemy(space: PhysicsDirectSpaceState2D, at: Vector2, radius: float, mask: int) -> bool:

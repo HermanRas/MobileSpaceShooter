@@ -533,6 +533,14 @@ Shots ran 5–9 ms a tick across runs: their step includes the damage hits do.
 ms, frame scripts 12 → 9 ms, 24 fps. What's left is mostly real drawing, as the 40 chasers heap
 round the player on screen. ⚠️ With the marks every other frame, a drive must wait ≥ 4 frames
 after moving a ship before reading them (`drive_flight` was flaky at 2).
+6. Shots (owner, 2026-10-28): timed inside, a tick's 8.3 ms of shots was mine checks 3.2 (every shot
+against every mine), hits 2.8 (damage 1.0, the rest sparks and splash), rays 2.0. Mines are now
+filed on a grid each tick, so a shot checks one cell (`ProjectilePool._shoot_mines`;
+`tests/ship/test_mine_grid.gd` checks it sets off exactly what every-pair did): mine checks 3.2 →
+0.6 ms. ⚠️ An A/B of whole frames with the breakdown off (`bench.breakdown`; baseline, fix,
+baseline, fix) couldn't show it: 46.7 vs 46.0 ms, but each build ranged 42–51 ms run to run,
+because every fight differs (how many minelayers, how many mines). To confirm a few-ms change in
+totals, the bench needs a seeded, repeatable fight.
 
 **Android's bottom gesture strip** (130 px on this phone, ~78 canvas px) sends the game home
 on any drag that starts there, even in immersive mode. Only taps belong in that strip; no drag

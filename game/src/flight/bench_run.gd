@@ -47,7 +47,7 @@ static func spent(key: StringName, since_usec: int) -> void:
 
 func start(sandbox: FlightSandbox) -> void:
 	_sandbox = sandbox
-	timing = true
+	timing = bool(_cfg.get("breakdown", true))
 	costs.clear()
 	_cfg = Data.table(&"flight").get("bench", {})
 	var station_cfg: Dictionary = _cfg.get("station", {})
