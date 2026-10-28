@@ -539,8 +539,9 @@ filed on a grid each tick, so a shot checks one cell (`ProjectilePool._shoot_min
 `tests/ship/test_mine_grid.gd` checks it sets off exactly what every-pair did): mine checks 3.2 →
 0.6 ms. ⚠️ An A/B of whole frames with the breakdown off (`bench.breakdown`; baseline, fix,
 baseline, fix) couldn't show it: 46.7 vs 46.0 ms, but each build ranged 42–51 ms run to run,
-because every fight differs (how many minelayers, how many mines). To confirm a few-ms change in
-totals, the bench needs a seeded, repeatable fight.
+because every fight differs (how many minelayers, how many mines). A seeded, repeatable fight
+would settle changes that small; deferred (owner, 2026-10-28): keep these gains, and build it only
+if a problem needs it. The worst case runs at ~70–77% game speed, good enough for now.
 
 **Android's bottom gesture strip** (130 px on this phone, ~78 canvas px) sends the game home
 on any drag that starts there, even in immersive mode. Only taps belong in that strip; no drag
