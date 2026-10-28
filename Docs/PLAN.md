@@ -1425,11 +1425,18 @@ the open blueprint too, or its next Save would quietly unpublish it.
 - [ ] Owner, on the phone: publish a Creative ship, then buy it in another pilot's WaveTime hangar
 
 #### 7.4 Save ships to files and share them
-- [ ] **Save ship to file**: a `.mssship` file (the blueprint JSON) to send to friends, and **Load ship from file** on their end
-- [ ] On Android, save and open through the system file picker (Godot's native file dialog; confirm it works on 4.7.1 here). If it doesn't, write to the Documents folder, where any app can send the file. The Android share sheet needs a plugin, so it isn't in v1.
-- [ ] A share code (compressed base64 text) as a fallback for pasting into a chat
-- [ ] Dev path: save a ship from Creative into `data/enemies/` (this is how enemies get authored)
-- **Done when:** a ship saved on one phone, sent to a second phone and loaded there rebuilds identically.
+Built 2026-10-28; waiting on the phone. The Creative library's **Share** menu: Save to file, Load
+from file, Copy share code, Paste share code, and (in a project run, not an export) Save as enemy.
+`ShipCode` (`src/model/`) makes the `.mssship` text (the blueprint JSON) and the share code
+(`MSS1:` + deflated JSON in base64, ~550 characters for a 9-tile ship). Both drop gun item ids
+and the for-sale tag. `read` finds a code inside a chat message, ignores the line breaks chats add,
+and refuses junk, cut-off codes and anything over 1 MB unpacked, saying why. `ShipShare` drives a
+`FileDialog` with `use_native_dialog` (Android's picker on the phone, Godot's own where there's
+none). `BlueprintLibrary.import_ship` never overwrites a ship already there. Save as enemy writes
+`data/enemies/<name>.json` tagged `enemy`; the roster in `enemies.json` is still edited by hand.
+Tested in `tests/model/test_ship_code.gd` (every sample round-trips exactly) and by `drive_share`.
+- [ ] Owner, on the phone: does the Android picker save and open a `.mssship`? If not, fall back to the Documents folder.
+- [ ] **Done when:** a ship saved on one phone, sent to a second phone and loaded there rebuilds identically.
 
 #### 7.5 Performance test `[D15]`
 - [ ] A Creative button that runs a scripted worst case (40 ships, 600 projectiles, a large station) and reports fps and frame time

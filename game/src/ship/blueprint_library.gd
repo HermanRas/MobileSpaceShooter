@@ -94,6 +94,15 @@ func save_ship(bp: Blueprint) -> Error:
 	return Save.write_json(json_path(bp.id), bp.to_dict())
 
 
+## Adds a ship that came from a file or a share code (7.4). It keeps its id unless that's taken
+## or unusable, so loading the same ship twice gives two ships, not one overwritten. Returns
+## the id it was saved under, or "".
+func import_ship(bp: Blueprint) -> String:
+	if not is_valid_id(bp.id) or has(bp.id):
+		bp.id = new_id()
+	return bp.id if save_ship(bp) == OK else ""
+
+
 ## Saves a copy under a new id and name; returns the copy.
 func save_as(bp: Blueprint, new_name: String) -> Blueprint:
 	var errors: PackedStringArray = []

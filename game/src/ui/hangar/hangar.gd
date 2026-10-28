@@ -58,6 +58,8 @@ var _reset_armed_until := 0
 var _market: MarketPanel
 var _shop: ShipShopPanel
 var _confirm := ConfirmPanel.new()
+## Creative: ships to and from files and share codes (7.4).
+var _share := ShipShare.new()
 ## Creative's Fly: free flight or a test fight at a level (7.2).
 var _launch := LaunchPanel.new()
 var _notice: Label
@@ -190,6 +192,34 @@ func publish(id: String, on: bool) -> bool:
 	return true
 
 
+## Creative: the library's Share menu (7.4). Ships going out are read from the library, so what's
+## shared is what was last saved.
+func _on_share(action: StringName, id: String) -> void:
+	var bp := _library.load_ship(id) if not id.is_empty() and _library.has(id) else null
+	match action:
+		&"open_file":
+			_share.open_file()
+		&"paste_code":
+			_share.paste_code()
+		&"save_file" when bp != null:
+			_share.save_file(bp)
+		&"copy_code" when bp != null:
+			_share.copy_code(bp)
+		&"save_enemy" when bp != null:
+			_share.save_enemy(bp)
+
+
+## A ship from a file or a share code goes in the library, with a thumbnail.
+func _on_ship_arrived(bp: Blueprint) -> void:
+	var id := _library.import_ship(bp)
+	if id.is_empty():
+		_library_panel.show_note("Couldn't add %s to your ships" % bp.name)
+		return
+	await _thumbs.render(bp, placement, _library.thumbnail_path(id))
+	_library_panel.show_note("Added %s to your ships" % bp.name)
+	_library_panel.refresh()
+
+
 ## Stocked: the ship shop (7.3).
 func _open_shop(open: bool) -> void:
 	_shop.visible = open
@@ -317,7 +347,8 @@ func on_back() -> void:
 	elif _shop != null and _shop.visible:
 		_open_shop(false)
 	elif _library_panel.visible:
-		_open_library(false)
+		if not _library_panel.close_menu():
+			_open_library(false)
 	else:
 		Router.goto_main_menu()
 
@@ -1091,6 +1122,10 @@ func _build_ui() -> void:
 		load_from_library(id)
 		_open_library(false))
 	_library_panel.publish_requested.connect(publish)
+	_library_panel.share_requested.connect(_on_share)
+	add_child(_share)
+	_share.loaded.connect(_on_ship_arrived)
+	_share.done.connect(_library_panel.show_note)
 	root.add_child(_library_panel)
 	_launch.name = "LaunchPanel"
 	_launch.max_level = int(Encounter.Rules.from_table(Data.table(&"levels")).bands.back().get("to", 100))

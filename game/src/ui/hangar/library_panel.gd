@@ -1,7 +1,8 @@
 class_name LibraryPanel
 extends PanelContainer
 ## The ship library screen (Phase 2.6): a grid of thumbnail cards, plus New, Save, Save As,
-## Load, Rename and Delete, and Publish, which puts a ship up for sale in every pilot's shop (7.3).
+## Load, Rename and Delete, Publish, which puts a ship up for sale in every pilot's shop (7.3), and
+## Share (7.4): a ship to or from a file or a share code, and (in a project run) save as an enemy.
 ##
 ## The panel owns the dialogs; the hangar owns the ship being edited and does the actual
 ## save and load, so this only emits what the player asked for.
@@ -11,6 +12,8 @@ signal new_requested
 signal save_requested
 signal save_as_requested(new_name: String)
 signal publish_requested(id: String, on: bool)
+## &"save_file", &"copy_code" and &"save_enemy" act on ship `id`; &"open_file" and &"paste_code" bring one in.
+signal share_requested(action: StringName, id: String)
 
 const CARD := Vector2(180, 232)
 const FOR_SALE := Color(1, 0.85, 0.5)
@@ -24,6 +27,9 @@ var _rename_button: Button
 var _delete_button: Button
 var _publish_button: Button
 var _note := Label.new()
+var _share_menu := ColorRect.new()
+## The share menu's buttons that need a ship selected.
+var _share_ship_buttons: Array[Button] = []
 ## The listed ships by id, as BlueprintLibrary.list() gives them.
 var _entries := {}
 var _name_dialog := AcceptDialog.new()
@@ -61,6 +67,10 @@ func _ready() -> void:
 	_publish_button = _button(bar, "Publish", func() -> void:
 		publish_requested.emit(_selected_id, not _entries.get(_selected_id, {}).get("published", false)))
 	_publish_button.name = "Publish"
+	_button(bar, "Share", func() -> void:
+		for button in _share_ship_buttons:
+			button.disabled = _selected_id.is_empty() or not library.has(_selected_id)
+		_share_menu.visible = true).name = "Share"
 	_delete_button = _button(bar, "Delete", func() -> void:
 		_confirm.dialog_text = "Delete this ship? This can't be undone."
 		_confirm.popup_centered())
@@ -84,6 +94,52 @@ func _ready() -> void:
 		_selected_id = ""
 		refresh())
 	add_child(_confirm)
+	_build_share_menu()
+
+
+## Closes the share menu if it's open; false if it wasn't (so Back closes the panel instead).
+func close_menu() -> bool:
+	if not _share_menu.visible:
+		return false
+	_share_menu.visible = false
+	return true
+
+
+func _build_share_menu() -> void:
+	_share_menu.color = Color(0, 0, 0, 0.7)
+	_share_menu.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_share_menu.visible = false
+	_share_menu.gui_input.connect(func(event: InputEvent) -> void:
+		if event is InputEventMouseButton and (event as InputEventMouseButton).pressed:
+			_share_menu.visible = false)
+	add_child(_share_menu)
+	var center := CenterContainer.new()
+	center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	center.mouse_filter = Control.MOUSE_FILTER_PASS
+	_share_menu.add_child(center)
+	var panel := PanelContainer.new()
+	panel.theme_type_variation = &"ChromePanel"
+	center.add_child(panel)
+	var grid := GridContainer.new()
+	grid.columns = 2
+	grid.add_theme_constant_override(&"h_separation", 16)
+	grid.add_theme_constant_override(&"v_separation", 16)
+	panel.add_child(grid)
+	var actions := [
+		["Save to file", &"save_file", true], ["Load from file", &"open_file", false],
+		["Copy share code", &"copy_code", true], ["Paste share code", &"paste_code", false],
+	]
+	if ShipShare.can_save_enemies():
+		actions.append(["Save as enemy", &"save_enemy", true])
+	for row: Array in actions:
+		var action: StringName = row[1]
+		var button := _button(grid, row[0], func() -> void:
+			_share_menu.visible = false
+			share_requested.emit(action, _selected_id))
+		button.name = String(action)
+		button.custom_minimum_size = Vector2(280, 64)
+		if row[2]:
+			_share_ship_buttons.append(button)
 
 
 func refresh() -> void:

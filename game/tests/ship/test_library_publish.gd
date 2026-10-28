@@ -1,6 +1,7 @@
 extends TestCase
 ## Phase 7.3: publishing marks a library ship for sale (no second store), signed by its pilot.
-## The shops list every published ship that can fly, at what building it costs.
+## The shops list every published ship that can fly, at what building it costs. Phase 7.4: a ship
+## that arrives from a file or a code joins the library without overwriting one already there.
 
 const DIR := "user://test_publish_library"
 
@@ -49,6 +50,21 @@ func test_a_ship_that_cant_fly_isnt_offered() -> void:
 	library.save_ship(broken)
 	var ids := library.for_sale(placement).map(func(entry: Dictionary) -> String: return entry["id"])
 	assert_false(ids.has("gunboat"), "a coreless ship isn't for sale")
+
+
+func test_an_arriving_ship_never_overwrites_one() -> void:
+	var errors: PackedStringArray = []
+	var arrived := ShipCode.read(ShipCode.code(library.load_ship("gunboat")), errors)
+	var id := library.import_ship(arrived)
+	assert_ne(id, "gunboat", "the id is taken, so it gets a new one")
+	assert_eq(library.load_ship("gunboat").name, "Gunboat", "the old one is still there")
+	assert_eq(library.load_ship(id).tiles.size(), library.load_ship("gunboat").tiles.size())
+	var fresh := ShipCode.read(ShipCode.code(library.load_ship("hexwing")), errors)
+	fresh.id = "ship_from_a_friend"
+	assert_eq(library.import_ship(fresh), "ship_from_a_friend", "a free id is kept")
+	var odd := ShipCode.read(ShipCode.code(library.load_ship("hexwing")), errors)
+	odd.id = "../../escape"
+	assert_true(BlueprintLibrary.is_valid_id(library.import_ship(odd)), "an id that isn't a safe file name is replaced")
 
 
 func _entry(id: String) -> Dictionary:
