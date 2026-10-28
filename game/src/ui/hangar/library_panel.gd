@@ -1,7 +1,7 @@
 class_name LibraryPanel
 extends PanelContainer
 ## The ship library screen (Phase 2.6): a grid of thumbnail cards, plus New, Save, Save As,
-## Load, Rename and Delete.
+## Load, Rename and Delete, and Publish, which puts a ship up for sale in every pilot's shop (7.3).
 ##
 ## The panel owns the dialogs; the hangar owns the ship being edited and does the actual
 ## save and load, so this only emits what the player asked for.
@@ -10,8 +10,10 @@ signal load_requested(id: String)
 signal new_requested
 signal save_requested
 signal save_as_requested(new_name: String)
+signal publish_requested(id: String, on: bool)
 
-const CARD := Vector2(180, 210)
+const CARD := Vector2(180, 232)
+const FOR_SALE := Color(1, 0.85, 0.5)
 
 var library: BlueprintLibrary
 
@@ -20,6 +22,10 @@ var _selected_id: String = ""
 var _load_button: Button
 var _rename_button: Button
 var _delete_button: Button
+var _publish_button: Button
+var _note := Label.new()
+## The listed ships by id, as BlueprintLibrary.list() gives them.
+var _entries := {}
 var _name_dialog := AcceptDialog.new()
 var _name_edit := LineEdit.new()
 var _name_action: Callable
@@ -39,6 +45,11 @@ func _ready() -> void:
 	title.text = "Ships"
 	title.add_theme_font_size_override(&"font_size", 28)
 	bar.add_child(title)
+	_note.add_theme_color_override(&"font_color", FOR_SALE)
+	_note.add_theme_font_size_override(&"font_size", 18)
+	_note.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_note.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	bar.add_child(_note)
 	var spacer := Control.new()
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	bar.add_child(spacer)
@@ -47,6 +58,9 @@ func _ready() -> void:
 	_button(bar, "Save As", func() -> void: _ask_name("Save as", "", func(text: String) -> void: save_as_requested.emit(text)))
 	_load_button = _button(bar, "Load", func() -> void: load_requested.emit(_selected_id))
 	_rename_button = _button(bar, "Rename", _rename_selected)
+	_publish_button = _button(bar, "Publish", func() -> void:
+		publish_requested.emit(_selected_id, not _entries.get(_selected_id, {}).get("published", false)))
+	_publish_button.name = "Publish"
 	_delete_button = _button(bar, "Delete", func() -> void:
 		_confirm.dialog_text = "Delete this ship? This can't be undone."
 		_confirm.popup_centered())
@@ -75,7 +89,9 @@ func _ready() -> void:
 func refresh() -> void:
 	for child in _grid.get_children():
 		child.queue_free()
+	_entries.clear()
 	for entry in library.list():
+		_entries[entry["id"]] = entry
 		_grid.add_child(_card(entry))
 	_update_buttons()
 
@@ -105,6 +121,16 @@ func _card(entry: Dictionary) -> Control:
 	label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	column.add_child(label)
+	var byline := Label.new()
+	byline.text = ("For sale · " if entry["published"] else "") + ("by %s" % entry["author"] if entry["author"] != "" else "")
+	byline.add_theme_font_size_override(&"font_size", 14)
+	byline.add_theme_color_override(&"font_color", FOR_SALE if entry["published"] else Color(1, 1, 1, 0.6))
+	byline.add_theme_color_override(&"font_outline_color", UiTheme.TEXT_OUTLINE)
+	byline.add_theme_constant_override(&"outline_size", UiTheme.OUTLINE_PX)
+	byline.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	byline.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	byline.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	column.add_child(byline)
 	card.pressed.connect(func() -> void:
 		_selected_id = entry["id"]
 		for other in _grid.get_children():
@@ -136,6 +162,13 @@ func _update_buttons() -> void:
 	_load_button.disabled = not has
 	_rename_button.disabled = not has
 	_delete_button.disabled = not has
+	_publish_button.disabled = not has
+	_publish_button.text = "Unpublish" if has and _entries.get(_selected_id, {}).get("published", false) else "Publish"
+
+
+## A line beside the title: what Publish did, or why it didn't.
+func show_note(text: String) -> void:
+	_note.text = text
 
 
 func _button(parent: Control, text: String, action: Callable) -> Button:

@@ -17,9 +17,11 @@ signal changed
 
 const UNDO_DEPTH := 100
 const DEFAULT_PAINT := Color(0.55, 0.59, 0.63)
-## Where a new part comes from: bought, or out of the inventory.
+## Where a new part comes from: bought, out of the inventory, or the inventory first and the
+## shop for the rest (a bought ship, 7.3).
 const SHOP := &"shop"
 const STOCK := &"stock"
+const EITHER := &"either"
 
 var placement: Placement
 var blueprint: Blueprint
@@ -281,6 +283,58 @@ func move_mount(index: int, slot: Dictionary) -> bool:
 	return true
 
 
+## Stocked: rebuilds the ship as `design`, a library ship bought in the shop (PLAN.md 7.3), as one
+## undo step. The old ship's tiles are refunded and its parts go in the inventory; the new one
+## takes loose parts first (the most experienced gun of each kind) and buys the rest. Gun items
+## and Creative gun levels in `design` are ignored. False, with `refusal`, if it can't be paid for.
+func swap_to(design: Blueprint) -> bool:
+	refusal = ""
+	var errors: PackedStringArray = []
+	var ship := Blueprint.from_dict(design.to_dict(), errors) if stock != null else null
+	if ship == null:
+		return false
+	ship.tags.erase(Blueprint.PUBLISHED)
+	for mount in ship.mounts:
+		if Mounting.is_weapon(mount):
+			mount.erase("gun")
+			mount.erase("level")
+	var before := _snapshot()
+	# Strip the old ship first, so its guns are loose for the new one to take.
+	_checkpoint()
+	var stripped := Blueprint.new()
+	stripped.id = blueprint.id  # an undo snapshot needs one to parse
+	blueprint = stripped
+	_settle(&"")
+	_checkpoint()
+	blueprint = ship
+	if not _settle(EITHER):
+		_undo.pop_back()
+		var why := refusal
+		_restore(before)
+		refusal = why
+		return false
+	_undo.pop_back()  # the stripped state; one undo goes back to the old ship
+	changed.emit()
+	return true
+
+
+## What swap_to(`design`) would cost now, without doing it: {"pay": {resource: net amount}, where
+## a negative amount comes back, "refusal": why it can't be paid for, or ""}.
+func quote_swap(design: Blueprint) -> Dictionary:
+	var errors: PackedStringArray = []
+	var trial := HangarEditor.create(placement, Blueprint.from_dict(blueprint.to_dict(), errors))
+	trial.economy = economy
+	trial.stock = Inventory.from_dict(stock.to_dict(), errors) if stock != null else null
+	if not trial.swap_to(design):
+		return {"pay": {}, "refusal": trial.refusal if not trial.refusal.is_empty() else "Can't buy it here"}
+	var pay := {}
+	for resource: StringName in Economy.add(stock.wallet, trial.stock.wallet):
+		var spent := stock.amount(resource) - trial.stock.amount(resource)
+		if spent != 0:
+			pay[resource] = spent
+	return {"pay": pay, "refusal": ""}
+
+
 ## Index of the mount in that place ({"tile", "edge", "port"} or {"tile", "face"}), or -1.
 func mount_index(where: Dictionary) -> int:
 	for i in blueprint.mounts.size():
@@ -479,10 +533,11 @@ func _settle(source: StringName, wanted := "", selling := false) -> bool:
 			var id := str(mount.get("gun", ""))
 			if id.is_empty() or not was_fitted.has(id) or claimed.has(id):
 				new_parts += 1
-				id = _spare_gun(spare, WeaponLib.type_of_part(str(mount["part"])), wanted, claimed) if source == STOCK else ""
+				id = _spare_gun(spare, WeaponLib.type_of_part(str(mount["part"])), wanted, claimed) \
+						if source in [STOCK, EITHER] else ""
 				if not id.is_empty():
 					mount["gun"] = id
-				elif source == SHOP:
+				elif source in [SHOP, EITHER]:
 					mount.erase("gun")
 					bill = Economy.add(bill, Economy.part_price(placement, mount))
 					bought.append(mount)
@@ -501,9 +556,9 @@ func _settle(source: StringName, wanted := "", selling := false) -> bool:
 			if seen_thrusters[key] <= int(old_thrusters.get(key, 0)):
 				continue
 			new_parts += 1
-			if source == STOCK and int(stock.thrusters.get(key, 0)) > int(taken_thrusters.get(key, 0)):
+			if source in [STOCK, EITHER] and int(stock.thrusters.get(key, 0)) > int(taken_thrusters.get(key, 0)):
 				taken_thrusters[key] = int(taken_thrusters.get(key, 0)) + 1
-			elif source == SHOP:
+			elif source in [SHOP, EITHER]:
 				bill = Economy.add(bill, Economy.part_price(placement, mount))
 			else:
 				left_off.append(mount)

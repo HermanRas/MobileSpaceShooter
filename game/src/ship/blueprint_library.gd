@@ -2,6 +2,8 @@ class_name BlueprintLibrary
 extends RefCounted
 ## The device-wide ship library (D6, Phase 2.6): `user://library/<id>.json`, with a thumbnail
 ## beside each as `<id>.png`. Writes go through `Save`, so they're atomic with a `.bak`.
+## A ship tagged `Blueprint.PUBLISHED` is for sale in every pilot's shop (7.3): the library is
+## the shop's stock, not a second store.
 
 const DIR := "user://library"
 ## Which sample ships were copied in, and which version: not `.json`, so list() skips it.
@@ -14,7 +16,7 @@ func _init(library_dir: String = DIR) -> void:
 	dir = library_dir
 
 
-## Every saved ship, newest first, as {"id", "name", "tiles", "modified"}.
+## Every saved ship, newest first, as {"id", "name", "author", "published", "tiles", "modified"}.
 func list() -> Array[Dictionary]:
 	var out: Array[Dictionary] = []
 	if not DirAccess.dir_exists_absolute(dir):
@@ -29,12 +31,30 @@ func list() -> Array[Dictionary]:
 		out.append({
 			"id": id,
 			"name": str(data.get("name", id)),
+			"author": str(data.get("author", "")),
+			"published": (data.get("tags", []) as Array).has(Blueprint.PUBLISHED),
 			"tiles": (data.get("tiles", []) as Array).size(),
 			"modified": FileAccess.get_modified_time(json_path(id)),
 		})
 	# File times have 1 s resolution, so ships saved together tie; break ties by name.
 	out.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		return a["modified"] > b["modified"] if a["modified"] != b["modified"] else a["name"] < b["name"])
+	return out
+
+
+## The ships for sale (7.3): every published one that can fly (one edited into a broken state
+## since isn't offered), as list()'s entries plus "blueprint" and "cost" (Economy.build_cost).
+func for_sale(placement: Placement) -> Array[Dictionary]:
+	var out: Array[Dictionary] = []
+	for entry in list():
+		if not entry["published"]:
+			continue
+		var bp := load_ship(entry["id"])
+		if bp == null or not placement.validate(bp).is_empty():
+			continue
+		entry["blueprint"] = bp
+		entry["cost"] = Economy.build_cost(placement, bp)
+		out.append(entry)
 	return out
 
 
@@ -89,6 +109,18 @@ func rename(id: String, new_name: String) -> Error:
 	if bp == null:
 		return ERR_FILE_NOT_FOUND
 	bp.name = new_name
+	return save_ship(bp)
+
+
+## Puts a ship up for sale (`on`) or takes it off, signed by `author` (the pilot's name).
+func publish(id: String, on: bool, author := "") -> Error:
+	var bp := load_ship(id)
+	if bp == null:
+		return ERR_FILE_NOT_FOUND
+	bp.tags.erase(Blueprint.PUBLISHED)
+	if on:
+		bp.tags.append(Blueprint.PUBLISHED)
+		bp.author = author
 	return save_ship(bp)
 
 

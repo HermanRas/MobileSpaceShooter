@@ -1409,9 +1409,20 @@ anything is on screen: brutal, but no ship can react. Flagged for the tuning pas
 grace before they fire, or spawning beyond range.
 
 #### 7.3 Publish to the library `[D6]`
-- [ ] "Publish" makes a validated blueprint buyable in WaveTime and Story at its computed cost
-- [ ] A device-wide library at `user://library/`, with the author shown
-- **Done when:** a ship published by profile A appears in profile B's shop.
+✅ 2026-10-28. **Publish** in the Creative library (Ships) tags a library ship `published` and
+signs it with the chosen pilot's name; only a ship that can fly goes up, and cards show "For sale ·
+by …". There's no second store: `BlueprintLibrary.for_sale()` lists every published ship that still
+validates, priced at `Economy.build_cost` (tiles' materials plus parts' GC). The stocked hangar's
+**Ships** (top right, beside Undo) opens `ShipShopPanel`. Selecting a ship quotes what it costs
+*now*, and Buy (after a confirmation) **swaps** the pilot's ship for it (owner, 2026-10-28):
+`HangarEditor.swap_to` strips the old ship, refunding tiles 1:1 and putting parts in the inventory,
+then builds the new one taking loose parts first (the most experienced gun of each kind) and buying
+the rest. It's one undo step, and `quote_swap` dry-runs it on a copy. Gun ids and Creative gun
+levels never come along. Tested in `tests/model/test_ship_shop.gd` and
+`tests/ship/test_library_publish.gd`. `drive_shop` has pilot A publish and pilot B find it signed,
+fail to afford it, then buy it. ⚠️ Publishing a ship that's open in the hangar copies the tag onto
+the open blueprint too, or its next Save would quietly unpublish it.
+- [ ] Owner, on the phone: publish a Creative ship, then buy it in another pilot's WaveTime hangar
 
 #### 7.4 Save ships to files and share them
 - [ ] **Save ship to file**: a `.mssship` file (the blueprint JSON) to send to friends, and **Load ship from file** on their end
@@ -1464,7 +1475,7 @@ grace before they fire, or spawning beyond range.
 - **Done when:** a ship can be upgraded only with what the profile owns.
 
 #### 8.6 Shops `[D5]`
-- [ ] A ship shop: library blueprints priced at their computed cost
+- [x] A ship shop: library blueprints priced at their computed cost (7.3: the stocked hangar's Ships)
 - [ ] A market: buy and sell materials for GC (the hangar's `MarketPanel`, 4.8c), and buy L1 guns and thrusters (§4.6)
 - **Done when:** a blueprint can be bought, then flown in the next run.
 

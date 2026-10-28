@@ -14,7 +14,8 @@ extends Node
 ## stock, and every edit is paid for (HangarEditor). Delete becomes Remove, Sell sells the
 ## selected part (or a part dropped on it), a part dragged off the ship onto the palette goes in
 ## the inventory, and the Inventory tab holds what's loose. Tapping the wallet opens the market
-## (4.8c). Without a profile it's Creative.
+## (4.8c), and Ships the ship shop (7.3), where buying a published library ship swaps the pilot's
+## ship for it. Without a profile it's Creative, whose library can publish ships to the shops.
 
 const PX := ShipMesh.PX_PER_U
 const GHOST_LIFT_PX := 90.0
@@ -55,6 +56,8 @@ var _wallet: Button
 var _reset_button: Button
 var _reset_armed_until := 0
 var _market: MarketPanel
+var _shop: ShipShopPanel
+var _confirm := ConfirmPanel.new()
 ## Creative's Fly: free flight or a test fight at a level (7.2).
 var _launch := LaunchPanel.new()
 var _notice: Label
@@ -162,7 +165,75 @@ func load_from_library(id: String) -> void:
 func _open_library(open: bool) -> void:
 	_library_panel.visible = open
 	if open:
+		_library_panel.show_note("")
 		_library_panel.refresh()
+
+
+## Creative: puts library ship `id` up for sale in every pilot's shop (7.3), signed by the chosen
+## pilot, or takes it off. Only a ship that can fly goes up. The ship being edited takes the
+## change too, so its next Save doesn't undo it.
+func publish(id: String, on: bool) -> bool:
+	var bp := _library.load_ship(id)
+	if bp == null:
+		return false
+	if on and not placement.validate(bp).is_empty():
+		_library_panel.show_note("Only a ship that can fly can be sold")
+		return false
+	var pilot := Profiles.selected()
+	_library.publish(id, on, pilot.name if pilot != null else "")
+	if editor.blueprint.id == id:
+		var saved := _library.load_ship(id)
+		editor.blueprint.tags = saved.tags
+		editor.blueprint.author = saved.author
+	_library_panel.show_note("For sale in every pilot's shop" if on else "Taken off sale")
+	_library_panel.refresh()
+	return true
+
+
+## Stocked: the ship shop (7.3).
+func _open_shop(open: bool) -> void:
+	_shop.visible = open
+	if open:
+		_end_carry()
+		_shop.show_ships(_library.for_sale(placement), _library.thumbnail_path)
+		if not _shop.selected_id().is_empty():
+			_quote_ship(_shop.selected_id())
+
+
+## The shop's line for ship `id`: what buying it costs now, after the trade-in.
+func _quote_ship(id: String) -> void:
+	var bp := _library.load_ship(id)
+	if bp == null:
+		return
+	var quote := editor.quote_swap(bp)
+	if quote["refusal"] != "":
+		_shop.show_quote(quote["refusal"], false)
+		return
+	var pay := {}
+	var back := {}
+	for resource: StringName in quote["pay"]:
+		if int(quote["pay"][resource]) > 0:
+			pay[resource] = quote["pay"][resource]
+		else:
+			back[resource] = -int(quote["pay"][resource])
+	var parts: PackedStringArray = ["You pay " + StatsPanel.format_cost(pay) if not pay.is_empty() else "Nothing to pay"]
+	if not back.is_empty():
+		parts.append("back: " + StatsPanel.format_cost(back))
+	_shop.show_quote("  ·  ".join(parts), true)
+
+
+## Buys library ship `id` (7.3): it replaces the pilot's ship, whose tiles are refunded and whose
+## parts go in the inventory (HangarEditor.swap_to).
+func buy_ship(id: String) -> bool:
+	var bp := _library.load_ship(id)
+	if bp == null:
+		return false
+	if not editor.swap_to(bp):
+		_quote_ship(id)
+		return false
+	_select(-1)
+	_open_shop(false)
+	return true
 
 
 ## Fly: in Creative, the launch panel (free flight or a test fight, 7.2); stocked, straight up.
@@ -239,8 +310,12 @@ func on_back() -> void:
 		_end_carry()
 	elif _launch.visible:
 		_launch.visible = false
+	elif _confirm.visible:
+		_confirm.close()
 	elif _market != null and _market.visible:
 		_open_market(false)
+	elif _shop != null and _shop.visible:
+		_open_shop(false)
 	elif _library_panel.visible:
 		_open_library(false)
 	else:
@@ -942,7 +1017,7 @@ func _build_ui() -> void:
 	_stats.self_modulate = Color(1, 1, 1, 0.85)
 	root.add_child(_stats)
 
-	# The stocked hangar builds the profile's own ship; buying library ships comes with shops (7.3).
+	# Stocked, Ships is the shop instead, up in the corner (7.3).
 	_tool_button(tools, "Ships", _open_library.bind(true)).visible = not stocked()
 
 	_wallet = Button.new()
@@ -973,16 +1048,30 @@ func _build_ui() -> void:
 		root.add_child(_market)
 	_fly_button = _tool_button(tools, "Fly", _on_fly_pressed)
 	_fly_button.theme_type_variation = &"GoButton"
-	if stocked() and OS.is_debug_build():
-		# Debug: start the profile over (owner, 2026-10-26). Two taps, then a clean load from the
-		# menu. Beside Undo rather than in the column, which is full down to the palette.
-		var corner := Control.new()
+	if stocked():
+		# Beside Undo rather than in the column, which is full down to the palette.
+		var corner := HBoxContainer.new()
+		corner.add_theme_constant_override(&"separation", 12)
 		corner.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-		corner.position = Vector2(-16 - 132 - 12 - 132, 16)
+		corner.grow_horizontal = Control.GROW_DIRECTION_BEGIN
+		corner.position = Vector2(-16 - 132 - 12, 16)
 		root.add_child(corner)
-		_reset_button = _tool_button(corner, "Reset", _reset_stock)
-		_reset_button.name = "ResetStock"
-		_reset_button.theme_type_variation = &"DangerButton"
+		if OS.is_debug_build():
+			# Debug: start the profile over (owner, 2026-10-26). Two taps, then a clean load from
+			# the menu.
+			_reset_button = _tool_button(corner, "Reset", _reset_stock)
+			_reset_button.name = "ResetStock"
+			_reset_button.theme_type_variation = &"DangerButton"
+		_tool_button(corner, "Ships", _open_shop.bind(true)).name = "ShipShop"
+		_shop = ShipShopPanel.new()
+		_shop.visible = false
+		_shop.selected.connect(_quote_ship)
+		_shop.buy_requested.connect(func(id: String) -> void:
+			var bp := _library.load_ship(id)
+			if bp != null:
+				_confirm.ask("Swap your %s for the %s?\nIts tiles are refunded and its parts go in the Inventory."
+						% [editor.blueprint.name, bp.name], "Buy", buy_ship.bind(id), "ConfirmBuy"))
+		root.add_child(_shop)
 	_thumbs = ThumbnailRenderer.new()
 	add_child(_thumbs)
 	_library_panel = LibraryPanel.new()
@@ -1001,11 +1090,13 @@ func _build_ui() -> void:
 	_library_panel.load_requested.connect(func(id: String) -> void:
 		load_from_library(id)
 		_open_library(false))
+	_library_panel.publish_requested.connect(publish)
 	root.add_child(_library_panel)
 	_launch.name = "LaunchPanel"
 	_launch.max_level = int(Encounter.Rules.from_table(Data.table(&"levels")).bands.back().get("to", 100))
 	_launch.launched.connect(func(level: int) -> void: fly(level))
 	root.add_child(_launch)
+	root.add_child(_confirm)
 
 
 ## The first tap arms it; a second within RESET_ARM_S deletes the profile's saved stock and goes

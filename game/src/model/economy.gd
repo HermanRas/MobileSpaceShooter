@@ -125,6 +125,16 @@ static func part_price(placement: Placement, mount: Dictionary) -> Dictionary:
 	return {Inventory.GC: int(spec["price_gc"])}
 
 
+## What building `bp` from nothing costs: its tiles' materials and its parts' GC (a library
+## ship's price in the shop, PLAN.md 7.3).
+static func build_cost(placement: Placement, bp: Blueprint) -> Dictionary:
+	var total := tiles_cost(placement, bp)
+	for mount in bp.mounts:
+		if Mounting.is_weapon(mount) or Mounting.is_thruster(mount):
+			total = add(total, part_price(placement, mount))
+	return total
+
+
 ## The materials `bp`'s tiles cost (the core is free).
 static func tiles_cost(placement: Placement, bp: Blueprint) -> Dictionary:
 	var total := {}

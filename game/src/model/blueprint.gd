@@ -8,6 +8,8 @@ extends RefCounted
 ## and stats are always computed, never stored.
 
 const FORMAT := 1
+## The tag on a library ship that's for sale in the shops (PLAN.md 7.3).
+const PUBLISHED := "published"
 
 ## One placed tile.
 class Tile:

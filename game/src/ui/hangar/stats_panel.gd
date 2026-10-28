@@ -107,6 +107,8 @@ static func format_cost(cost: Dictionary) -> String:
 	for material: StringName in [&"hull", &"alloy", &"crystal", &"tech"]:
 		if cost.has(material):
 			parts.append("%d %s" % [cost[material], material])
+	if cost.has(Inventory.GC):
+		parts.append("%d GC" % cost[Inventory.GC])
 	return ", ".join(parts)
 
 
