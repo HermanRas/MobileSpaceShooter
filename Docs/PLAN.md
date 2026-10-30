@@ -1596,14 +1596,19 @@ frame would redraw the labels every frame.
   and do the "new best" lines show?
 
 #### 8.5 Inventory and owned hangar
-- [ ] Hangar mode `OWNED`: placing spends materials, removing refunds 100%, parts come from inventory
-- [ ] Can't-afford states are greyed out with the shortfall shown
-- **Done when:** a ship can be upgraded only with what the profile owns.
+✅ 2026-10-30. The owned hangar is 4.8a's stocked hangar: placing spends materials, removing
+refunds 100%, and parts come from the inventory or are bought. New this phase: every palette
+swatch shows its price, and a swatch the wallet can't pay for is greyed out with what's missing
+written across it ("need 120 hull"). It won't pick up. `HangarPalette._mark_prices` updates the
+swatches in place after each edit; `Inventory.shortfall` and `cost_text` are tested in
+`test_inventory.gd`, and `drive_stocked` checks it. ⚠️ A swatch's tile mesh is a child drawn over
+the swatch's own `_draw`, so the corner price and the note go on an overlay child added after it.
 
 #### 8.6 Shops `[D5]`
-- [x] A ship shop: library blueprints priced at their computed cost (7.3: the stocked hangar's Ships)
-- [ ] A market: buy and sell materials for GC (the hangar's `MarketPanel`, 4.8c), and buy L1 guns and thrusters (§4.6)
-- **Done when:** a blueprint can be bought, then flown in the next run.
+✅ 2026-10-30, already built in earlier phases. The ship shop is the stocked hangar's **Ships**
+(7.3). The market is the wallet's `MarketPanel` (4.8c). New guns come at L1 and thrusters at their
+chosen L1–3 from the palette, priced in GC (4.8a). A bought ship is the one in the hangar, so the
+next run flies it (`drive_shop` buys one; `drive_wavetime` flies whatever is in the hangar).
 
 #### 8.7 New-player curve
 - [x] Spawn fairness (from 7.2), 2026-10-30: an enemy holds its fire until any part of it is in

@@ -119,8 +119,22 @@ func _step_building_pays_and_a_short_wallet_refuses() -> void:
 	_check(_hangar.editor.blueprint.tiles.size() == tiles, "with no hull, it's refused")
 	_check(_hangar._notice.text == "Not enough hull" and _hangar._notice.modulate.a > 0.5,
 			"and the hangar says why (%s)" % _hangar._notice.text)
+	# 8.5: once the palette knows the wallet, a tile it can't pay for is greyed out, saying what's
+	# missing, and won't even pick up.
+	_hangar._on_changed()
+	await _frames(2)
+	var swatch := _swatch("triangle")
+	var cost: Dictionary = _hangar.placement.tiles.tile(&"hull").cost(&"L")
+	_check(swatch.short == "need %d hull" % int(cost[&"hull"]), "a swatch it can't afford is greyed: %s" % swatch.short)
+	_check(swatch.corner == Inventory.cost_text(cost), "and every swatch shows its price (%s)" % swatch.corner)
+	await _frames(1)
+	_save_shot("drive_stocked_short.png")
+	await _drag(0, swatch.get_global_rect().get_center(), target)
+	_check(_hangar.editor.blueprint.tiles.size() == tiles and _hangar._carry.is_empty(), "and it doesn't pick up")
 	_hangar.editor.stock.wallet[&"hull"] = hull
 	_hangar._on_changed()
+	await _frames(2)
+	_check(_swatch("triangle").short.is_empty(), "with the hull back, it's live again")
 
 
 func _step_the_stock_survives_a_reload() -> void:

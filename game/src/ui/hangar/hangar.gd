@@ -1062,6 +1062,7 @@ func _build_ui() -> void:
 
 	_palette = HangarPalette.new()
 	_palette.shapes = placement.shapes
+	_palette.tiles = placement.tiles
 	_palette.set_anchors_preset(Control.PRESET_BOTTOM_WIDE)
 	_palette.grow_vertical = Control.GROW_DIRECTION_BEGIN
 	_palette.drag_started.connect(_start_carry_new)

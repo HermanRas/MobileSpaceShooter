@@ -55,7 +55,13 @@ var level: int = 1
 ## Creative: the level new guns get (7.1), L1 to the XP curve's top.
 var gun_level: int = 1
 ## The profile's stock and the ship it's building (for which guns are loose); null in Creative.
+## With a stock, every swatch shows its price, and one the wallet can't pay for is greyed out with
+## what's missing written across it (8.5).
 var stock: Inventory
+## Tile costs by type and size (for the prices).
+var tiles: TileLib
+## The swatches with a price now: [swatch, cost].
+var _priced: Array = []
 var ship: Blueprint
 ## The mount type an inventory gun goes on, or &"" for the one it had.
 var refit_to: StringName = &""
@@ -109,6 +115,7 @@ func _ready() -> void:
 func _refresh_shapes() -> void:
 	for child in _shape_row.get_children():
 		child.queue_free()
+	_priced.clear()
 	for size_button in _size_buttons:
 		size_button.visible = type != WEAPONS and type != INVENTORY  # guns come in one size
 	if type == INVENTORY:
@@ -128,11 +135,14 @@ func _refresh_shapes() -> void:
 		swatch.mesh = ShipMesh.swatch_mesh(swatch.polygon, type, HangarEditor.DEFAULT_PAINT)
 		swatch.scale_hint = {&"S": 0.45, &"M": 0.7, &"L": 1.0}[tile_size]
 		swatch.tooltip_text = String(shape_id)
+		if stock != null and tiles != null and tiles.tile_ids().has(type):
+			_price(swatch, tiles.tile(type).cost(tile_size))
 		swatch.gui_input.connect(func(event: InputEvent) -> void:
-			if _is_press(event):
+			if _is_press(event) and swatch.short.is_empty():
 				drag_started.emit(type, shape_id, tile_size)
 				accept_event())
 		_shape_row.add_child(swatch)
+	_mark_prices()
 
 
 func _thruster_row() -> void:
@@ -147,12 +157,13 @@ func _thruster_row() -> void:
 		swatch.caption = thrusters.display_name(type_id)
 		swatch.tooltip_text = String(type_id)
 		if stock != null:
-			swatch.corner = "%d GC" % thrusters.spec(type_id, tile_size, level)["price_gc"]
+			_price(swatch, {Inventory.GC: int(thrusters.spec(type_id, tile_size, level)["price_gc"])})
 		swatch.gui_input.connect(func(event: InputEvent) -> void:
-			if _is_press(event):
+			if _is_press(event) and swatch.short.is_empty():
 				thruster_drag_started.emit(type_id, tile_size, level)
 				accept_event())
 		_shape_row.add_child(swatch)
+	_mark_prices()
 	_shape_row.add_child(_spacer())
 	var level_group := ButtonGroup.new()
 	for n in range(1, 4):
@@ -199,9 +210,9 @@ func _weapon_row() -> void:
 				names.append(weapons.mount_type(StringName(each)).get("name", each))
 			swatch.note = "%s only" % " / ".join(names)
 		if stock != null:
-			swatch.corner = "%d GC" % weapons.weapon(weapon_id)["price_gc"]
+			_price(swatch, {Inventory.GC: int(weapons.weapon(weapon_id)["price_gc"])})
 		swatch.gui_input.connect(func(event: InputEvent) -> void:
-			if _is_press(event) and weapons.allows(weapon_id, mount_type):
+			if _is_press(event) and weapons.allows(weapon_id, mount_type) and swatch.short.is_empty():
 				weapon_drag_started.emit(weapon_id, mount_type, weapons.mode_for(mount_type, mode))
 				accept_event())
 		_shape_row.add_child(swatch)
@@ -266,12 +277,30 @@ func show_gun_level(to: int) -> void:
 	_refresh_shapes()
 
 
-## Shows the stock now (after an edit); the Inventory tab is redrawn if it's open.
+## Shows the stock now (after an edit): the Inventory tab is redrawn if it's open, and the other
+## tabs' swatches greyed or not by what the wallet holds now.
 func show_stock(new_stock: Inventory, new_ship: Blueprint) -> void:
 	stock = new_stock
 	ship = new_ship
 	if type == INVENTORY:
 		_refresh_shapes()
+	else:
+		_mark_prices()
+
+
+## `swatch` costs `cost`: its price in the corner, and it's marked by `_mark_prices`.
+func _price(swatch: _ShapeSwatch, cost: Dictionary) -> void:
+	swatch.corner = Inventory.cost_text(cost)
+	_priced.append([swatch, cost])
+
+
+## Greys out each priced swatch the wallet can't pay for, with what's missing across it.
+func _mark_prices() -> void:
+	for entry: Array in _priced:
+		var swatch: _ShapeSwatch = entry[0]
+		if is_instance_valid(swatch):
+			var missing := stock.shortfall(entry[1])
+			swatch.set_short("need " + Inventory.cost_text(missing) if not missing.is_empty() else "")
 
 
 func _stock_row() -> void:
@@ -409,21 +438,64 @@ class _ShapeSwatch extends PanelContainer:
 	var disabled := false
 	## Why it's disabled ("Fixed only"), written across the dimmed part.
 	var note: String = ""
+	## What the wallet is missing to buy it ("need 40 hull"), or "": it's dimmed while it's short.
+	var short: String = ""
 	var _mesh_view: MeshInstance2D
+	## Over the mesh: the corner text, and the note or shortfall written across the swatch.
+	var _across := Control.new()
 
 	func _ready() -> void:
 		texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
-		if mesh == null or not Assets.has_real_art(ShipMesh.ATLAS_ID):
+		if mesh != null and Assets.has_real_art(ShipMesh.ATLAS_ID):
+			if _ship_material == null:
+				_ship_material = ShipMesh.make_material()
+			_mesh_view = MeshInstance2D.new()
+			_mesh_view.mesh = mesh
+			_mesh_view.material = _ship_material
+			_mesh_view.modulate.a = 0.35 if _dim() else 1.0
+			add_child(_mesh_view)
+			resized.connect(_place_mesh)
+			_place_mesh()
+		# Last, so it draws over the mesh; a container child, so it fills the swatch.
+		_across.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_across.draw.connect(func() -> void:
+			if not corner.is_empty():
+				_across.draw_string_outline(get_theme_default_font(), Vector2(4, 16), corner, HORIZONTAL_ALIGNMENT_LEFT,
+						size.x - 8, 12, 3, Color(0, 0, 0, 0.8))
+				_across.draw_string(get_theme_default_font(), Vector2(4, 16), corner, HORIZONTAL_ALIGNMENT_LEFT, size.x - 8, 12,
+						Color(1, 0.85, 0.5))
+			var text := note if not note.is_empty() else short
+			if not text.is_empty():
+				_draw_across(_across, text, Color(1, 0.85, 0.5) if not note.is_empty() else Color(1.0, 0.45, 0.4)))
+		add_child(_across)
+
+	## `text` across the middle, outlined: on one line if it fits at a readable size, else its first
+	## word over the rest ("need" / "120 hull").
+	static func _draw_across(on: Control, text: String, colour: Color) -> void:
+		var font := on.get_theme_default_font()
+		var size := on.size
+		var lines := PackedStringArray([text])
+		if font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, 11).x > size.x - 16 and " " in text:  # room for the outline
+			lines = PackedStringArray([text.get_slice(" ", 0), text.substr(text.find(" ") + 1)])
+		for i in lines.size():
+			var font_size := 12
+			while font_size > 8 and font.get_string_size(lines[i], HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x > size.x - 10:
+				font_size -= 1
+			var at := Vector2(0, size.y * 0.5 + 4 + (i - (lines.size() - 1) * 0.5) * 13)
+			on.draw_string_outline(font, at, lines[i], HORIZONTAL_ALIGNMENT_CENTER, size.x, font_size, 4, Color(0, 0, 0, 0.9))
+			on.draw_string(font, at, lines[i], HORIZONTAL_ALIGNMENT_CENTER, size.x, font_size, colour)
+
+	func set_short(text: String) -> void:
+		if text == short:
 			return
-		if _ship_material == null:
-			_ship_material = ShipMesh.make_material()
-		_mesh_view = MeshInstance2D.new()
-		_mesh_view.mesh = mesh
-		_mesh_view.material = _ship_material
-		_mesh_view.modulate.a = 0.35 if disabled else 1.0
-		add_child(_mesh_view)
-		resized.connect(_place_mesh)
-		_place_mesh()
+		short = text
+		if _mesh_view != null:
+			_mesh_view.modulate.a = 0.35 if _dim() else 1.0
+		queue_redraw()
+		_across.queue_redraw()
+
+	func _dim() -> bool:
+		return disabled or not short.is_empty()
 
 	func _place_mesh() -> void:
 		_mesh_view.position = size * 0.5
@@ -440,28 +512,20 @@ class _ShapeSwatch extends PanelContainer:
 		var side := minf(size.x, size.y)
 		var icon := Rect2((size - Vector2.ONE * side) * 0.5, Vector2.ONE * side)
 		var art := _mesh_view != null or (weapon != &"" and GunView.draw_icon(self, weapon, mount, icon,
-				0.35 if disabled else 1.0))
+				0.35 if _dim() else 1.0))
 		if not art:
 			var s := _px_per_u()
 			var points := PackedVector2Array()
 			for p in polygon:
 				points.append(size * 0.5 + p * s)
-			draw_colored_polygon(points, Color(fill, 0.35) if disabled else fill)
+			draw_colored_polygon(points, Color(fill, 0.35) if _dim() else fill)
 			draw_polyline(points + PackedVector2Array([points[0]]), Color(0, 0, 0, 0.8), 2.0, true)
-		if not note.is_empty():
-			draw_string_outline(get_theme_default_font(), Vector2(0, size.y * 0.5 + 4), note, HORIZONTAL_ALIGNMENT_CENTER,
-					size.x, 12, 4, Color(0, 0, 0, 0.9))
-			draw_string(get_theme_default_font(), Vector2(0, size.y * 0.5 + 4), note, HORIZONTAL_ALIGNMENT_CENTER,
-					size.x, 12, Color(1, 0.85, 0.5))
 		if not caption.is_empty():
 			var font := get_theme_default_font()
 			var font_size := 14
 			while font_size > 9 and font.get_string_size(caption, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size).x > size.x - 4:
 				font_size -= 1
 			draw_string(font, Vector2(0, size.y - 6), caption, HORIZONTAL_ALIGNMENT_CENTER, size.x, font_size)
-		if not corner.is_empty():
-			draw_string(get_theme_default_font(), Vector2(4, 16), corner, HORIZONTAL_ALIGNMENT_LEFT, size.x - 8, 12,
-					Color(1, 0.85, 0.5))
 		if bar >= 0.0:
 			draw_rect(Rect2(4, 20, size.x - 8, 4), Color(1, 1, 1, 0.15))
 			draw_rect(Rect2(4, 20, (size.x - 8) * clampf(bar, 0.0, 1.0), 4), Color(0.45, 0.85, 1.0))

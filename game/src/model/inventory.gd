@@ -58,6 +58,25 @@ func short_of(cost: Dictionary) -> StringName:
 	return &""
 
 
+## How much more of each resource `cost` needs than the wallet holds ({} when it can be paid).
+func shortfall(cost: Dictionary) -> Dictionary:
+	var out := {}
+	for resource: StringName in cost:
+		var missing := int(cost[resource]) - amount(resource)
+		if missing > 0:
+			out[resource] = missing
+	return out
+
+
+## A cost or a shortfall in words: "40 hull 12 alloy", "300 GC" (8.5's palette swatches).
+static func cost_text(cost: Dictionary) -> String:
+	var parts: PackedStringArray = []
+	for resource: StringName in MATERIALS + [GC]:
+		if int(cost.get(resource, 0)) > 0:
+			parts.append("%d %s" % [int(cost[resource]), "GC" if resource == GC else String(resource)])
+	return " ".join(parts)
+
+
 ## Takes `cost` from the wallet; false (and nothing taken) if it can't.
 func pay(cost: Dictionary) -> bool:
 	if short_of(cost) != &"":

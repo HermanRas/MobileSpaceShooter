@@ -257,3 +257,11 @@ func _spent() -> Dictionary:
 		if gone != 0:
 			out[resource] = gone
 	return out
+
+
+func test_the_shortfall_says_what_is_missing() -> void:
+	var stock := Inventory.new()
+	stock.receive({&"hull": 30, &"gc": 500})
+	assert_eq(stock.shortfall({&"hull": 70, &"alloy": 12, &"gc": 100}), {&"hull": 40, &"alloy": 12})
+	assert_eq(stock.shortfall({&"hull": 30}), {}, "exactly enough is enough")
+	assert_eq(Inventory.cost_text({&"gc": 300, &"alloy": 12, &"hull": 40}), "40 hull 12 alloy 300 GC", "materials first, GC last")
