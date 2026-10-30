@@ -5,11 +5,11 @@ extends Control
 ##   kills / deaths and Story progress; its Pilots button opens the pilots (6.2).
 ## - Creative: the hangar with everything free (no profile stock).
 ## - WaveTime: the hangar building from the selected pilot's stock (4.8); with no pilot yet, the
-##   character screen makes one first. The run loop is Phase 8, so for now Fly is the test
-##   flight. (Debug builds can reset the stock from that hangar.)
+##   character screen makes one first. Fly starts a run (8.1) or free flight. (Debug builds can
+##   reset the stock from that hangar.)
 ## - Story: locked until Phase 9.
-## - Tutorials (the WaveTime and Story tutorials, and the enemy gallery), Settings and Credits:
-##   their screens.
+## - Tutorials (the WaveTime and Story tutorials, and the enemy gallery), the WaveTime Scoreboard
+##   (8.4), Settings and Credits: their screens.
 ##
 ## The back button asks before quitting.
 ##
@@ -17,6 +17,7 @@ extends Control
 
 const HANGAR := "res://scenes/hangar/hangar.tscn"
 const TUTORIALS := "res://scenes/menu/tutorials.tscn"
+const SCOREBOARD := "res://scenes/menu/scoreboard.tscn"
 const SETTINGS := "res://scenes/menu/settings.tscn"
 const CREDITS := "res://scenes/menu/credits.tscn"
 const CHARACTER := "res://scenes/menu/character.tscn"
@@ -65,8 +66,9 @@ func _ready() -> void:
 			MODE_SIZE, MODE_TITLE_SIZE))
 	modes.add_child(MenuKit.tile("Story", "Locked: arrives in Phase 9", Callable(), "Story", MODE_SIZE, MODE_TITLE_SIZE))
 
-	_row(column, BUTTON_GAP).add_child(MenuKit.button("Tutorials", func() -> void: Router.goto(TUTORIALS),
-			Vector2(BUTTON_SIZE.x * 2 + BUTTON_GAP, BUTTON_SIZE.y)))
+	var help := _row(column, BUTTON_GAP)
+	help.add_child(MenuKit.button("Tutorials", func() -> void: Router.goto(TUTORIALS), BUTTON_SIZE))
+	help.add_child(MenuKit.button("Scoreboard", func() -> void: Router.goto(SCOREBOARD), BUTTON_SIZE))
 	var more := _row(column, BUTTON_GAP)
 	more.add_child(MenuKit.button("Settings", func() -> void: Router.goto(SETTINGS), BUTTON_SIZE))
 	more.add_child(MenuKit.button("Credits", func() -> void: Router.goto(CREDITS), BUTTON_SIZE))

@@ -45,9 +45,11 @@ func _ready() -> void:
 	_check(_find_text(menu, "Shot stress test") == null and _find_text(menu, "Enemy gallery") == null
 			and _find_text(menu, "Reset WaveTime stock") == null, "no debug buttons on the menu")
 	var tutorials_button := _button(menu, "Tutorials")
-	_check(tutorials_button != null and absf(tutorials_button.size.x - (_button(menu, "Settings").size.x * 2 + 12)) < 2.0
+	var scoreboard_button := _button(menu, "Scoreboard")
+	_check(tutorials_button != null and scoreboard_button != null
+			and absf(tutorials_button.size.x - _button(menu, "Settings").size.x) < 2.0
 			and tutorials_button.get_global_rect().end.y <= _button(menu, "Settings").get_global_rect().position.y,
-			"Tutorials is as wide as Settings and Credits together, above them")
+			"Tutorials and Scoreboard sit above Settings and Credits")
 	_save_shot("drive_menu.png")
 	menu.call("on_back")
 	await _frames(2)
@@ -130,6 +132,13 @@ func _ready() -> void:
 	Input.parse_input_event(esc)
 	await _frames(3)
 	_check(_is(get_tree().current_scene, Router.MAIN_MENU), "Esc comes home")
+
+	await _press("Scoreboard")
+	var board := get_tree().current_scene
+	_check(_is(board, "res://scenes/menu/scoreboard.tscn") and "Scoreboard" in _all_text(board), "Scoreboard opens")
+	board.call("on_back")
+	await _frames(3)
+	_check(_is(get_tree().current_scene, Router.MAIN_MENU), "and back comes home")
 
 	await _press("Credits")
 	var credits := get_tree().current_scene

@@ -3,10 +3,14 @@ extends RefCounted
 ## One pilot (PLAN.md 6.2, D2): a name, a character (D3: a base and four colours), and the
 ## record the menus show (best WaveTime, kills, deaths, Story %, jobs). Saved as
 ## `<profile dir>/profile.json`; the profile's stock is beside it (StockStore).
+##
+## WaveTime runs (8.4) add up into the record: kills, deaths (a run lost), runs, and the bests
+## (score, wave reached, longest run in `best_wave_s`). The Scoreboard ranks pilots by them.
 
 const FORMAT := 1
 const REGIONS: Array[String] = ["hair", "eyes", "outfit", "trim"]
-const STATS := {"best_wave_s": 0, "kills": 0, "deaths": 0, "story_pct": 0, "jobs": 0}
+const STATS := {"best_wave_s": 0, "kills": 0, "deaths": 0, "story_pct": 0, "jobs": 0, "best_score": 0, "best_wave": 0,
+		"runs": 0}
 
 var id := ""
 var name := ""
@@ -67,6 +71,22 @@ static func make_id(from_name: String, taken: Array) -> String:
 		out = "%s-%d" % [slug, n]
 		n += 1
 	return out
+
+
+## A WaveTime run is over: `score`, the `wave` it reached, how long it lasted, its `kills`, and
+## whether the ship was lost (`died`; leaving from the pause menu isn't a death). Returns the bests
+## it beat: any of "score", "wave", "time".
+func record_run(score: int, wave: int, seconds: int, kills: int, died: bool) -> PackedStringArray:
+	var beaten: PackedStringArray = []
+	stats["runs"] += 1
+	stats["kills"] += kills
+	if died:
+		stats["deaths"] += 1
+	for pair: Array in [["score", "best_score", score], ["wave", "best_wave", wave], ["time", "best_wave_s", seconds]]:
+		if pair[2] > int(stats[pair[1]]):
+			stats[pair[1]] = pair[2]
+			beaten.append(pair[0])
+	return beaten
 
 
 ## The menus' view of it: the name and the record (ProfileCard.show_profile).

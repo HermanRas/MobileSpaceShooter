@@ -356,6 +356,7 @@ func fly(test_level := 0) -> FlightSandbox:
 	_sandbox.economy = editor.economy
 	_sandbox.test_level = test_level if stocked() == (test_level == FlightSandbox.WAVETIME) else 0
 	_sandbox.cinematic = _cinematic()
+	_sandbox.profile = Profiles.record(Profiles.active_id) if stocked() else null
 	add_child(_sandbox)
 	_sandbox.open(copy, placement)
 	_sandbox.closed.connect(func() -> void:

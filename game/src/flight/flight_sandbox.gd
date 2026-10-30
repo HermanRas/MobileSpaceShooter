@@ -122,6 +122,11 @@ var run_hud := RunHud.new()
 var numbers := DamageNumbers.new()
 ## A run's power-ups (8.3), or null outside a run.
 var power: PowerUps
+## The pilot flying (WaveTime), whose record a run adds up into when it ends (8.4), or null.
+var profile: ProfileRecord
+## The bests the run just beat ("score", "wave", "time"), once it's recorded.
+var run_bests: PackedStringArray = []
+var _run_recorded := false
 var picker := WeaponPicker.new()
 ## A short message under the HUD (e.g. SWITCH before there are weapons), and when it fades.
 var _note := ""
@@ -426,6 +431,7 @@ func _on_player_destroyed() -> void:
 		return
 	if run != null:
 		run.destroyed()
+		_record_run(true)
 		_show_results_soon(float(_cine.get("pod_s", RESULTS_DELAY_S)) if cinematic else RESULTS_DELAY_S)
 		return
 	_note = "destroyed"
@@ -578,6 +584,8 @@ func _show_results_soon(delay_s := RESULTS_DELAY_S) -> void:
 		pause_menu.visible = false
 		if run != null:
 			var lines := run.lines()
+			for best in run_bests:
+				lines.insert(0, {"score": "NEW BEST SCORE!", "wave": "Furthest wave yet!", "time": "Longest run yet!"}[best])
 			lines.append("Cargo: " + (cargo_text().trim_prefix("cargo ") if not cargo.is_empty() else "nothing"))
 			results.show_report(run.title(), lines, false)
 		else:
@@ -593,8 +601,11 @@ func perf_note() -> String:
 	return "  ship spawn %.1f ms (%d tiles)" % [last_spawn_usec / 1000.0, ship.blueprint.tiles.size() if ship else 0]
 
 
-## Leaves the flight: in a cinematic one, after the dock screen.
+## Leaves the flight: in a cinematic one, after the dock screen. A run left alive is recorded
+## as it stands.
 func close() -> void:
+	if run != null:
+		_record_run(false)
 	if cinematic and not dock.running:
 		_touches.clear()
 		pause_menu.visible = false
@@ -610,6 +621,16 @@ func close() -> void:
 		return
 	get_tree().paused = false
 	closed.emit()
+
+
+## The run is over (the ship lost, or left from the pause menu): it adds up into the pilot's
+## record, saved at once, and `run_bests` says which bests it beat. Once only.
+func _record_run(died: bool) -> void:
+	if _run_recorded or profile == null:
+		return
+	_run_recorded = true
+	run_bests = profile.record_run(run.score(), run.wave, floori(run.seconds), run.kills, died)
+	Profiles.save(profile)
 
 
 ## The ship's lost in a run: its escape pod bursts out of the wreck and burns for the bay.

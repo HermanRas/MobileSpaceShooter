@@ -1578,9 +1578,22 @@ frame would redraw the labels every frame.
   most heavily armed ship: does a ×4–×5 storm hold its frame rate?
 
 #### 8.4 End of run
-- [ ] A results screen with score, kills, loot and best wave. **Loot banks into the profile inventory** (death doesn't lose it in WaveTime).
-- [ ] **Scoreboard** `[D2]` `[D20]`: kills, deaths, kills ÷ deaths and best score for every character on the device, best at the top
-- **Done when:** resources appear in the hangar after a run.
+✅ 2026-10-30, waiting on the phone.
+- **Results card:** a run's card leads with any new bests ("NEW BEST SCORE!", "Furthest wave
+  yet!", "Longest run yet!"), then score, wave, waves cleared, time, kills, damage and cargo.
+  Loot banks on landing, death included (8.1).
+- **Records:** a run ends when the ship is lost or the player leaves from the pause menu (not a
+  death). `ProfileRecord.record_run` adds it to the pilot's `profile.json` at once: kills, deaths,
+  runs, best score, best wave, longest run (the menu card's "Best").
+- **Scoreboard** `[D2]` `[D20]`: the main menu's **Scoreboard** (beside Tutorials). Every pilot
+  on the device ranks by kills ÷ deaths, ties broken by kills, with best score and best wave as
+  columns. No deaths counts as one. Pilots who never flew a run come last, with dashes, and the
+  selected pilot is gold. `Scoreboard.rank` is in `src/model/`, tested in
+  `tests/model/test_scoreboard.gd`.
+- `drive_wavetime` checks the saved record across three runs and the board's order; `drive_menu`
+  opens the board.
+- [ ] Owner, on the phone: two pilots each fly a run; does the Scoreboard rank them as expected,
+  and do the "new best" lines show?
 
 #### 8.5 Inventory and owned hangar
 - [ ] Hangar mode `OWNED`: placing spends materials, removing refunds 100%, parts come from inventory

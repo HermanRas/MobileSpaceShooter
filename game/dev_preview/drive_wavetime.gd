@@ -168,8 +168,10 @@ func _step_a_x5_bullet_storm(sandbox: FlightSandbox) -> void:
 	sandbox.spawner.spawn_encounter(30)
 	sandbox.pickups.drop(PackedVector2Array([ship.global_position + Vector2(2, 0) * ShipMesh.PX_PER_U]), Vector2.ZERO,
 			[{"powerup": 5}] as Array[Dictionary])
-	var limit_ms := Time.get_ticks_msec() + 4000
-	while sandbox.power.shots() == 1 and Time.get_ticks_msec() < limit_ms:
+	# Counted in ticks: the new wave's first frames can stall for seconds in the container.
+	for i in 120:
+		if sandbox.power.shots() > 1:
+			break
 		await _physics_frames(2)
 	_check(sandbox.power.shots() == 5 and sandbox.weapons.shots_each == 5, "a ×5 pickup makes every gun fire 5 shots")
 	_check(sandbox.cargo.is_empty() or not sandbox.cargo.to_dict().has("powerup"), "and it isn't cargo: it never banks")
@@ -218,8 +220,18 @@ func _step_death_ends_the_run(sandbox: FlightSandbox) -> void:
 	var lines: PackedStringArray = []
 	for label in sandbox.results._lines.get_children():
 		lines.append((label as Label).text)
-	_check(lines.size() == run.lines().size() + 1 and lines.has("Kills: %d" % run.kills) and lines[0] == "Score: %d" % run.score() and lines[-1].begins_with("Cargo: "),
+	_check(lines.size() == run.lines().size() + 1 + sandbox.run_bests.size() and lines.has("Kills: %d" % run.kills)
+			and lines.has("Score: %d" % run.score()) and lines[-1].begins_with("Cargo: "),
 			"with the score, waves, time, kills, damage and cargo (%s)" % ", ".join(lines))
+	# 8.4: the run adds up into the pilot's record, saved, and a first run beats every best.
+	_check(lines[0] == "Longest run yet!" and lines.has("NEW BEST SCORE!") and sandbox.run_bests.size() == 3,
+			"a first run's results say it set new bests (%s)" % ", ".join(sandbox.run_bests))
+	var errors: PackedStringArray = []
+	var saved := ProfileRecord.from_dict(Save.read_json(Profiles.profile_dir(Profiles.active_id).path_join("profile.json")),
+			Data.table(&"characters"), errors)
+	_check(saved.stats["runs"] == 1 and saved.stats["deaths"] == 1 and saved.stats["kills"] == run.kills
+			and saved.stats["best_score"] == run.score() and saved.stats["best_wave"] == run.wave,
+			"the pilot's record is saved: 1 run, 1 death, %d kills, best %d at wave %d" % [run.kills, run.score(), run.wave])
 	await _frames(3)
 	_save_shot("drive_wavetime_results.png")
 	var waited := run.seconds
@@ -287,6 +299,27 @@ func _step_fly_again_and_the_ship_docks() -> void:
 	_save_shot("drive_wavetime_dock_ship.png")
 	await _until_landed()
 	_check(not get_tree().paused, "landed, unpaused")
+	var me := Profiles.record(Profiles.active_id)
+	_check(me.stats["runs"] == 3 and me.stats["deaths"] == 2, "three runs, two lost: leaving from the pause menu isn't a death (%s)" % [me.stats])
+	await _step_the_scoreboard()
+
+
+## 8.4: the main menu's Scoreboard ranks every pilot on the device by kills ÷ deaths.
+func _step_the_scoreboard() -> void:
+	var ace := Profiles.create("Ace")
+	ace.record_run(9999, 12, 300, 1000, true)
+	Profiles.save(ace)
+	Profiles.create("Rookie")
+	_hangar.queue_free()  # its UI layer would draw over the board
+	_hangar = null
+	await _frames(1)
+	var board: Control = (load("res://scenes/menu/scoreboard.tscn") as PackedScene).instantiate()
+	add_child(board)
+	await _frames(3)
+	var names: Array = board.rows.map(func(row: Dictionary) -> String: return row["name"])
+	_check(names == ["Ace", "Wave", "Rookie"], "the scoreboard ranks Ace, then Wave, then the pilot who never flew (%s)" % [names])
+	_save_shot("drive_wavetime_scoreboard.png")
+	board.queue_free()
 
 
 ## Waits out the launch of the flight now open. Returns it, or null.
