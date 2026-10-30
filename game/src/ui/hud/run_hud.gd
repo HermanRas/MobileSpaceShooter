@@ -28,6 +28,8 @@ var _banner_text := MenuKit.label("", 32, GOLD)
 var _top: VBoxContainer
 var _banner_left := 0.0
 var _loot := HBoxContainer.new()
+## The clock, the wave line and the score, each with its A.16 icon beside it when the art is in.
+var _run_rows: Array[Control] = []
 ## Resource -> {"box", "count": Label, "shown": float, "target": int, "flash": seconds left}.
 var _rows := {}
 
@@ -45,7 +47,9 @@ func _ready() -> void:
 	add_child(top)
 	for label: Label in [clock, wave, power]:
 		_outline(label)
-		top.add_child(label)
+	top.add_child(_with_icon(clock, &"vis.icon.clock", 52))
+	top.add_child(_with_icon(wave, &"vis.icon.wave", 26))
+	top.add_child(power)
 	var right := VBoxContainer.new()
 	right.name = "Tally"
 	right.set_anchors_and_offsets_preset(Control.PRESET_TOP_RIGHT)
@@ -57,7 +61,9 @@ func _ready() -> void:
 	add_child(right)
 	score.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	_outline(score)
-	right.add_child(score)
+	var score_row := _with_icon(score, &"vis.icon.score", 38)
+	(score_row as BoxContainer).alignment = BoxContainer.ALIGNMENT_END
+	right.add_child(score_row)
 	_loot.alignment = BoxContainer.ALIGNMENT_END
 	_loot.add_theme_constant_override(&"separation", 14)
 	_loot.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -70,16 +76,15 @@ func _ready() -> void:
 	banner.add_child(_banner_text)
 	banner.visible = false
 	add_child(banner)
-	clock.visible = false
-	wave.visible = false
-	score.visible = false
+	for row in _run_rows:
+		row.visible = false
 	power.visible = false
 
 
 ## The run's clock, wave and score.
 func show_run(run: WaveRun) -> void:
-	for label: Label in [clock, wave, score]:
-		label.visible = true
+	for row in _run_rows:
+		row.visible = true
 	clock.text = TestFlight.clock(run.seconds)
 	wave.text = "WAVE %d   ·   next %s" % [run.wave, TestFlight.clock(ceilf(run.next_in()))]
 	score.text = _thousands(run.score())
@@ -139,7 +144,7 @@ func _process(delta: float) -> void:
 		banner.modulate.a = clampf(_banner_left / 0.5, 0.0, 1.0)
 		banner.visible = _banner_left > 0.0
 		# Under the clock (and a power-up's countdown), above the ship.
-		var under := _top.get_rect().end.y + 8.0 if clock.visible else size.y * 0.12
+		var under := _top.get_rect().end.y + 8.0 if clock.is_visible_in_tree() else size.y * 0.12
 		banner.position = Vector2((size.x - banner.size.x) * 0.5, under)
 
 
@@ -150,14 +155,8 @@ func _add_row(resource: StringName) -> void:
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	box.visible = false
 	var id := StringName("vis.icon.%s" % resource)
-	if resource != &"parts" and Assets.has_real_art(id):
-		var icon := TextureRect.new()
-		icon.texture = Assets.tex(id)
-		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		icon.custom_minimum_size = Vector2(ICON, ICON)
-		icon.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
-		box.add_child(icon)
+	if Assets.has_real_art(id):
+		box.add_child(_icon(id, ICON))
 	else:
 		var name_label := MenuKit.label("parts" if resource == &"parts" else "GC" if resource == &"gc" else String(resource), 22)
 		_outline(name_label)
@@ -185,6 +184,31 @@ static func _thousands(value: int) -> String:
 		out = "," + digits.right(3) + out
 		digits = digits.left(digits.length() - 3)
 	return ("-" if value < 0 else "") + digits + out
+
+
+## `label` in a row with the icon `id` (`side` px) before it, or alone in the row without its
+## art. The row shows and hides with the run's readouts.
+func _with_icon(label: Label, id: StringName, side: int) -> Control:
+	var row := HBoxContainer.new()
+	row.alignment = BoxContainer.ALIGNMENT_CENTER
+	row.add_theme_constant_override(&"separation", 8)
+	row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	if Assets.has_real_art(id):
+		row.add_child(_icon(id, side))
+	row.add_child(label)
+	_run_rows.append(row)
+	return row
+
+
+static func _icon(id: StringName, side: int) -> TextureRect:
+	var icon := TextureRect.new()
+	icon.texture = Assets.tex(id)
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon.custom_minimum_size = Vector2(side, side)
+	icon.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return icon
 
 
 ## A dark outline so the text reads over bright explosions and nebulae.

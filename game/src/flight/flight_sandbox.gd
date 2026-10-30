@@ -744,7 +744,7 @@ func _process(delta: float) -> void:
 		_apply_power()
 	if Engine.get_process_frames() % 2 == 0:  # the HUD's frames (below)
 		run_hud.show_cargo(cargo)
-		if run != null:
+		if run != null and run.wave > 0:  # not during the launch
 			run_hud.show_run(run)
 			run_hud.show_power(power)
 	if ship == null:

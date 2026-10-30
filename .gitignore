@@ -22,3 +22,6 @@ __pycache__/
 
 # Reference images: some are third-party screenshots, so they stay out of the public repo
 /insperationPictures/
+
+# Google Drive sync conflict copies
+*.conflict*

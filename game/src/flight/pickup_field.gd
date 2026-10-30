@@ -11,7 +11,7 @@ extends Node2D
 ## `vis.icon.<resource>`), rocking gently, its halo pulsing and a glint crossing it now and then
 ## so loot stands out from the debris (8.2). Without the icon art it's a shape in code: Hull a scrap
 ## of plate (pentagon, so it isn't taken for a tile of debris), Alloy a steel hexagon, Crystal a
-## cyan shard, Tech a bundle of wires, GC a gold coin. A part is always a crate.
+## cyan shard, Tech a bundle of wires, GC a gold coin. A part is a crate (A.16's `vis.icon.parts`).
 
 signal collected(piece: Dictionary)
 
@@ -176,8 +176,8 @@ func _draw() -> void:
 
 func _icon(kind: StringName) -> Texture2D:
 	if not _icons.has(kind):
-		var id := StringName("vis.icon.%s" % kind)
-		_icons[kind] = Assets.tex(id) if kind != &"part" and Assets.has_real_art(id) else null
+		var id := StringName("vis.icon.%s" % ("parts" if kind == &"part" else String(kind)))  # a part is a crate (A.16)
+		_icons[kind] = Assets.tex(id) if Assets.has_real_art(id) else null
 	return _icons[kind]
 
 

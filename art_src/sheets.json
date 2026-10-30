@@ -564,6 +564,32 @@
 			"cells": {
 				"1": ["title_plate", "chrome", {"w": 1100}]
 			}
+		},
+		"world_launch_bay_2": {
+			"file": "stations/world_launch_bay_2.jpeg",
+			"grid": [1, 1],
+			"_doc": "Generated 2026-10-30, run 2 of 3 (A.14): the one with two even rows of 7 lamps (run 1 has one row; run 3's door frame bars the mouth). The bay opens to the right.",
+			"cells": {"1": ["launch_bay", "chrome", {"key": "green", "w": 1024}]}
+		},
+		"parts_pod_shutter_2": {
+			"file": "parts/parts_pod_shutter_2.jpeg",
+			"grid": [4, 4],
+			"_doc": "Generated 2026-10-30, run 2 of 3 (A.15): the only run without black grid lines. Every door has stripes at both ends (one was asked for); the game mirrors the halves, so it doesn't matter.",
+			"cells": {
+				"2": ["escape_pod", "sprite", {"key": "green", "px": 256}],
+				"5": ["bay_shutter", "sprite", {"key": "green", "px": 256}]
+			},
+			"spares": {"1": "plain capsule", "3": "ringed pod", "4": "dart pod", "6": "diagonal-braced door", "7": "panelled door",
+				"8": "dark circuit door"}
+		},
+		"icons_run_1": {
+			"file": "icons/icons_run_1.jpeg",
+			"grid": [4, 4],
+			"_doc": "Generated 2026-10-30, run 1 of 3 (A.16): the only one on black (runs 2 and 3 came back on white). It has thin grey grid lines, which ring cells 6 and 7 on all four sides, so every cell is cut 4 px in (`inset`).",
+			"cells": {"1": ["parts", "sprite", {"inset": 4}], "2": ["clock", "sprite", {"holes": true, "inset": 4}],
+				"3": ["trophy", "sprite", {"inset": 4}], "4": ["skull", "sprite", {"holes": true, "inset": 4}],
+				"5": ["kills", "sprite", {"inset": 4}], "6": ["score", "sprite", {"inset": 4}], "7": ["wave", "sprite", {"inset": 4}],
+				"8": ["pod", "sprite", {"holes": true, "inset": 4}]}
 		}
 	},
 	"atlases": {
@@ -593,7 +619,8 @@
 			"layout": "files",
 			"_doc": "One 128 px RGBA PNG per icon (visuals.json vis.icon.<id>), for Buttons and the pickups.",
 			"files": ["hull", "alloy", "crystal", "tech", "gc", "fire", "switch", "pause", "boost",
-				"powerup_2", "powerup_3", "powerup_4", "powerup_5"]
+				"powerup_2", "powerup_3", "powerup_4", "powerup_5", "parts", "clock", "trophy", "skull", "kills", "score", "wave",
+				"pod"]
 		},
 		"fx": {
 			"out": "game/assets/fx",
@@ -656,7 +683,7 @@
 			"files": ["asteroid_stone_l", "asteroid_stone_m", "asteroid_stone_s", "asteroid_stone_frag",
 				"asteroid_metal_l", "asteroid_metal_m", "asteroid_metal_s", "asteroid_metal_frag",
 				"asteroid_crystal_l", "asteroid_crystal_m", "asteroid_crystal_s", "asteroid_crystal_frag",
-				"asteroid_stone_frag2", "asteroid_metal_frag2", "asteroid_crystal_frag2"]
+				"asteroid_stone_frag2", "asteroid_metal_frag2", "asteroid_crystal_frag2", "launch_bay", "escape_pod", "bay_shutter"]
 		},
 		"space": {
 			"out": "game/assets/space",

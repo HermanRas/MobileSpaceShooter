@@ -475,6 +475,11 @@ def slice_sheet(name: str, spec: dict, cells: dict[str, np.ndarray], kinds: dict
         elif kind == "overlay":
             cells[ident] = cut_overlay(window, size, report, ident)
         elif kind == "sprite":
+            # A sheet with grid lines rings an inner cell in them, and the flood fill that keys the
+            # background starts from the cell's border: `inset` trims the lines off first.
+            inset = int(options.get("inset", 0))
+            if inset > 0:
+                window = window[inset:-inset, inset:-inset]
             cells[ident] = cut_sprite(window, int(options.get("px", SPRITE_PX)), bool(options.get("holes", False)),
                                       options.get("key") == "green", report, ident)
         elif kind == "texture":

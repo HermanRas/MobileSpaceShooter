@@ -9,6 +9,8 @@ signal docked
 
 const PX := ShipMesh.PX_PER_U
 const STARS := 90
+## The pod is under a unit long, a speck beside a bay sized for ships: drawn this much bigger here.
+const POD_SCALE := 2.5
 
 ## Whether it's under way (or done).
 var running := false
@@ -17,6 +19,8 @@ var _bay: LaunchBay
 var _craft: Node2D
 var _stage := Node2D.new()
 var _title := MenuKit.label("", 30)
+## "Pod recovered" gets A.16's pod badge beside it.
+var _badge: TextureRect
 var _black := ColorRect.new()
 var _from := Vector2.ZERO
 var _to := Vector2.ZERO
@@ -32,11 +36,17 @@ func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	visible = false
 	add_child(_stage)
-	_title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	_title.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
-	_title.offset_top = -110
-	_title.offset_bottom = -60
-	add_child(_title)
+	var caption := HBoxContainer.new()
+	caption.alignment = BoxContainer.ALIGNMENT_CENTER
+	caption.add_theme_constant_override(&"separation", 12)
+	caption.set_anchors_and_offsets_preset(Control.PRESET_BOTTOM_WIDE)
+	caption.offset_top = -120
+	caption.offset_bottom = -56
+	add_child(caption)
+	if Assets.has_real_art(&"vis.icon.pod"):
+		_badge = RunHud._icon(&"vis.icon.pod", 56)
+		caption.add_child(_badge)
+	caption.add_child(_title)
 	_black.color = Color.BLACK
 	_black.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_black.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -55,6 +65,7 @@ func play(bp: Blueprint, placement: Placement, tuning: Dictionary) -> void:
 	_bay.z_index = 0  # over this screen's backdrop, not under it as in flight
 	if _pod:
 		_craft = _PodView.new()
+		_craft.scale = Vector2.ONE * POD_SCALE
 	else:
 		var mesh := MeshInstance2D.new()
 		mesh.mesh = ShipMesh.build(bp.tiles, placement, bp)
@@ -73,6 +84,8 @@ func play(bp: Blueprint, placement: Placement, tuning: Dictionary) -> void:
 	_craft.rotation = -PI * 0.5
 	_craft.position = _from
 	_title.text = "Pod recovered" if _pod else "Docking"
+	if _badge != null:
+		_badge.visible = _pod
 	_black.modulate.a = 1.0
 	_age = 0.0
 	running = true

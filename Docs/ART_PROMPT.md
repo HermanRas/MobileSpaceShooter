@@ -161,9 +161,9 @@ band for the colour the player picked and keeps the shading. Each hue is far fro
 | A.9 | `arena_nebula` × 5 | `art_src/backgrounds/` | 5 canvases, run ×2 | ✅ in the game 2026-10-27: behind the stars |
 | A.10 | `world_asteroids` | `art_src/parts/` | 15, run ×3 | ✅ cut 2026-10-27: run 1, waiting for the belts (10.2) |
 | A.11 | `splash`, `app_icon`, `title_plate` | `art_src/backgrounds/`, `art_src/icons/`, `art_src/ui/` | 3 canvases, run ×3 | ✅ in the game 2026-10-27: splash, icon, menu title |
-| A.14 | `world_launch_bay` | `art_src/stations/` | 1 canvas, run ×3 | to generate (8.1's bay) |
-| A.15 | `parts_pod_shutter` | `art_src/parts/` | 8, run ×3 | to generate (8.1's pod and shutter) |
-| A.16 | `icons_run` | `art_src/icons/` | 8, run ×3 | to generate (8.2 and 8.4's HUD and scoreboard) |
+| A.14 | `world_launch_bay` | `art_src/stations/` | 1 canvas, run ×3 | ✅ in the game 2026-10-30: run 2, LaunchBay |
+| A.15 | `parts_pod_shutter` | `art_src/parts/` | 8, run ×3 | ✅ in the game 2026-10-30: run 2, pod #2 and door #1 |
+| A.16 | `icons_run` | `art_src/icons/` | 8, run ×3 | ✅ in the game 2026-10-30: run 1 (the only one on black) |
 
 ---
 
@@ -1959,6 +1959,19 @@ Remember: no text, black background, rows 3 and 4 empty.
 (the clock face and the skull's sockets may need `holes`) into 128 px PNGs in `assets/icons/`, as
 `vis.icon.parts`, `clock`, `trophy`, `skull`, `kills`, `score`, `wave` and `pod`. The HUD keeps
 its words until `has_real_art()`.
+
+---
+
+### Review, 2026-10-30: what came back
+
+- **Bay:** run 2, with two even rows of 7 lamps. Run 1 has one row, and run 3's door frame bars
+  the mouth. The deck and lamp positions were measured off the cut picture into `visuals.json`.
+- **Pod and shutter:** run 2, the only one without black grid lines. The finned capsule (#2) and
+  the plain door (#1). Every door came back striped at both ends, not one, which is harmless
+  because the game mirrors the halves.
+- **Run icons:** run 1. Runs 2 and 3 came back on white. Its thin grey grid lines ring cells 6
+  and 7 on all four sides, which stops the background flood fill, so every cell is cut 4 px in
+  (the slicer's new `inset` option for sprites).
 
 ---
 
