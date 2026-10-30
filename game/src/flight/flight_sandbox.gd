@@ -460,7 +460,10 @@ func _on_cleared() -> void:
 		test.cleared()
 		_show_results_soon()
 	if run != null and ship != null:
-		run.cleared()
+		var bonus := run.cleared()
+		if bonus > 0:  # every run banks something (8.7)
+			cargo.receive({Inventory.GC: bonus})
+			run_hud.found("WAVE %d CLEARED!   +%d GC" % [run.wave, bonus])
 	if _fight_level > 0:
 		_note = "level %d cleared!" % _fight_level
 		_note_until = Time.get_ticks_msec() + 4000

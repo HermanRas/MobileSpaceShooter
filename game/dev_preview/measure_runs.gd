@@ -5,7 +5,7 @@ extends "res://dev_preview/drive_shop.gd"
 ## not a player: a real pilot dodges and lasts longer. Time runs at TIME_SCALE.
 ## Run with `tools/drive.sh res://dev_preview/measure_runs.tscn`.
 
-const RUNS := 3
+const RUNS := 5
 const TIME_SCALE := 4.0
 ## Game seconds before a run is cut off.
 const LIMIT_S := 600.0

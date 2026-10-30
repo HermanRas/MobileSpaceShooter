@@ -114,3 +114,14 @@ func test_staying_alive_scores_by_the_second() -> void:
 func test_the_shipped_score_rules_load() -> void:
 	var run := WaveRun.from_table(Data.table(&"levels").get("waves", {}))
 	assert_true(run.per_tile_level > 0.0 and run.survival_per_s > 0.0 and run.wave_bonus > 0.0)
+
+
+func test_a_clear_pays_gc_by_the_wave_once() -> void:
+	var run := WaveRun.from_table({"levels": [1, 2, 4], "wave_s": 60, "clear_pause_s": 3, "clear_bonus_gc": 50})
+	run.tick(0.0)
+	assert_eq(run.cleared(), 50, "wave 1: 50 GC")
+	assert_eq(run.cleared(), 0, "a second clear in the same breather pays nothing")
+	run.tick(3.0)
+	assert_eq(run.cleared(), 100, "wave 2: 100 GC")
+	run.destroyed()
+	assert_eq(run.cleared(), 0, "nothing after the end")

@@ -14,6 +14,8 @@ var levels: Array[int] = [1]
 var then_per_wave := 4
 var wave_s := 60.0
 var clear_pause_s := 3.0
+## GC for clearing a wave, times its number (8.7).
+var clear_bonus_gc := 60
 var per_tile_level := 10.0
 var wave_bonus := 0.25
 var survival_per_s := 5.0
@@ -47,6 +49,7 @@ static func from_table(table: Dictionary) -> WaveRun:
 	run.then_per_wave = maxi(int(table.get("then_per_wave", run.then_per_wave)), 0)
 	run.wave_s = maxf(float(table.get("wave_s", run.wave_s)), 1.0)
 	run.clear_pause_s = maxf(float(table.get("clear_pause_s", run.clear_pause_s)), 0.0)
+	run.clear_bonus_gc = maxi(int(table.get("clear_bonus_gc", run.clear_bonus_gc)), 0)
 	var score: Dictionary = table.get("score", {})
 	run.per_tile_level = maxf(float(score.get("per_tile_level", run.per_tile_level)), 0.0)
 	run.wave_bonus = maxf(float(score.get("wave_bonus", run.wave_bonus)), 0.0)
@@ -116,11 +119,14 @@ func took(amount: float) -> void:
 		damage_taken += maxf(amount, 0.0)
 
 
-## Every enemy is down: the next wave comes after a breather.
-func cleared() -> void:
-	if not over and wave > 0 and _pause_left < 0.0:
-		waves_cleared += 1
-		_pause_left = clear_pause_s
+## Every enemy is down: the next wave comes after a breather. Returns the GC the clear earns
+## (`clear_bonus_gc` × the wave's number), 0 if it doesn't count.
+func cleared() -> int:
+	if over or wave == 0 or _pause_left >= 0.0:
+		return 0
+	waves_cleared += 1
+	_pause_left = clear_pause_s
+	return clear_bonus_gc * wave
 
 
 ## The ship is gone: the run is over.

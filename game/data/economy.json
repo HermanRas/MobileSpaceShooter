@@ -11,10 +11,10 @@
 		"tech": {"buy": 12, "sell": 8}
 	},
 	"drops": {
-		"_doc": "4.8c, 5.4. What a kill drops as pickups: share of the materials the enemy's tiles cost, tech_per_part Tech a mounted gun or thruster, and gc_per_tile GC a tile, all x (1 + per_level x (encounter level - 1)), rounded down; each resource splits into at most `pieces` pickups. A 20-tile practice barge at level 3 drops about 300 GC's worth. part_chance: the chance a kill also drops one of its guns or thrusters (a gun with the XP of the level it fought at).",
-		"share": 0.02,
-		"tech_per_part": 1,
-		"gc_per_tile": 2,
+		"_doc": "4.8c, 5.4. What a kill drops as pickups: share of the materials the enemy's tiles cost, tech_per_part Tech a mounted gun or thruster, and gc_per_tile GC a tile, all x (1 + per_level x (encounter level - 1)), rounded down; each resource splits into at most `pieces` pickups. A 20-tile practice barge at level 3 drops about 450 GC's worth (x1.5 for WaveTime, owner 2026-10-30). part_chance: the chance a kill also drops one of its guns or thrusters (a gun with the XP of the level it fought at).",
+		"share": 0.03,
+		"tech_per_part": 1.5,
+		"gc_per_tile": 3,
 		"per_level": 0.25,
 		"part_chance": 0.04,
 		"pieces": 3

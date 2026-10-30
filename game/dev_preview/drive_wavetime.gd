@@ -146,6 +146,11 @@ func _step_waves_escalate(sandbox: FlightSandbox) -> void:
 	_check(sandbox.run_hud.banner.visible and "WAVE 2" in (sandbox.run_hud.banner.get_child(0) as Label).text,
 			"a banner calls the new wave")
 	_check(run.kill_score > 0, "the kill scored (%d of %d)" % [run.kill_score, run.score()])
+	_check(sandbox.cargo.amount(Inventory.GC) >= run.clear_bonus_gc, "clearing wave 1 put %d GC in the hold (8.7)" % run.clear_bonus_gc)
+	# From wave 2 the idle starter is meant to die (8.7: passing it takes a pilot), so it's kept
+	# alive to watch the rest; the death step takes this off.
+	if sandbox.ship != null:
+		sandbox.ship.invulnerable = true
 	await _frames(2)
 	_save_shot("drive_wavetime_wave2.png")
 	# A wave left standing is joined by the next at the minute.

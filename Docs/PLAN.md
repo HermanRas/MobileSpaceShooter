@@ -1617,15 +1617,15 @@ next run flies it (`drive_shop` buys one; `drive_wavetime` flies whatever is in 
 - [x] Starter ship (§4.10): Core, hull tiles and 3 hardpoints carrying 3 pulse thrusters (2 rear, 1 front) and 1 single gatling
   (checked 2026-10-30: `data/blueprints/starter.json` is exactly that, and `economy.json` →
   `new_pilot` gives it)
-- [ ] Tune so run 1 lasts ~1–2 min and every run banks enough to visibly upgrade. **Measured
-  2026-10-30** (`dev_preview/measure_runs.tscn`: a fresh pilot's starter sitting still with every
-  gun on auto, so a floor, not a player): runs of 4:00, 2:30 and 1:53, reaching waves 7, 6 and 4.
-  They banked 208 hull 119 alloy 105 tech 249 GC, then 105/56/51/123, then only 21 hull 6 alloy
-  9 tech 22 GC. Prices for scale: hull L 120 hull, armor L 80 hull 120 alloy, gatling 800 GC. So
-  an idle ship already outlasts the target, and a short run banks too little to buy anything.
-  Options for the owner's playtest: a steeper `waves.levels` (e.g. 1, 3, 5, 8, 11, 15, 19, 24, 30,
-  36, then +6); a GC bonus per wave cleared, so every run banks something; more loot per kill
-  (`economy.json` → `drops`).
+- [x] Tune so run 1 lasts ~1–2 min and every run banks enough to visibly upgrade. Owner,
+  2026-10-30: the starter should clear wave 1 untouched, but passing wave 2 should take a pilot.
+  So waves now run at levels 1, 6, 8, 11, 14, 17, 21, 25, 30, 35, then +5; clearing wave n adds
+  60 × n GC to the hold (`levels.json` → `waves.clear_bonus_gc`, on a banner); and kills drop
+  ×1.5 loot (`economy.json` → `drops`). `measure_runs`, five idle starters: every one cleared
+  wave 1 and none cleared wave 2, in runs of 0:52–1:51. The first numbers, before this tuning,
+  were 1:53–4:00 runs reaching waves 4–7, with a short run banking only 22 GC.
+- [ ] Owner, on the phone: does wave 2 feel beatable with input, and does each run bank enough
+  for a visible upgrade?
 - [ ] Owner's sandbox playtest, 2026-10-26: a level-1 Starter with 3 gatlings barely survived
   Level 10; Level 25 took 4 respawns; Boss L15 (the Marauder) was almost an instant kill. In
   about 14 kills it dropped 2 guns and 1 thruster at the 4% part chance, maybe too often (keep
@@ -1874,7 +1874,9 @@ contract). The owner generates in Gemini, and then we review, slice and stage.
 | A.10 | ✅ cut 2026-10-27. **Asteroids**: stone, metal and crystal, L, M, S and two fragments each, 256 px in `assets/world/` as `vis.world.asteroid_<kind>_<size>` (fitted to the square; the belts size them). Waiting for the belts (10.2). | 1 sheet, run ×3 | 10.2 |
 | A.11 | ✅ 2026-10-27. **Splash, app icon and title plate**, no painted text: `tools/make_branding.py` builds the icons (the rounded icon inside Android's safe zone) and the boot splash, with "MOBILE SPACE SHOOTER" set in **Orbitron** (OFL, `assets/fonts/`); the main menu's "MSS" is Orbitron on the gold title plate (`vis.ui.title_plate`). The X-wing-like first splash is retired. | 3 canvases, run ×3 | 8.8 |
 | A.12 | SFX and music (CC0/CC-BY, not Gemini) | – | 14 |
-| A.14 | **Launch bay and escape pod** (8.1): the station's bay mouth seen from above (floor, walls, lights, a shutter in two halves) and a small pod, in place of the code-drawn `vis.fx.launch_bay` and `vis.fx.escape_pod`. Could reuse A.8's station exteriors for the block round the mouth. | 1 sheet | 15 |
+| A.14 | **Launch bay** (8.1): `ART_PROMPT.md` `world_launch_bay`, one top-down canvas, mouth to the right, unlit floor lamps the game lights. Replaces the code-drawn `vis.fx.launch_bay` | 1 canvas, run ×3 | 8.1 |
+| A.15 | **Escape pod and bay shutter** (8.1): `parts_pod_shutter`, 4 pods and 4 door halves to pick from | 8 cells, run ×3 | 8.1 |
+| A.16 | **Run icons** (8.2, 8.4): `icons_run`: parts crate, stopwatch, trophy, skull, kills, score star, wave chevrons, pod badge, in A.4's style | 8 cells, run ×3 | 8.2 |
 | A.13 | Fonts (OFL) | – | 6.1 |
 
 Enemies, bosses, VIPs and the bandit HQ need **no sprites**: they're blueprints built from A.1 tiles

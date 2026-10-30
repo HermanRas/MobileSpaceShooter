@@ -161,6 +161,9 @@ band for the colour the player picked and keeps the shading. Each hue is far fro
 | A.9 | `arena_nebula` × 5 | `art_src/backgrounds/` | 5 canvases, run ×2 | ✅ in the game 2026-10-27: behind the stars |
 | A.10 | `world_asteroids` | `art_src/parts/` | 15, run ×3 | ✅ cut 2026-10-27: run 1, waiting for the belts (10.2) |
 | A.11 | `splash`, `app_icon`, `title_plate` | `art_src/backgrounds/`, `art_src/icons/`, `art_src/ui/` | 3 canvases, run ×3 | ✅ in the game 2026-10-27: splash, icon, menu title |
+| A.14 | `world_launch_bay` | `art_src/stations/` | 1 canvas, run ×3 | to generate (8.1's bay) |
+| A.15 | `parts_pod_shutter` | `art_src/parts/` | 8, run ×3 | to generate (8.1's pod and shutter) |
+| A.16 | `icons_run` | `art_src/icons/` | 8, run ×3 | to generate (8.2 and 8.4's HUD and scoreboard) |
 
 ---
 
@@ -1776,6 +1779,186 @@ game writes the title.
 `app_icon` (the adaptive foreground inside its safe zone) and the boot splash from `splash`,
 with the title set over it; the menu draws `title_plate` (a `chrome` cut) behind its title. The
 old `Spash.jpeg` and `Icon_origenal.jpeg` are retired.
+
+---
+
+## A.14–A.16: WaveTime's launch, pod and run icons (2026-10-30)
+
+Phase 8 added three things that are still drawn in code or shown as a word. The **launch bay**
+the ship flies out of and docks into (`vis.fx.launch_bay`, 8.1), its **shutter**, the **escape
+pod** a lost ship throws out (`vis.fx.escape_pod`), and the run HUD's **parts** counter, which has
+no icon. Plus a few HUD and scoreboard symbols that would lift 8.2 and 8.4. The game keeps
+drawing the moving parts itself: the floor lights' chase, the field across the mouth, the
+shutter's slide and the pod's flame.
+
+### world_launch_bay
+
+**A.14: 1 canvas, on chroma green. Run ×3. Save them as `art_src/stations/world_launch_bay_1.png`, `_2`, `_3`.**
+
+World tier: strictly top-down, like the ships. The game shows it two ways: in flight, at ship
+scale behind the ship as it launches (the bay's inside is a little wider than the ship and about
+twice its length), and on the dock screen, big, turned so the mouth faces down. So it's one
+canvas, not a cell. The mouth faces **right** (+X, the way ships fly out).
+
+```
+A single top-down view of a space station's HANGAR BAY for a 2D mobile space
+shooter, seen from DIRECTLY ABOVE, perfectly flat and orthographic, centred on a
+square 1024x1024 canvas and filling about 85% of it.
+
+THE SHAPE: a thick rectangular block of station hull. Cut into it is a long open
+bay, a rectangular slot running from the middle of the block out to its RIGHT
+EDGE, where the bay is OPEN to space. The bay is about one third of the block's
+height wide and reaches about two thirds of the way into the block. The station
+hull continues past the block on the left side, as if the block is one arm of a
+bigger station.
+
+INSIDE THE BAY: a dark steel deck floor #343B44 with faint panel seams and a few
+hazard chevrons near the open end. Along BOTH long walls of the bay, a row of
+eight small square floor lamps, evenly spaced, painted as flat UNLIT dark amber
+squares (the game lights them). At the open right end, a heavy steel door frame
+with a recess on each side where a sliding door would hide.
+
+BACKGROUND: flat pure chroma green #00FF00 everywhere around the station,
+including in front of the open bay. No space, no stars, no shadow, no gradient.
+
+COLOUR: steel greys from light #C3CAD2 to dark #343B44 for the whole structure,
+and ONE accent colour only, AMBER #FFB040, for hazard stripes and markings.
+NOTHING green on the station, no other colours.
+
+STYLE: clean painted game art with crisp edges and a little bevel on every
+panel, light from the upper left, the same finish as a polished mobile game.
+NOT perspective, NOT isometric, NOT a 3D render, NOT a photo, NOT pixel art. No
+cast shadows. No glows, no lights shining, no beams, no force field: lights are
+flat shapes.
+
+An original design: it must not resemble any station or ship from a film, TV
+show or game.
+
+ABSOLUTELY NO TEXT, no signs with writing, no logos, no numbers.
+
+Remember: seen from directly above, the bay opens to the RIGHT, chroma green
+background, nothing green on the station.
+```
+
+**What happens to it.** The slicer's `sprite` kind with `{"key": "green"}` cuts it as one PNG in
+`assets/world/` as `vis.world.launch_bay`. `LaunchBay` draws it in place of its rectangles,
+scaled so the bay slot fits the ship. It keeps drawing the lamps' chase over the painted lamps
+(their positions measured at slicing, into `visuals.json`), the field across the mouth and the
+shutter.
+
+### parts_pod_shutter
+
+**A.15: 8 cells, rows 1 and 2 only. Run ×3. Save them as `art_src/parts/parts_pod_shutter_1.png`, `_2`, `_3`.**
+
+World tier, top-down, on chroma green. The **escape pod** flies nose first along +X, about 0.9 U
+long, so it must read as a little lifeboat at 30 px. The **shutter** is one of the bay's two
+sliding door halves, seen from above: the game slides one in from each side and mirrors the
+second.
+
+```
+A 1024x1024 sprite sheet for a top-down 2D space shooter, arranged on a strict
+4x4 grid of 256x256 cells. ONLY ROWS 1 AND 2 are filled, one object per cell,
+centred in its cell. ROWS 3 AND 4 ARE COMPLETELY EMPTY, flat chroma green.
+
+BACKGROUND: flat pure chroma green #00FF00 everywhere there is no artwork. No
+gradient, no shadow on the background, no grid lines, no borders or frames.
+
+VIEW: seen from DIRECTLY ABOVE, perfectly flat and orthographic, lit from the
+upper left. No cast shadows. NOT perspective, NOT isometric, NOT a 3D render.
+
+STYLE: clean painted game art, crisp edges, a little bevel, a thin dark outline,
+readable when shrunk to 32 pixels. NOT a photo, NOT pixel art. NOTHING green.
+No flames, no glows, no exhaust: the game draws those.
+
+ROW 1, four cells: FOUR DIFFERENT ESCAPE PODS, each a small rounded lifeboat
+capsule pointing RIGHT, filling about 70% of its cell's width: a white and light
+grey #D9DDE3 hull, ONE round cyan #73F2FF window near the nose, a small dark
+nozzle at the back (left) end, and a thin amber #FFB040 stripe. Each pod a
+different shape: 1. a plain capsule, 2. a capsule with two small fins at the
+back, 3. a short rounded pod with a ring round its middle, 4. a slim dart-like
+pod.
+
+ROW 2, four cells: FOUR SLIDING BAY DOOR PANELS, each a heavy rectangular steel
+slab seen from above, TALLER THAN IT IS WIDE (about one third as wide as its
+cell, filling 90% of its height), steel greys #C3CAD2 to #343B44 with panel lines,
+rivets and AMBER #FFB040 hazard stripes along ONE short end (the end that meets
+the other door). Four different patterns of panels and stripes.
+
+ABSOLUTELY NO TEXT, no labels, no numbers.
+
+Remember: top-down, pods point RIGHT, chroma green background, nothing green,
+rows 3 and 4 empty.
+```
+
+**What happens to it.** We pick one pod and one door. The slicer's `sprite` kind with
+`{"key": "green"}` cuts them as `vis.world.escape_pod` and `vis.world.bay_shutter` in
+`assets/world/`. `EscapePod` and `LaunchBay` draw them in place of their shapes. The pod keeps its
+code-drawn flame.
+
+### icons_run
+
+**A.16: 8 cells, rows 1 and 2 only. Run ×3. Save them as `art_src/icons/icons_run_1.png`, `_2`, `_3`.**
+
+Chrome-and-icons tier, glossy and painted on black, **the same style and palette as `icons_main`**
+(A.4), because they sit beside its resource icons on the run HUD.
+
+| Cell | What | Used by |
+|---|---|---|
+| 1 | Parts crate | The run HUD's loot tally, and a part pickup in space (8.2) |
+| 2 | Stopwatch | The run clock, the profile card's best time (8.2, 6.1) |
+| 3 | Trophy | "New best" on the results card, the Scoreboard's #1 (8.4) |
+| 4 | Skull | Deaths on the Scoreboard and the profile card (8.4) |
+| 5 | Crossed blasters, or a target with a hit | Kills on the Scoreboard and the profile card (8.4) |
+| 6 | Star medal | Score (8.2) |
+| 7 | Wave chevrons | The wave number (8.2) |
+| 8 | Escape pod badge | "Pod recovered" on the dock screen (8.1) |
+
+```
+A 1024x1024 sprite sheet of 8 game icons for a mobile space shooter, arranged on a
+strict 4x4 grid of 256x256 cells, one icon centred in each cell, each filling about
+75% of its cell. ONLY ROWS 1 AND 2 are filled. ROWS 3 AND 4 ARE COMPLETELY EMPTY,
+flat black.
+
+BACKGROUND: flat pure black #000000 everywhere there is no artwork. No gradient,
+no vignette, no glow spilling onto the background, no grid lines, no borders, no
+frames around the cells.
+
+STYLE: a rich, glossy, painted mobile-game finish: bevelled edges, soft studio
+light from the upper left, a crisp bright highlight on each object, a thin dark
+outline so each icon reads on any background. NOT pixel art, NOT flat vector,
+NOT a photo. Every icon in the same style, light and level of finish. Each icon
+is one solid object or symbol with a clean silhouette, readable when shrunk to
+32 pixels.
+
+PALETTE (use these colours):
+gold highlight #F3CD37, gold mid #EAA50D, orange shadow #A76711, bronze deep
+#5F3514, steel light #C3CAD2, steel mid #7A838D, steel dark #343B44, cream
+#FFF1D0, crystal cyan #73F2FF, credits gold #FFCC40, red #E0452A, amber #FFB040.
+
+ROW 1:
+1. A small sturdy supply CRATE seen at a slight angle, steel #7A838D with amber
+   #FFB040 corner brackets and a cyan #73F2FF latch.
+2. A STOPWATCH, gold #EAA50D case, cream #FFF1D0 face with only two hands and
+   tick marks.
+3. A gold #F3CD37 TROPHY cup with two handles on a short dark base.
+4. A cream #FFF1D0 SKULL with dark eye sockets, simple and bold, not gory.
+
+ROW 2:
+5. Two crossed sci-fi BLASTER PISTOLS, steel #C3CAD2 with gold #EAA50D grips.
+6. A gold #F3CD37 five-pointed STAR medal on a short red #E0452A ribbon.
+7. Three bold gold #EAA50D CHEVRONS stacked pointing UP, one above the other.
+8. A small white ESCAPE POD capsule pointing up-right inside a cyan #73F2FF ring.
+
+ABSOLUTELY NO TEXT of any kind: no labels, no numbers, no letters, no digits, no
+logos.
+
+Remember: no text, black background, rows 3 and 4 empty.
+```
+
+**What happens to it.** Like `icons_main`: the slicer's `sprite` kind keys each icon off black
+(the clock face and the skull's sockets may need `holes`) into 128 px PNGs in `assets/icons/`, as
+`vis.icon.parts`, `clock`, `trophy`, `skull`, `kills`, `score`, `wave` and `pod`. The HUD keeps
+its words until `has_real_art()`.
 
 ---
 

@@ -4,11 +4,12 @@
 	"budget": {"base": 8, "per_level": 1.6, "power": 1.15},
 	"gun_level": {"per_level": 10, "spread": 0.2},
 	"waves": {
-		"_doc": "PLAN.md 8.1, WaveTime. Wave n is a generated fight at levels[n-1]; past the list each wave adds then_per_wave, up to 100. The next wave comes wave_s after the last one came in, or clear_pause_s after every enemy is down, whichever is first. First pass, tuned in 8.7 (run 1 should last 1-2 minutes).",
-		"levels": [1, 2, 3, 5, 7, 10, 13, 16, 20, 25],
+		"_doc": "PLAN.md 8.1, WaveTime. Wave n is a generated fight at levels[n-1]; past the list each wave adds then_per_wave, up to 100. The next wave comes wave_s after the last one came in, or clear_pause_s after every enemy is down, whichever is first. Owner, 2026-10-30 (8.7): the idle starter should clear wave 1 but need the player to pass wave 2. Clearing wave n adds clear_bonus_gc x n GC to the hold, so every run banks something.",
+		"levels": [1, 6, 8, 11, 14, 17, 21, 25, 30, 35],
 		"then_per_wave": 5,
 		"wave_s": 60,
 		"clear_pause_s": 3,
+		"clear_bonus_gc": 60,
 		"_score": "8.2: a kill scores tiles x level x per_tile_level, times the wave multiplier (1 + wave_bonus per wave after the first); staying alive scores survival_per_s a second, times the same multiplier.",
 		"score": {"per_tile_level": 10, "wave_bonus": 0.25, "survival_per_s": 2}
 	},
