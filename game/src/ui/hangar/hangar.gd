@@ -64,6 +64,12 @@ var _share := ShipShare.new()
 var _launch := LaunchPanel.new()
 var _notice: Label
 var _notice_left := 0.0
+## WaveTime's fly out and fly back (8.1): on unless a drive turns them off. The hangar fades to
+## black before a launch and back in after docking.
+var cinematics := true
+var _fade_layer := CanvasLayer.new()
+var _fade := ColorRect.new()
+var _fade_tween: Tween
 
 var _selected: int = -1
 var _selected_mount: int = -1
@@ -299,16 +305,41 @@ func _after_fleet_change(done: bool) -> void:
 	_open_shop(false)
 
 
-## Fly: in Creative, the launch panel (free flight or a test fight, 7.2); stocked, straight up.
+## Fly: the launch panel. In Creative, free flight, a test fight (7.2) or the performance test;
+## in WaveTime, a run (8.1) or free flight.
 func _on_fly_pressed() -> void:
-	if stocked():
-		fly()
-	elif placement.validate(editor.blueprint).is_empty():
-		_launch.open()
+	if placement.validate(editor.blueprint).is_empty() and not _fade.visible:
+		_launch.open(stocked())
+
+
+## From the launch panel: in WaveTime the hangar fades to black first (8.1); Creative goes at once.
+func _on_launched(level: int) -> void:
+	if not _cinematic():
+		fly(level)
+		return
+	_launch.visible = false
+	_fade_to(1.0, func() -> void:
+		fly(level)
+		_fade.visible = false)
+
+
+func _cinematic() -> bool:
+	return stocked() and cinematics
+
+
+## Fades the black over the hangar to `alpha`, then calls `then`.
+func _fade_to(alpha: float, then: Callable = func() -> void: pass) -> void:
+	if _fade_tween != null:
+		_fade_tween.kill()
+	_fade.visible = true
+	_fade_tween = create_tween()
+	_fade_tween.tween_property(_fade, "modulate:a", alpha, float(Data.table(&"flight").get("cinematics", {}).get("fade_s", 0.35)))
+	_fade_tween.tween_callback(then)
 
 
 ## Test-flies a copy of the ship on top of the hangar (Phase 3), or with `test_level`, flies a
-## Creative test fight at that level (7.2). Returns null if the ship has problems. The hangar is
+## Creative test fight at that level (7.2), the performance test, or (stocked) a WaveTime run
+## (8.1). Returns null if the ship has problems. The hangar is
 ## hidden and paused, not freed, so edits and undo survive the flight.
 func fly(test_level := 0) -> FlightSandbox:
 	_launch.visible = false
@@ -323,10 +354,16 @@ func fly(test_level := 0) -> FlightSandbox:
 	_sandbox.name = "FlightSandbox"
 	_sandbox.stock = editor.stock
 	_sandbox.economy = editor.economy
-	_sandbox.test_level = test_level if not stocked() else 0
+	_sandbox.test_level = test_level if stocked() == (test_level == FlightSandbox.WAVETIME) else 0
+	_sandbox.cinematic = _cinematic()
 	add_child(_sandbox)
 	_sandbox.open(copy, placement)
-	_sandbox.closed.connect(land)
+	_sandbox.closed.connect(func() -> void:
+		var docked := _sandbox.cinematic
+		land()
+		if docked:  # the dock screen ended on black
+			_fade.modulate.a = 1.0
+			_fade_to(0.0, func() -> void: _fade.visible = false))
 	_sandbox.again.connect(func(level: int) -> void:
 		land()
 		fly.call_deferred(level))
@@ -1160,9 +1197,17 @@ func _build_ui() -> void:
 	root.add_child(_library_panel)
 	_launch.name = "LaunchPanel"
 	_launch.max_level = int(Encounter.Rules.from_table(Data.table(&"levels")).bands.back().get("to", 100))
-	_launch.launched.connect(func(level: int) -> void: fly(level))
+	_launch.launched.connect(_on_launched)
 	root.add_child(_launch)
 	root.add_child(_confirm)
+	_fade_layer.layer = 10
+	add_child(_fade_layer)
+	_fade.name = "Fade"
+	_fade.color = Color.BLACK
+	_fade.modulate.a = 0.0
+	_fade.visible = false
+	_fade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_fade_layer.add_child(_fade)
 
 
 ## The first tap arms it; a second within RESET_ARM_S deletes the profile's saved stock and goes

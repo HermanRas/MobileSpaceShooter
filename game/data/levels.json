@@ -3,6 +3,13 @@
 	"_doc": "PLAN.md 5.3, §4.8. Encounter level 1-100 is the one difficulty axis. An encounter spends a budget of enemy tiles (a ship costs its tile count, so big ships cost more): base + per_level x level^power. The level's band says which tiers come and how often (weights; a tier none of whose ships fit the level is skipped), how many enemies (count [min, max]), and damage: the share of their guns' damage enemies deal, so early fights don't melt a starter ship. Enemy guns are level x gun_level.per_level, give or take gun_level.spread (a share), within 1-999 (§4.8). A Kill HVT encounter (12.2) brings the boss whose levels fit, and it counts toward the budget.",
 	"budget": {"base": 8, "per_level": 1.6, "power": 1.15},
 	"gun_level": {"per_level": 10, "spread": 0.2},
+	"waves": {
+		"_doc": "PLAN.md 8.1, WaveTime. Wave n is a generated fight at levels[n-1]; past the list each wave adds then_per_wave, up to 100. The next wave comes wave_s after the last one came in, or clear_pause_s after every enemy is down, whichever is first. First pass, tuned in 8.7 (run 1 should last 1-2 minutes).",
+		"levels": [1, 2, 3, 5, 7, 10, 13, 16, 20, 25],
+		"then_per_wave": 5,
+		"wave_s": 60,
+		"clear_pause_s": 3
+	},
 	"bands": [
 		{"to": 10,  "tiers": {"1": 1.0},                     "count": [1, 3], "damage": 0.5},
 		{"to": 25,  "tiers": {"1": 0.7, "2": 0.3},           "count": [2, 4], "damage": 0.6},

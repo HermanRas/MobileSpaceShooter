@@ -1507,11 +1507,36 @@ Phone numbers are in §5.5.
 ### Phase 8: WaveTime → **M3**
 
 #### 8.1 The run loop `[D4]`
-- [ ] Choose an owned ship → arena → waves on a timer (the next wave comes at 60 s or when the current one is cleared, whichever is first)
-- [ ] `wave → level` mapping in `data/levels.json`
-- [ ] Fly out and fly back (owner, 2026-10-26): a short launch from the hangar bay into the arena,
-  and a return-and-dock screen when the run ends, so leaving and coming home read as moments
-- **Done when:** a run starts, escalates and ends in death.
+✅ 2026-10-30. **Run loop.** In WaveTime, Fly opens the `LaunchPanel` with **Start run** and Free flight;
+the run flies whichever owned ship is in the hangar (Ships switches it). `WaveRun` (`src/model/`)
+keeps the waves: wave n comes at `levels.json` → `waves.levels[n-1]` (then +5 a wave, up to 100),
+60 s after the last or 3 s after a clear, whichever is first, so a wave left standing is joined by
+the next. `FlightSandbox.WAVETIME` spawns each through the Spawner, with no respawn and no Spawn or
+Guns button; XP and cargo work as in free flight, and death shows the results card (wave reached,
+waves cleared, time, kills, damage, cargo) with Fly again. The HUD line shows the wave and the time
+to the next one until 8.2. Tested in `tests/model/test_wave_run.gd` and by `drive_wavetime` (the
+idle starter clears wave 1 in ~22 s). ⚠️ The cargo banks on any landing, death included: that's
+WaveTime's rule (8.4), but Story will need its own.
+
+**Fly out and fly back** (owner, 2026-10-30: WaveTime and Story, none in Creative, no skip, and
+an escape pod). From a WaveTime hangar, Free flight included, the hangar fades to black; space
+fades in with the ship in a `LaunchBay` (drawn in code, `vis.fx.launch_bay`). The ship boosts out
+on its own thrusters for 2 s, its guns held and the controls hidden, while the camera eases out.
+Then the player has it, and wave 1 (or the practice target) comes. A ship lost in a run throws
+out an `EscapePod` that burns for the bay. The results card follows after 2.4 s. Return to hangar
+plays the `DockScreen`: the ship as it is now, or the pod, glides up into the bay, the shutter
+closes, and the hangar fades back in. Fly again launches straight away, without docking. Timings
+are in `flight.json` → `cinematics`. `drive_wavetime` plays all of it; `drive_stocked` turns it
+off (`hangar.cinematics`). ⚠️ The bay draws at `z_index` −1 under ships in flight, but on the dock
+screen that put it under the screen's own backdrop, so the dock sets it back to 0. No sound yet:
+launch, pod and dock SFX are on 14.1's list.
+- [ ] Owner, on the phone: WaveTime → Fly → Start run. Does the fade and launch out of the bay
+  feel right (2 s; `cinematics` in `flight.json`)? Do enemies hold fire until they're on screen?
+- [ ] Owner, on the phone: play a run to death. Pacing of the waves (levels 1, 2, 3, 5, 7, 10…;
+  next wave 3 s after a clear or at 60 s); the escape pod; the results card; Return to hangar's pod
+  dock; the cargo and gun XP in the hangar afterwards
+- [ ] Owner, on the phone: Fly again from the results card, then Pause → Return to hangar (the ship
+  docks); Free flight from WaveTime also launches from the bay
 
 #### 8.2 HUD
 - [ ] A big timer, the score, the wave number, a live loot tally
@@ -1544,9 +1569,9 @@ Phone numbers are in §5.5.
 - **Done when:** a blueprint can be bought, then flown in the next run.
 
 #### 8.7 New-player curve
-- [ ] Spawn fairness (from 7.2): at L100 the off-screen spawn ring sits inside the enemies' gun
-  range, and the starter dies in about a second, unseen. Give enemies a grace before they fire
-  (until seen, or a second or two), or spawn them beyond their range.
+- [x] Spawn fairness (from 7.2), 2026-10-30: an enemy holds its fire until any part of it is in
+  view round the player or `flight.json` → `spawner.fire_grace_s` (2 s) has passed
+  (`Spawner._holding`, `WeaponController.hold_fire`, `SpawnRing.in_view`), in every mode.
 - [ ] Starter ship (§4.10): Core, hull tiles and 3 hardpoints carrying 3 pulse thrusters (2 rear, 1 front) and 1 single gatling
 - [ ] Tune so run 1 lasts ~1–2 min and every run banks enough to visibly upgrade
 - [ ] Owner's sandbox playtest, 2026-10-26: a level-1 Starter with 3 gatlings barely survived
@@ -1714,6 +1739,7 @@ Phone numbers are in §5.5.
 
 #### 14.1 SFX
 - [ ] Weapons, thruster loops (pitch follows throttle), explosions, pickups, UI, by ID through the seam
+- [ ] The launch roar out of the bay, the escape pod's eject and burn, and the dock's clamps and shutter (8.1)
 - **Done when:** every action has a sound and the licence audit passes.
 
 #### 14.2 Music
@@ -1796,6 +1822,7 @@ contract). The owner generates in Gemini, and then we review, slice and stage.
 | A.10 | ✅ cut 2026-10-27. **Asteroids**: stone, metal and crystal, L, M, S and two fragments each, 256 px in `assets/world/` as `vis.world.asteroid_<kind>_<size>` (fitted to the square; the belts size them). Waiting for the belts (10.2). | 1 sheet, run ×3 | 10.2 |
 | A.11 | ✅ 2026-10-27. **Splash, app icon and title plate**, no painted text: `tools/make_branding.py` builds the icons (the rounded icon inside Android's safe zone) and the boot splash, with "MOBILE SPACE SHOOTER" set in **Orbitron** (OFL, `assets/fonts/`); the main menu's "MSS" is Orbitron on the gold title plate (`vis.ui.title_plate`). The X-wing-like first splash is retired. | 3 canvases, run ×3 | 8.8 |
 | A.12 | SFX and music (CC0/CC-BY, not Gemini) | – | 14 |
+| A.14 | **Launch bay and escape pod** (8.1): the station's bay mouth seen from above (floor, walls, lights, a shutter in two halves) and a small pod, in place of the code-drawn `vis.fx.launch_bay` and `vis.fx.escape_pod`. Could reuse A.8's station exteriors for the block round the mouth. | 1 sheet | 15 |
 | A.13 | Fonts (OFL) | – | 6.1 |
 
 Enemies, bosses, VIPs and the bandit HQ need **no sprites**: they're blueprints built from A.1 tiles

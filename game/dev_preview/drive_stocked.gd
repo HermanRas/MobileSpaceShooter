@@ -14,6 +14,7 @@ func _ready() -> void:
 	_wipe()
 	Profiles.active_id = PROFILE
 	_hangar = (load("res://scenes/hangar/hangar.tscn") as PackedScene).instantiate()
+	_hangar.cinematics = false  # straight into flight and back; drive_wavetime plays them
 	add_child(_hangar)
 	await _frames(5)
 
@@ -128,6 +129,7 @@ func _step_the_stock_survives_a_reload() -> void:
 	_hangar.queue_free()
 	await _frames(2)
 	_hangar = (load("res://scenes/hangar/hangar.tscn") as PackedScene).instantiate()
+	_hangar.cinematics = false  # straight into flight and back; drive_wavetime plays them
 	add_child(_hangar)
 	await _frames(5)
 	_check(_hangar.editor.stock.wallet == wallet, "the wallet is saved")

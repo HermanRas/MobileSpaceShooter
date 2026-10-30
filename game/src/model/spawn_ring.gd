@@ -89,3 +89,10 @@ func _abreast(members: Array[int], sizes: Array[float], center: Vector2, reach: 
 func _fits(point: Vector2, arena: Arena) -> bool:
 	var limit := arena.half_size_u - inside_u
 	return absf(point.x) <= limit and absf(point.y) <= limit
+
+
+## Whether any part of a ship at `pos` reaching `reach` from it is inside the view: `view_half`
+## round `center` (8.7: an enemy holds its fire until it has been in view).
+static func in_view(center: Vector2, view_half: Vector2, pos: Vector2, reach: float) -> bool:
+	var off := (pos - center).abs()
+	return off.x <= view_half.x + reach and off.y <= view_half.y + reach

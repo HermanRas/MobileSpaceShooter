@@ -34,6 +34,17 @@ extends Node
 ##
 ## Performance test (7.5, Creative): `test_level` BENCH flies §5.5's worst case instead (BenchRun),
 ## the player's ship taking no damage, and the results card shows the frame times.
+##
+## WaveTime (8.1, stocked): `test_level` WAVETIME flies a run (WaveRun): waves of generated fights
+## at rising levels, each coming when the last is cleared or after a minute, with no respawn. The
+## guns earn XP and the cargo banks on landing as in free flight; the results card shows how far
+## the run got.
+##
+## Fly out and fly back (8.1, WaveTime and Story; Creative goes straight in): with `cinematic`
+## set before `open()`, space fades in with the ship in a LaunchBay, and it boosts out on its own
+## for `cinematics.launch_s` before the player has it (and the first wave or the practice target
+## comes). A ship lost in a run throws out an EscapePod. Leaving plays the DockScreen (the ship, or
+## the pod, gliding into the bay) before `closed`.
 
 signal closed
 ## Fly again, from the results card: the hangar flies a fresh copy at `level`.
@@ -141,6 +152,19 @@ var test_level := 0
 ## `test_level` for the performance test (7.5).
 const BENCH := -1
 var bench_run: BenchRun
+## `test_level` for a WaveTime run (8.1).
+const WAVETIME := -2
+## The WaveTime run under way, or null.
+var run: WaveRun
+## Fly out and fly back (8.1): set before `open()`.
+var cinematic := false
+var bay: LaunchBay
+var dock := DockScreen.new()
+## Seconds of the launch left (0 once the player has the ship).
+var launch_left := 0.0
+var _cine: Dictionary = {}
+## Space fading in from black at the start of a cinematic flight.
+var _fade_in := ColorRect.new()
 ## The test fight under way, or null.
 var test: TestFlight
 var results := TestResults.new()
@@ -193,8 +217,17 @@ func open(bp: Blueprint, placement: Placement) -> void:
 		_note = "the carrier is lost"
 		_note_until = Time.get_ticks_msec() + 3000)
 	add_child(spawner)
+	_cine = _flight.get("cinematics", {})
+	if cinematic:
+		bay = LaunchBay.create(Spawner.extent_u(_bp, _placement))
+		_world.add_child(bay)
+		bay.position = -bay.berth_u() * PX  # the ship starts at the origin, in its berth
 	_spawn_player()
 	_camera.make_current()
+	if cinematic:
+		launch_left = float(_cine.get("launch_s", 2.0))
+		_camera.zoom *= float(_cine.get("zoom_in", 1.6))
+		weapons.hold_fire = true
 	if test_level > 0:
 		test = TestFlight.start(test_level, spawn_encounter(test_level).spawns.size())
 	elif test_level == BENCH:
@@ -209,12 +242,16 @@ func open(bp: Blueprint, placement: Placement) -> void:
 			pause_menu.visible = false
 			results.show_report("Performance test", bench_run.lines, run["summary"]["slow"] == 0)
 			get_tree().paused = true)
-	else:
+	elif test_level == WAVETIME:
+		run = WaveRun.from_table(Data.table(&"levels").get("waves", {}))
+		if not cinematic and run.tick(0.0):
+			_start_wave()
+	elif not cinematic:
 		spawn(SPAWN_ENEMIES, str(_sandbox.get("start_target", "target_barge")))
 	var stars := Starfield.new()
 	stars.camera = _camera
 	add_child(stars)
-	stars.use_nebula(randi() if test_level == 0 else absi(test_level))  # a test fight keeps its sky
+	stars.use_nebula(randi() if test_level in [0, WAVETIME] else absi(test_level))  # a test fight keeps its sky
 	_build_ui()
 	_show_status()
 
@@ -256,7 +293,9 @@ func _spawn_player() -> void:
 	ship.destroyed.connect(_on_player_destroyed)
 	ship.damaged.connect(func(result: ShipDamage.Result) -> void:
 		if test != null:
-			test.took(result.shield + result.hull))
+			test.took(result.shield + result.hull)
+		if run != null:
+			run.took(result.shield + result.hull))
 	_camera.configure(_flight.get("camera", {}), ship, Spawner.extent_u(_bp, _placement))
 
 
@@ -288,6 +327,13 @@ func spawn_encounter(level: int, hvt := false) -> Encounter:
 			mini(roundi(levels.gun_per_level * level), _placement.weapons.xp.max_level)]
 	_note_until = Time.get_ticks_msec() + 3000
 	return fight
+
+
+## The run's next wave (8.1): a generated fight at its level, off screen round the player.
+func _start_wave() -> void:
+	var fight := spawner.spawn_encounter(run.level())
+	_note = "Wave %d: level %d, %d enemies" % [run.wave, run.level(), fight.spawns.size()]
+	_note_until = Time.get_ticks_msec() + 3000
 
 
 ## Every enemy, gone.
@@ -355,6 +401,8 @@ func _close_spawner(kind: StringName = &"", id: String = "") -> void:
 
 
 func _on_player_destroyed() -> void:
+	if cinematic and run != null:
+		_launch_pod()
 	ship = null
 	pilot = null
 	weapons = null
@@ -362,6 +410,10 @@ func _on_player_destroyed() -> void:
 	if test != null:
 		test.destroyed()
 		_show_results_soon()
+		return
+	if run != null:
+		run.destroyed()
+		_show_results_soon(float(_cine.get("pod_s", RESULTS_DELAY_S)) if cinematic else RESULTS_DELAY_S)
 		return
 	_note = "destroyed"
 	_note_until = Time.get_ticks_msec() + int(float(_sandbox.get("respawn_s", 3.0)) * 1000.0)
@@ -377,6 +429,8 @@ func _on_enemy_destroyed(body: ShipBody, built: Blueprint) -> void:
 	_on_kill(body)
 	if test != null:
 		test.killed()
+	if run != null:
+		run.killed()
 
 
 ## The last enemy is gone; if it was a fight from the Spawn list, say so.
@@ -384,6 +438,8 @@ func _on_cleared() -> void:
 	if test != null and ship != null:
 		test.cleared()
 		_show_results_soon()
+	if run != null and ship != null:
+		run.cleared()
 	if _fight_level > 0:
 		_note = "level %d cleared!" % _fight_level
 		_note_until = Time.get_ticks_msec() + 4000
@@ -484,16 +540,21 @@ func _item_levels() -> Dictionary:
 	return out
 
 
-## The results card, a moment after a test fight ends; it pauses the flight under it.
-func _show_results_soon() -> void:
-	get_tree().create_timer(RESULTS_DELAY_S).timeout.connect(func() -> void:
-		if not is_inside_tree() or test == null:
+## The results card, `delay_s` after a test fight or a run ends; it pauses the flight under it.
+func _show_results_soon(delay_s := RESULTS_DELAY_S) -> void:
+	get_tree().create_timer(delay_s).timeout.connect(func() -> void:
+		if not is_inside_tree() or (test == null and run == null):
 			return
 		_touches.clear()
 		controls.stick.reset()
 		controls.fire.reset()
 		pause_menu.visible = false
-		results.show_flight(test)
+		if run != null:
+			var lines := run.lines()
+			lines.append("Cargo: " + (cargo_text().trim_prefix("cargo ") if not cargo.is_empty() else "nothing"))
+			results.show_report(run.title(), lines, false)
+		else:
+			results.show_flight(test)
 		get_tree().paused = true)
 
 
@@ -505,14 +566,47 @@ func perf_note() -> String:
 	return "  ship spawn %.1f ms (%d tiles)" % [last_spawn_usec / 1000.0, ship.blueprint.tiles.size() if ship else 0]
 
 
+## Leaves the flight: in a cinematic one, after the dock screen.
 func close() -> void:
+	if cinematic and not dock.running:
+		_touches.clear()
+		pause_menu.visible = false
+		results.visible = false
+		_controls_panel.visible = false
+		get_tree().paused = true
+		dock.docked.connect(func() -> void:
+			get_tree().paused = false
+			closed.emit(), CONNECT_ONE_SHOT)
+		dock.play(ship.blueprint if ship != null else null, _placement, _cine)
+		return
+	if dock.running:
+		return
 	get_tree().paused = false
 	closed.emit()
 
 
+## The ship's lost in a run: its escape pod bursts out of the wreck and burns for the bay.
+func _launch_pod() -> void:
+	var at := ship.global_transform * ship.center_of_mass
+	var home := bay.global_position if bay != null else Vector2.ZERO
+	var heading := (home - at).angle() if at.distance_to(home) > PX else ship.global_rotation
+	_world.add_child(EscapePod.launch(at, ship.linear_velocity, heading,
+			float(_cine.get("pod_speed_u", 5.0)), float(_cine.get("pod_accel_u_s2", 9.0))))
+
+
+## The launch is over: the player has the ship, and the fight (or the practice target) comes.
+func _end_launch() -> void:
+	launch_left = 0.0
+	controls.visible = true
+	if weapons != null:
+		weapons.hold_fire = false
+	if test_level == 0:
+		spawn(SPAWN_ENEMIES, str(_sandbox.get("start_target", "target_barge")))
+
+
 ## Pauses the flight under the pause menu (6.5).
 func open_pause() -> void:
-	if pause_menu.visible or spawn_list.visible or picker.visible or results.visible:
+	if pause_menu.visible or spawn_list.visible or picker.visible or results.visible or dock.running:
 		return
 	_touches.clear()  # a panel over the fingers takes their release
 	controls.stick.reset()
@@ -530,6 +624,8 @@ func resume() -> void:
 ## The Android back button (through the hangar): it closes whatever is open, and otherwise
 ## pauses or resumes. It never lands straight away; Return to hangar is in the pause menu.
 func on_back() -> void:
+	if dock.running:
+		return
 	if results.visible:
 		close()
 	elif _controls_panel.visible:
@@ -581,8 +677,19 @@ func _close_switch(weapon_id: StringName = &"") -> void:
 func _process(delta: float) -> void:
 	if test != null:
 		test.tick(delta)
+	if _fade_in.visible:
+		_fade_in.modulate.a -= delta / maxf(float(_cine.get("fade_s", 0.35)), 0.01)
+		_fade_in.visible = _fade_in.modulate.a > 0.0
+	if run != null and launch_left <= 0.0 and run.tick(delta):
+		_start_wave()
 	if ship == null:
 		_hud.text = _note
+		return
+	if launch_left > 0.0:
+		pilot.stick = Vector2.from_angle(ship.global_rotation)  # out of the bay, on its own
+		launch_left -= delta
+		if launch_left <= 0.0:
+			_end_launch()
 		return
 	pilot.stick = controls.stick_value()
 	weapons.fire_held = controls.is_firing()
@@ -600,6 +707,8 @@ func _process(delta: float) -> void:
 	var warning := arena.warning(ship.global_position / PX)
 	_edge_glow.strength = warning
 	var parts: PackedStringArray = ["%.1f U/s" % (ship.linear_velocity.length() / PX)]
+	if run != null:
+		parts.append("wave %d (L%d), next in %s" % [run.wave, run.level(), TestFlight.clock(ceilf(run.next_in()))])
 	if ship.damage.shield_cap > 0.0:
 		parts.append("shield %d/%d" % [roundi(ship.damage.shield), roundi(ship.damage.shield_cap)])
 	if ship.damage.is_disabled():
@@ -858,6 +967,15 @@ func _build_ui() -> void:
 	_controls_panel.process_mode = Node.PROCESS_MODE_ALWAYS  # opened from the pause menu
 	_controls_panel.visible = false
 	ui.add_child(_controls_panel)
+	controls.visible = launch_left <= 0.0
+	_fade_in.name = "FadeIn"
+	_fade_in.color = Color.BLACK
+	_fade_in.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	_fade_in.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_fade_in.visible = cinematic
+	ui.add_child(_fade_in)
+	dock.name = "DockScreen"
+	ui.add_child(dock)
 
 
 ## Steps every gun through the sandbox's `gun_levels`, then back to their own levels (0).

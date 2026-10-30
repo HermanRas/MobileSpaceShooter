@@ -250,6 +250,22 @@
 			"sparks": 96,
 			"spark_size": [0.09, 0.24],
 			"colors": ["#ffffff", "#ffd27a", "#ff7a1a", "#802000"]
+		},
+		"vis.fx.launch_bay": {
+			"_doc": "The hangar bay a WaveTime (and Story) flight launches from and docks into (PLAN.md 8.1), drawn in code until A-track art: a station block with an open mouth, floor lights running out to it, and a shutter. Sized by the ship.",
+			"hull": "#2a3340",
+			"trim": "#4c5a6c",
+			"floor": "#141a22",
+			"lights": "#ffb347",
+			"mouth": "#7fd4ff",
+			"shutter": "#39424f"
+		},
+		"vis.fx.escape_pod": {
+			"_doc": "The escape pod that leaves a destroyed ship in a run and flies home (PLAN.md 8.1), drawn in code: a capsule with a window and a flame.",
+			"body": "#d9dde3",
+			"window": "#7fd4ff",
+			"flame": "#ffb347",
+			"length_u": 0.9
 		}
 	}
 }

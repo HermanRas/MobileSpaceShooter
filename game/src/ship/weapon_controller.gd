@@ -20,6 +20,8 @@ var all_auto := false:
 		if gunnery != null:
 			gunnery.all_auto = value
 var enemies: Callable = func() -> Array: return []
+## While true the guns track nothing and fire nothing (an enemy's grace before it opens fire, 8.7).
+var hold_fire := false
 
 ## Gun index -> where its beam ends this tick (world pixels), for each beam that's on.
 var beam_ends := {}
@@ -47,12 +49,12 @@ func _physics_process(delta: float) -> void:
 		return
 	var targets := []
 	var bodies: Array[ShipBody] = []
-	for body: Variant in ShipBody.nearest(enemies.call(), _ship.global_position, _nearest):
+	for body: Variant in [] if hold_fire else ShipBody.nearest(enemies.call(), _ship.global_position, _nearest):
 		var enemy := body as ShipBody
 		if is_instance_valid(enemy) and not enemy.is_wreck() and enemy.damage != null and not enemy.damage.dead:
 			targets.append({"pos": enemy.global_transform * enemy.center_of_mass / PX, "vel": enemy.linear_velocity / PX})
 			bodies.append(enemy)
-	var missiles := _pool.rockets().filter(func(r: Dictionary) -> bool: return r["team"] != _ship.team)
+	var missiles := [] if hold_fire else _pool.rockets().filter(func(r: Dictionary) -> bool: return r["team"] != _ship.team)
 	var shots := gunnery.step(delta, _ship.global_position / PX, _ship.global_rotation, _ship.linear_velocity / PX,
 			targets, fire_held, missiles)
 	var beam_hits := _trace_beams()

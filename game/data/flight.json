@@ -53,7 +53,9 @@
 		"spawn_facing_deg": 180,
 		"target_rotation_deg": 90,
 		"carrier_beside_u": 4.0,
-		"carrier_bias": 0.6
+		"carrier_bias": 0.6,
+		"_fire_grace": "PLAN.md 8.7 (from 7.2): an enemy holds its fire until it has been in view (any part within the view round the player) or fire_grace_s has passed since it spawned, so a high level can't kill the player from off screen before anything shows.",
+		"fire_grace_s": 2.0
 	},
 	"sandbox": {
 		"_doc": "Flight sandbox extras (4.2): start_target (a practice target from data/enemies) is parked ahead at the start. The Spawn button (owner, 2026-10-26) lists every ship to spawn: practice targets, the roster, the carrier and the player's own ships; where they appear is the spawner's (above), and a roster ship flies itself (5.2). The carrier flies carrier_route round and round, laid out in the player's frame at spawn (x ahead, y to the right). A tap on any ship's tile highlights it, and hits it for test_hit raw damage of test_hit_type (0 since the guns arrived in 4.3). The player's ship comes back respawn_s after it's destroyed. The Guns button steps a Creative ship's guns through gun_levels (4.3); a stocked ship's guns are inventory items at their own levels. A single spawned enemy comes at encounter_level (its guns about 10x that, at the level's damage share, levels.json), and a kill earns XP at the enemy's own level (4.8b) and drops its loot as pickups (5.4, pickups). The Spawn list's encounter_buttons spawn a generated fight at that level off screen round the player (5.5), and hvt_buttons a Kill HVT one led by a boss (5.3).",
@@ -66,6 +68,17 @@
 		"hvt_buttons": [15, 40, 65, 90],
 		"start_target": "target_barge",
 		"carrier_route": [[35, 0], [35, 32], [0, 32], [0, 0]]
+	},
+	"cinematics": {
+		"_doc": "PLAN.md 8.1, WaveTime and Story only (Creative goes straight in; no skip, owner 2026-10-30). Launch: the hangar fades to black in fade_s, space fades in with the ship inside the bay, and it boosts out on its own thrusters for launch_s while the camera eases out from zoom_in times its usual zoom; then the player has it and the first wave comes. A ship destroyed in a run throws out an escape pod at pod_speed_u, accelerating at pod_accel_u_s2, and the results card follows after pod_s. Return to hangar plays the dock screen: the ship (or the pod) glides into the bay over dock_s, the shutter closes in shutter_s, and it fades to the hangar.",
+		"fade_s": 0.35,
+		"launch_s": 2.0,
+		"zoom_in": 1.6,
+		"pod_speed_u": 5.0,
+		"pod_accel_u_s2": 9.0,
+		"pod_s": 2.4,
+		"dock_s": 2.4,
+		"shutter_s": 0.5
 	},
 	"combat_hud": {
 		"_doc": "Phase 4.7. A hit on the player flashes the screen (red for hull, blue for shield only) for flash_s, at up to flash_alpha. Screen shake jolts the view by shake_px_per_damage per point of damage, up to shake_max_px, settling at shake_decay per second. A hull hit of at least vibrate_min_damage buzzes the phone for vibrate_ms. Both obey the Controls settings.",

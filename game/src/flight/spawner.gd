@@ -11,6 +11,9 @@ extends Node
 ##
 ## The mode owns the player's ship (`player`), the camera (`view_half_u`), loot and XP; it
 ## listens to `enemy_destroyed`, `cleared` and `carrier_lost`. Tuning is `flight.json` `spawner`.
+##
+## An enemy holds its fire until it has been in view or `fire_grace_s` has passed (8.7), so a
+## fight that comes in off screen can't open fire before the player sees anything.
 
 signal spawned(body: ShipBody)
 ## An enemy is destroyed; `built` is the ship as it spawned, before the damage.
@@ -48,6 +51,9 @@ var _damage_table: DamageTable
 var _pool: ProjectilePool
 var _world: Node2D
 var _rng := RandomNumberGenerator.new()
+## Enemies still holding their fire: WeaponController -> [its ship, game seconds left, its reach].
+var _holding := {}
+var _grace_s := 2.0
 
 
 ## Ships go into `world` and shoot through `pool`.
@@ -62,6 +68,7 @@ func setup(placement: Placement, flight: Dictionary, pool: ProjectilePool, world
 	levels = Encounter.Rules.from_table(Data.table(&"levels"))
 	arena = Arena.from_table(flight.get("arena", {}))
 	ring = SpawnRing.from_table(_tuning)
+	_grace_s = float(_tuning.get("fire_grace_s", _grace_s))
 	_rng.randomize()
 
 
@@ -231,7 +238,10 @@ func _spawn_enemy(bp: Blueprint, entry: EnemyRoster.Entry, level: int, gun_level
 	_world.add_child(enemy)
 	enemies.append(enemy)
 	target = enemy
-	_arm(enemy, player_side)
+	var guns := _arm(enemy, player_side)
+	if guns != null and _grace_s > 0.0:
+		guns.hold_fire = true
+		_holding[guns] = [enemy, _grace_s, reach_u(bp, _placement)]
 	if not enemy.envelope.thrusters.is_empty():
 		var behaviour := entry.behaviour if entry != null else behaviour_for(enemy)
 		_give_pilot(enemy, behaviour, entry.flee_below if entry != null else 0.0).target = _pick_victim.bind(enemy)
@@ -248,10 +258,11 @@ static func behaviour_for(body: ShipBody) -> StringName:
 	return &"strafe"
 
 
-## Its guns, firing on their own at `foes` (nobody holds FIRE for them), and drawn.
-func _arm(body: ShipBody, foes: Callable) -> void:
+## Its guns, firing on their own at `foes` (nobody holds FIRE for them), and drawn. Null if it
+## has none.
+func _arm(body: ShipBody, foes: Callable) -> WeaponController:
 	if body.guns.guns.is_empty():
-		return
+		return null
 	var guns := WeaponController.new()
 	guns.name = "Weapons"
 	guns.all_auto = true
@@ -260,6 +271,27 @@ func _arm(body: ShipBody, foes: Callable) -> void:
 	var view := GunView.new()
 	body.add_child(view)
 	view.attach(guns)
+	return guns
+
+
+## Each held enemy opens fire once it's in view round the player, or its grace runs out.
+func _physics_process(delta: float) -> void:
+	if _holding.is_empty():
+		return
+	var ship: ShipBody = player.call()
+	var center := _center_u()
+	var half: Vector2 = view_half_u.call()
+	for guns: Variant in _holding.keys():
+		var held: Array = _holding[guns]
+		if not is_instance_valid(guns) or not is_instance_valid(held[0]):
+			_holding.erase(guns)
+			continue
+		var enemy: ShipBody = held[0]
+		held[1] -= delta
+		if held[1] <= 0.0 or (is_instance_valid(ship) \
+				and SpawnRing.in_view(center, half, enemy.global_position / PX, held[2])):
+			(guns as WeaponController).hold_fire = false
+			_holding.erase(guns)
 
 
 ## An AI-flown ship (PLAN.md 5.2): a FlightController like the player's, its exhaust, and an

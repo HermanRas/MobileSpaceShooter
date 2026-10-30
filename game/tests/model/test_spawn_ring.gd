@@ -71,3 +71,13 @@ func test_the_same_seed_places_the_same_way() -> void:
 	var sizes: Array[float] = [3.0, 4.0, 5.0, 6.0]
 	assert_eq(_place(Vector2.ZERO, sizes, 3), _place(Vector2.ZERO, sizes, 3))
 	assert_eq(_place(Vector2.ZERO, []), [] as Array[Dictionary], "no ships, no spots")
+
+
+func test_a_ship_is_in_view_when_any_part_of_it_is() -> void:
+	var center := Vector2(10, -20)
+	assert_true(SpawnRing.in_view(center, VIEW, center + Vector2(14, 6), 1.0), "inside")
+	assert_true(SpawnRing.in_view(center, VIEW, center + Vector2(-17, 0), 2.5), "its edge pokes in")
+	assert_false(SpawnRing.in_view(center, VIEW, center + Vector2(0, 9), 1.5), "just below")
+	var spots := _place(center, [3.0, 5.0, 2.0] as Array[float])
+	for spot in spots:
+		assert_false(SpawnRing.in_view(center, VIEW, spot["pos"], 2.5), "a fresh spawn is out of view")
