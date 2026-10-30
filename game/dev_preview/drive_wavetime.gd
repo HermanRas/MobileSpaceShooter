@@ -117,20 +117,34 @@ func _step_wave_1_holds_fire_until_seen(sandbox: FlightSandbox) -> void:
 	_check(early.is_empty(), "no enemy opens fire out of view within the grace (%s)" % ", ".join(early))
 	var still := sandbox.enemies.filter(func(enemy: ShipBody) -> bool: return _guns(enemy) != null and _guns(enemy).hold_fire)
 	_check(still.is_empty(), "past the grace (%.1f s), they're all free to fire" % grace)
-	_check(sandbox._hud.text.contains("wave 1 (L%d)" % run.level()), "the HUD shows the wave (%s)" % sandbox._hud.text)
+	var hud := sandbox.run_hud
+	await _frames(2)
+	_check(hud.clock.visible and hud.clock.text == TestFlight.clock(run.seconds) and hud.wave.text.begins_with("WAVE 1 "),
+			"the HUD shows the clock and the wave (%s, %s)" % [hud.clock.text, hud.wave.text])
+	_check(hud.score.text == RunHud._thousands(run.score()) and run.score() > 0, "and the score, which staying alive earns (%s)" % hud.score.text)
 
 
 func _step_waves_escalate(sandbox: FlightSandbox) -> void:
 	var run := sandbox.run
 	Engine.time_scale = TIME_SCALE
 	var limit_ms := Time.get_ticks_msec() + int((CLEAR_S / TIME_SCALE + 10.0) * 1000.0)
+	var cleared_at := -1.0
 	while run.wave < 2 and sandbox.ship != null and Time.get_ticks_msec() < limit_ms:
 		sandbox.weapons.all_auto = true
 		await _physics_frames(10)
+		if cleared_at < 0.0 and run.waves_cleared > 0:
+			cleared_at = run.seconds
 	Engine.time_scale = 1.0
-	_check(run.waves_cleared >= 1 and run.wave == 2, "the idle starter clears wave 1 (%s), and wave 2 follows" % TestFlight.clock(run.seconds))
-	_check(run.seconds < run.wave_s, "after the breather, not the minute (%.1f s)" % run.seconds)
+	var came := run.seconds - run.wave_seconds
+	_check(run.waves_cleared >= 1 and run.wave == 2, "the idle starter clears wave 1 (%s), and wave 2 follows" % TestFlight.clock(cleared_at))
+	# Whichever is first: the breather after the clear, or the minute (the idle starter takes
+	# 20-58 s). Polled every 10 ticks at TIME_SCALE, so within a second.
+	var due := minf(cleared_at + run.clear_pause_s, run.wave_s) if cleared_at >= 0.0 else run.wave_s
+	_check(absf(came - due) < 1.0, "it came at %.1f s: the breather after the clear at %.1f s, or the minute" % [came, cleared_at])
 	_check(run.level() > run.level_for(1), "at a higher level (L%d)" % run.level())
+	_check(sandbox.run_hud.banner.visible and "WAVE 2" in (sandbox.run_hud.banner.get_child(0) as Label).text,
+			"a banner calls the new wave")
+	_check(run.kill_score > 0, "the kill scored (%d of %d)" % [run.kill_score, run.score()])
 	await _frames(2)
 	_save_shot("drive_wavetime_wave2.png")
 	# A wave left standing is joined by the next at the minute.
@@ -164,8 +178,8 @@ func _step_death_ends_the_run(sandbox: FlightSandbox) -> void:
 	var lines: PackedStringArray = []
 	for label in sandbox.results._lines.get_children():
 		lines.append((label as Label).text)
-	_check(lines.size() == run.lines().size() + 1 and lines[3] == "Kills: %d" % run.kills and lines[-1].begins_with("Cargo: "),
-			"with the waves, time, kills, damage and cargo (%s)" % ", ".join(lines))
+	_check(lines.size() == run.lines().size() + 1 and lines.has("Kills: %d" % run.kills) and lines[0] == "Score: %d" % run.score() and lines[-1].begins_with("Cargo: "),
+			"with the score, waves, time, kills, damage and cargo (%s)" % ", ".join(lines))
 	await _frames(3)
 	_save_shot("drive_wavetime_results.png")
 	var waited := run.seconds

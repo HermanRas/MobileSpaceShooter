@@ -8,7 +8,9 @@
 		"levels": [1, 2, 3, 5, 7, 10, 13, 16, 20, 25],
 		"then_per_wave": 5,
 		"wave_s": 60,
-		"clear_pause_s": 3
+		"clear_pause_s": 3,
+		"_score": "8.2: a kill scores tiles x level x per_tile_level, times the wave multiplier (1 + wave_bonus per wave after the first); staying alive scores survival_per_s a second, times the same multiplier.",
+		"score": {"per_tile_level": 10, "wave_bonus": 0.25, "survival_per_s": 2}
 	},
 	"bands": [
 		{"to": 10,  "tiers": {"1": 1.0},                     "count": [1, 3], "damage": 0.5},

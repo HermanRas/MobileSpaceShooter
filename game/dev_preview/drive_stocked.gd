@@ -213,8 +213,15 @@ func _step_a_kill_earns_the_guns_xp() -> void:
 	await _frames(2)
 	_check(sandbox.cargo.guns.size() == 1 and (sandbox.cargo.guns.values()[0] as Inventory.GunItem).xp == int(part["xp"]),
 			"a dropped gun is picked up with its XP (%s)" % [part])
-	_check("Found a" in sandbox._hud.text, "and the HUD says so (%s)" % sandbox._hud.text)
-	_check("cargo" in sandbox._hud.text and "GC" in sandbox._hud.text, "the HUD counts the cargo (%s)" % sandbox._hud.text)
+	var banner := sandbox.run_hud.banner
+	_check(banner.visible and "Found a" in (banner.get_child(0) as Label).text,
+			"and a banner says so (%s)" % (banner.get_child(0) as Label).text)
+	await _frames(30)  # the counts climb to the hold's
+	var tally := sandbox.run_hud
+	_check(tally.shown(&"gc") == sandbox.cargo.amount(&"gc") and tally.shown(&"hull") == sandbox.cargo.amount(&"hull")
+			and tally.shown(&"parts") == 1 and tally.find_child("Gc", true, false).visible,
+			"the HUD counts the cargo (GC %d, hull %d, parts %d)" % [tally.shown(&"gc"), tally.shown(&"hull"), tally.shown(&"parts")])
+	_save_shot("drive_stocked_tally.png")
 	var hold := sandbox.cargo.wallet.duplicate()
 	var found_gun := not sandbox.cargo.guns.is_empty()
 	_hangar.land()

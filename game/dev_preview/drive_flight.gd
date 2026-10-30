@@ -549,7 +549,7 @@ func _step_camera_and_arena() -> void:
 	var half := sandbox.arena.half_size_u * PX
 	_teleport(ship, Vector2(half - 5.0 * PX, 0))
 	await _physics_frames(2)
-	await _frames(2)
+	await _frames(4)  # the HUD line updates every other frame
 	_check(sandbox._edge_glow.strength > 0.5 and "leaving" in sandbox._hud.text,
 			"near the edge: the glow (%.2f) and the warning (%s)" % [sandbox._edge_glow.strength, sandbox._hud.text])
 	_save_shot("drive_flight_edge.png")

@@ -1539,12 +1539,23 @@ launch, pod and dock SFX are on 14.1's list.
   docks); Free flight from WaveTime also launches from the bay
 
 #### 8.2 HUD
-- [ ] A big timer, the score, the wave number, a live loot tally
-- [ ] Make pickups noticeable (owner, 2026-10-26: the sandbox's "Found a …" note was easy to
-  miss). The cargo counter flashes and counts up as resources come in. A found part gets a
-  banner. Pickups glint or pulse so they stand out from the debris.
-- [ ] Score = kill value × wave multiplier, plus a survival bonus
-- **Done when:** the HUD reads at arm's length on the phone (dev_preview at phone resolution).
+Built 2026-10-30; waiting on the phone. `RunHud` (`src/ui/hud/`), in outlined type over the
+flight:
+- **In a run:** a big clock top centre, "WAVE n · next m:ss" under it, the score top right, and
+  a chrome banner calling each new wave.
+- **In every flight:** the hold's loot under the score, as an icon and a count per resource
+  (parts as a word until there's a crate icon). Counts climb to the new total and flash gold as
+  loot comes in. A found part gets the banner too.
+- **Pickups:** each one's halo pulses, and a glint crosses it every 1.6 s (`flight.json` →
+  `pickups`).
+
+Score (`WaveRun.score`, `levels.json` → `waves.score`): a kill is worth tiles × level × 10;
+staying alive earns 2 a second. Both are multiplied by 1 + 0.25 per wave after the first. The
+results card leads with it. Tested in `test_wave_run.gd`; `drive_wavetime` and `drive_stocked`
+read the HUD. ⚠️ The tally sets its colours only while a count flashes: theme overrides every
+frame would redraw the labels every frame.
+- [ ] Owner, on the phone: does the HUD read at arm's length (clock, wave, score, loot counts)?
+  Do the banners and glinting pickups catch the eye without getting in the way?
 
 #### 8.3 Arcade feedback and power-ups `[D4]`
 - [ ] Floating damage numbers on every hit (bigger and brighter for big hits), and a score pop on each kill

@@ -78,9 +78,39 @@ func test_destroyed_ends_the_run_and_nothing_counts_after() -> void:
 	run.tick(70.0)
 	run.destroyed()
 	assert_false(run.tick(100.0), "no wave after the end")
-	run.killed()
+	assert_eq(run.killed(9, 9), 0, "a kill after the end scores nothing")
 	run.took(999.0)
 	assert_eq([run.wave, run.kills], [2, 1])
 	assert_eq(run.title(), "Destroyed in wave 2")
-	assert_eq(run.lines(), PackedStringArray(["Reached wave 2 (level 2)", "Waves cleared: 0", "Time: 1:10",
-			"Kills: 1", "Damage taken: 40"]))
+	assert_eq(run.lines(), PackedStringArray(["Score: %d" % run.score(), "Reached wave 2 (level 2)", "Waves cleared: 0",
+			"Time: 1:10", "Kills: 1", "Damage taken: 40"]))
+
+
+func test_kills_score_by_size_and_level_times_the_wave() -> void:
+	var run := WaveRun.from_table({"levels": [1, 2, 4], "wave_s": 60,
+			"score": {"per_tile_level": 10, "wave_bonus": 0.5, "survival_per_s": 0}})
+	run.tick(0.0)
+	assert_eq(run.killed(12, 3), 360, "wave 1: 12 tiles x level 3 x 10")
+	run.tick(60.0)
+	assert_almost_eq(run.multiplier(), 1.5)
+	assert_eq(run.killed(12, 3), 540, "wave 2 multiplies it by 1.5")
+	assert_eq(run.score(), 900)
+
+
+func test_staying_alive_scores_by_the_second() -> void:
+	var run := WaveRun.from_table({"levels": [1, 2], "wave_s": 60,
+			"score": {"per_tile_level": 0, "wave_bonus": 1.0, "survival_per_s": 5}})
+	run.tick(0.0)
+	run.tick(10.0)
+	assert_eq(run.score(), 50, "10 s of wave 1 at 5 a second")
+	run.tick(50.0)
+	run.tick(10.0)
+	assert_eq(run.score(), 300 + 100, "a minute of wave 1, then 10 s of wave 2 at twice the rate")
+	run.destroyed()
+	run.tick(100.0)
+	assert_eq(run.score(), 400, "nothing after the end")
+
+
+func test_the_shipped_score_rules_load() -> void:
+	var run := WaveRun.from_table(Data.table(&"levels").get("waves", {}))
+	assert_true(run.per_tile_level > 0.0 and run.survival_per_s > 0.0 and run.wave_bonus > 0.0)

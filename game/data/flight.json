@@ -34,7 +34,10 @@
 		"scatter_per_blast_u": 1.5,
 		"drift_damp": 1.5,
 		"life_s": 45.0,
-		"blink_s": 5.0
+		"blink_s": 5.0,
+		"_glint": "8.2 (owner, 2026-10-26: loot was easy to miss): each pickup's halo pulses pulse_hz times a second, and a glint crosses it every glint_every_s.",
+		"pulse_hz": 1.2,
+		"glint_every_s": 1.6
 	},
 	"edge_markers": {
 		"_doc": "Owner, 2026-10-26: a mark at the screen's edge points at the carrier when it's off screen. Within dot_within_u of the edge it's a full-size dot (about to come into view); further off an arrow, shrinking from full size to smallest_share at smallest_at_u. An enemy that has been on screen gets a solid dot of fixed size at the edge while it's off screen and within sight_range_u of the player's ship; beyond that it's forgotten until seen again (5.5, owner 2026-10-26). Radar tech (v2) marks the rest.",

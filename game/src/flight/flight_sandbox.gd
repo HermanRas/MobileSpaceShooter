@@ -27,6 +27,8 @@ extends Node
 ##
 ## Combat HUD (4.7): shield and hull bars, the active manual weapon, and a flash, jolt and buzz
 ## when hit. SWITCH pauses and lists the manual weapons (Q on a keyboard cycles them instead).
+## The RunHud (8.2) counts the loot in the hold and banners a found part (and in a run, each new
+## wave), and shows a run's clock, wave and score.
 ##
 ## Test fight (7.2, Creative): with `test_level` set before `open()`, there's no practice target,
 ## no Spawn or Guns button and no respawn: a generated fight at that level comes in, and when it's
@@ -114,6 +116,7 @@ var _controls_panel: ControlsPanel
 ## losing focus.
 var pause_menu := PauseMenu.new()
 var hud := CombatHud.new()
+var run_hud := RunHud.new()
 var picker := WeaponPicker.new()
 ## A short message under the HUD (e.g. SWITCH before there are weapons), and when it fades.
 var _note := ""
@@ -331,9 +334,8 @@ func spawn_encounter(level: int, hvt := false) -> Encounter:
 
 ## The run's next wave (8.1): a generated fight at its level, off screen round the player.
 func _start_wave() -> void:
-	var fight := spawner.spawn_encounter(run.level())
-	_note = "Wave %d: level %d, %d enemies" % [run.wave, run.level(), fight.spawns.size()]
-	_note_until = Time.get_ticks_msec() + 3000
+	spawner.spawn_encounter(run.level())
+	run_hud.found("WAVE %d   ·   level %d" % [run.wave, run.level()])
 
 
 ## Every enemy, gone.
@@ -430,7 +432,7 @@ func _on_enemy_destroyed(body: ShipBody, built: Blueprint) -> void:
 	if test != null:
 		test.killed()
 	if run != null:
-		run.killed()
+		run.killed(built.tiles.size(), body.level)
 
 
 ## The last enemy is gone; if it was a fight from the Spawn list, say so.
@@ -470,16 +472,19 @@ func _on_pickup(piece: Dictionary) -> void:
 		_note = "Found a %s, L%d!" % [_placement.weapons.weapon(piece["gun"]).get("name", piece["gun"]),
 				xp.level_for(int(piece["xp"]))]
 		_note_until = Time.get_ticks_msec() + 3000
+		run_hud.found(_note)
 	elif piece.has("thruster"):
 		cargo.add_thrusters(piece["thruster"], 1)
 		var parts := Inventory.thruster_parts(piece["thruster"])
 		_note = "Found a thruster: %s %s L%d!" % [String(parts[0]).capitalize(), parts[1], parts[2]]
 		_note_until = Time.get_ticks_msec() + 3000
+		run_hud.found(_note)
 	else:
 		cargo.receive(piece)
 
 
-## The cargo hold for the HUD: "cargo 12 hull 3 crystal 40 GC 1 part", or "" when it's empty.
+## The cargo hold in words, for the results card: "cargo 12 hull 3 crystal 40 GC 1 part", or "" when
+## it's empty (the RunHud counts it in flight).
 func cargo_text() -> String:
 	if cargo.is_empty():
 		return ""
@@ -682,6 +687,10 @@ func _process(delta: float) -> void:
 		_fade_in.visible = _fade_in.modulate.a > 0.0
 	if run != null and launch_left <= 0.0 and run.tick(delta):
 		_start_wave()
+	if Engine.get_process_frames() % 2 == 0:  # the HUD's frames (below)
+		run_hud.show_cargo(cargo)
+		if run != null:
+			run_hud.show_run(run)
 	if ship == null:
 		_hud.text = _note
 		return
@@ -707,8 +716,6 @@ func _process(delta: float) -> void:
 	var warning := arena.warning(ship.global_position / PX)
 	_edge_glow.strength = warning
 	var parts: PackedStringArray = ["%.1f U/s" % (ship.linear_velocity.length() / PX)]
-	if run != null:
-		parts.append("wave %d (L%d), next in %s" % [run.wave, run.level(), TestFlight.clock(ceilf(run.next_in()))])
 	if ship.damage.shield_cap > 0.0:
 		parts.append("shield %d/%d" % [roundi(ship.damage.shield), roundi(ship.damage.shield_cap)])
 	if ship.damage.is_disabled():
@@ -721,8 +728,6 @@ func _process(delta: float) -> void:
 		parts.append("leaving the area" if arena.contains(ship.global_position / PX) else "outside the area: turning you back")
 	if is_instance_valid(carrier) and carrier.damage != null:
 		parts.append("carrier %d%%" % roundi(_hull_share(carrier) * 100.0))
-	if not cargo.is_empty():
-		parts.append(cargo_text())
 	if Time.get_ticks_msec() < _note_until:
 		parts.append(_note)
 	_hud.text = "  ·  ".join(parts)
@@ -904,6 +909,8 @@ func _build_ui() -> void:
 	ui.add_child(controls)
 	hud.name = "CombatHud"
 	ui.add_child(hud)
+	run_hud.name = "RunHud"
+	ui.add_child(run_hud)
 	_edge_glow.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_edge_glow.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	ui.add_child(_edge_glow)

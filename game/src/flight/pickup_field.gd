@@ -7,7 +7,8 @@ extends Node2D
 ##
 ## A pickup is a piece of loot: {resource: amount} (Economy.loot_pieces), or a part from
 ## Economy.part_drop ({"gun", "mount", "xp"} or {"thruster"}). A resource shows its icon (A.4,
-## `vis.icon.<resource>`), rocking gently. Without the icon art it's a shape in code: Hull a scrap
+## `vis.icon.<resource>`), rocking gently, its halo pulsing and a glint crossing it now and then
+## so loot stands out from the debris (8.2). Without the icon art it's a shape in code: Hull a scrap
 ## of plate (pentagon, so it isn't taken for a tile of debris), Alloy a steel hexagon, Crystal a
 ## cyan shard, Tech a bundle of wires, GC a gold coin. A part is always a crate.
 
@@ -30,6 +31,9 @@ var scatter_per_blast_u := 1.5
 var drift_damp := 1.5
 var life_s := 45.0
 var blink_s := 5.0
+## The halo's pulses a second, and how often a glint crosses each pickup (8.2).
+var pulse_hz := 1.2
+var glint_every_s := 1.6
 
 ## The ship pickups fly to, and how far its hull reaches from its centre, in U.
 var target: ShipBody
@@ -50,7 +54,7 @@ func _ready() -> void:
 
 func configure(table: Dictionary) -> void:
 	for key in ["magnet_u", "collect_u", "pull_u_s", "pull_accel_u_s2", "scatter_u_s", "scatter_per_blast_u", "drift_damp",
-			"life_s", "blink_s"]:
+			"life_s", "blink_s", "pulse_hz", "glint_every_s"]:
 		if table.has(key):
 			set(key, float(table[key]))
 
@@ -138,7 +142,11 @@ func _draw() -> void:
 		var at := _pos[i]
 		var piece := _piece[i]
 		var kind: StringName = &"part" if piece.has("gun") or piece.has("thruster") else piece.keys()[0]
-		draw_circle(at, r * 1.7, Color(_colour(kind), 0.18))
+		var pulse := 0.5 + 0.5 * sin(_age[i] * TAU * pulse_hz + _spin[i])
+		draw_circle(at, r * (1.6 + 0.5 * pulse), Color(_colour(kind), 0.14 + 0.16 * pulse))
+		var glint := fmod(_age[i] + i * 0.37, glint_every_s) / 0.3  # 0..1 while it crosses
+		if glint < 1.0:
+			_draw_glint(at, r * 2.2 * sin(glint * PI))
 		var icon := _icon(kind)
 		if icon != null:
 			var side := r * ICON_SCALE
@@ -180,6 +188,16 @@ func _colour(kind: StringName) -> Color:
 		&"gc": return Color(1.0, 0.8, 0.25)
 		&"part": return Color(1.0, 0.6, 0.25)
 	return Color(0.8, 0.8, 0.85)
+
+
+## A four-point sparkle `size` px across, over a pickup.
+func _draw_glint(at: Vector2, size: float) -> void:
+	if size < 1.0:
+		return
+	var colour := Color(1.0, 1.0, 0.92, 0.85)
+	draw_line(at - Vector2(size, 0), at + Vector2(size, 0), colour, 2.0, true)
+	draw_line(at - Vector2(0, size), at + Vector2(0, size), colour, 2.0, true)
+	draw_circle(at, size * 0.12, colour)
 
 
 func _draw_shape(at: Vector2, sides: int, radius: float, turn: float, colour: Color) -> void:

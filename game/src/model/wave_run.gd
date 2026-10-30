@@ -5,12 +5,18 @@ extends RefCounted
 ## `clear_pause_s` after the field is cleared, whichever is first; a wave that isn't cleared in
 ## time is joined by the next. The flight feeds it (`tick`, `killed`, `cleared`, `destroyed`) and
 ## spawns a wave whenever `tick` says so. Tuning is `levels.json` → `waves`.
+##
+## Score (8.2): a kill is worth its tiles × its level × `per_tile_level`, and every second alive
+## `survival_per_s`, both times the wave multiplier (1 + `wave_bonus` per wave after the first).
 
 ## Encounter level of waves 1, 2, 3, … in turn; past the list, each wave adds `then_per_wave`.
 var levels: Array[int] = [1]
 var then_per_wave := 4
 var wave_s := 60.0
 var clear_pause_s := 3.0
+var per_tile_level := 10.0
+var wave_bonus := 0.25
+var survival_per_s := 5.0
 
 ## The wave under way (0 before the first).
 var wave := 0
@@ -22,6 +28,9 @@ var kills := 0
 var waves_cleared := 0
 ## Shield and hull the player's ship lost.
 var damage_taken := 0.0
+## Points from kills, and from staying alive (fractional until it's shown).
+var kill_score := 0
+var survival_score := 0.0
 var over := false
 ## Seconds until the next wave after a clear, or -1 while there's fighting.
 var _pause_left := -1.0
@@ -38,6 +47,10 @@ static func from_table(table: Dictionary) -> WaveRun:
 	run.then_per_wave = maxi(int(table.get("then_per_wave", run.then_per_wave)), 0)
 	run.wave_s = maxf(float(table.get("wave_s", run.wave_s)), 1.0)
 	run.clear_pause_s = maxf(float(table.get("clear_pause_s", run.clear_pause_s)), 0.0)
+	var score: Dictionary = table.get("score", {})
+	run.per_tile_level = maxf(float(score.get("per_tile_level", run.per_tile_level)), 0.0)
+	run.wave_bonus = maxf(float(score.get("wave_bonus", run.wave_bonus)), 0.0)
+	run.survival_per_s = maxf(float(score.get("survival_per_s", run.survival_per_s)), 0.0)
 	return run
 
 
@@ -62,6 +75,7 @@ func tick(delta: float) -> bool:
 		return _next()
 	seconds += delta
 	wave_seconds += delta
+	survival_score += survival_per_s * multiplier() * delta
 	if _pause_left >= 0.0:
 		_pause_left -= delta
 		if _pause_left <= 0.0:
@@ -77,9 +91,24 @@ func next_in() -> float:
 	return maxf(minf(left, _pause_left) if _pause_left >= 0.0 else left, 0.0)
 
 
-func killed() -> void:
-	if not over:
-		kills += 1
+## The score so far.
+func score() -> int:
+	return kill_score + floori(survival_score)
+
+
+## What scores are multiplied by in the wave under way.
+func multiplier() -> float:
+	return 1.0 + wave_bonus * maxi(wave - 1, 0)
+
+
+## An enemy of `tiles` tiles at encounter `at_level` is down. Returns the points it scored.
+func killed(tiles := 0, at_level := 1) -> int:
+	if over:
+		return 0
+	kills += 1
+	var points := roundi(tiles * at_level * per_tile_level * multiplier())
+	kill_score += points
+	return points
 
 
 func took(amount: float) -> void:
@@ -105,6 +134,7 @@ func title() -> String:
 
 func lines() -> PackedStringArray:
 	return PackedStringArray([
+		"Score: %d" % score(),
 		"Reached wave %d (level %d)" % [wave, level()],
 		"Waves cleared: %d" % waves_cleared,
 		"Time: %s" % TestFlight.clock(seconds),
