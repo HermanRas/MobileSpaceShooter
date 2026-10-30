@@ -30,6 +30,7 @@ func _ready() -> void:
 	if sandbox != null:
 		await _step_wave_1_holds_fire_until_seen(sandbox)
 		await _step_waves_escalate(sandbox)
+		await _step_a_x5_bullet_storm(sandbox)
 		await _step_death_ends_the_run(sandbox)
 		await _step_the_pod_docks(sandbox)
 		await _step_fly_again_and_the_ship_docks()
@@ -156,6 +157,45 @@ func _step_waves_escalate(sandbox: FlightSandbox) -> void:
 	await _physics_frames(10)
 	_check(run.wave == 3 and sandbox.enemies.size() > before,
 			"at the minute, wave 3 joins wave 2 (%d -> %d enemies)" % [before, sandbox.enemies.size()])
+
+
+## 8.3's "done when": a ×5 power-up turns the guns into a bullet storm for its time, within the
+## shot pool, and then ends cleanly. Damage numbers float over the hits. Against a level-30 fight,
+## the ship invulnerable so the storm can be watched.
+func _step_a_x5_bullet_storm(sandbox: FlightSandbox) -> void:
+	var ship := sandbox.ship
+	ship.invulnerable = true
+	sandbox.spawner.spawn_encounter(30)
+	sandbox.pickups.drop(PackedVector2Array([ship.global_position + Vector2(2, 0) * ShipMesh.PX_PER_U]), Vector2.ZERO,
+			[{"powerup": 5}] as Array[Dictionary])
+	var limit_ms := Time.get_ticks_msec() + 4000
+	while sandbox.power.shots() == 1 and Time.get_ticks_msec() < limit_ms:
+		await _physics_frames(2)
+	_check(sandbox.power.shots() == 5 and sandbox.weapons.shots_each == 5, "a ×5 pickup makes every gun fire 5 shots")
+	_check(sandbox.cargo.is_empty() or not sandbox.cargo.to_dict().has("powerup"), "and it isn't cargo: it never banks")
+	await _frames(4)
+	_check(sandbox.run_hud.power.visible and sandbox.run_hud.power.text.begins_with("×5 FIREPOWER"),
+			"the HUD counts it down (%s)" % sandbox.run_hud.power.text)
+	_check("×5" in (sandbox.run_hud.banner.get_child(0) as Label).text, "with a banner")
+	var peak := 0
+	var numbers := 0
+	var dropped := sandbox.pool.dropped
+	for i in 90:
+		await get_tree().physics_frame
+		peak = maxi(peak, sandbox.pool.count)
+		numbers = maxi(numbers, sandbox.numbers.live())
+		if i == 45:
+			_save_shot("drive_wavetime_storm.png")
+	_check(peak > 20, "the screen fills with shots (peak %d)" % peak)
+	_check(peak <= ProjectilePool.CAPACITY, "within the pool (%d of %d; %d dropped)" % [peak, ProjectilePool.CAPACITY,
+			sandbox.pool.dropped - dropped])
+	_check(numbers > 0, "damage numbers float over the hits (up to %d at once)" % numbers)
+	sandbox.power.left = 0.05
+	await _physics_frames(6)
+	await _frames(4)
+	_check(sandbox.power.shots() == 1 and sandbox.weapons.shots_each == 1 and not sandbox.run_hud.power.visible,
+			"then it ends: one shot a gun again, and the countdown goes")
+	ship.invulnerable = false
 
 
 func _step_death_ends_the_run(sandbox: FlightSandbox) -> void:

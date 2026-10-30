@@ -1,0 +1,12 @@
+{
+	"format": 1,
+	"_doc": "PLAN.md 8.3, `[D4]`: WaveTime's arcade power-ups. A destroyed enemy drops one with drop_chance (a separate roll from its loot), picked by weight. While it lasts, every gun fires `shots` times as many shots, fanned spread_deg apart (a beam hits that many times as hard). They exist only inside a run: never banked, never in the hangar, never in Creative or Story. A new one replaces the one running.",
+	"drop_chance": 0.08,
+	"spread_deg": 4.0,
+	"kinds": [
+		{"shots": 2, "seconds": 15, "weight": 4},
+		{"shots": 3, "seconds": 12, "weight": 3},
+		{"shots": 4, "seconds": 10, "weight": 2},
+		{"shots": 5, "seconds": 8, "weight": 1}
+	]
+}

@@ -28,7 +28,9 @@ extends Node
 ## Combat HUD (4.7): shield and hull bars, the active manual weapon, and a flash, jolt and buzz
 ## when hit. SWITCH pauses and lists the manual weapons (Q on a keyboard cycles them instead).
 ## The RunHud (8.2) counts the loot in the hold and banners a found part (and in a run, each new
-## wave), and shows a run's clock, wave and score.
+## wave), and shows a run's clock, wave and score. Arcade feedback (8.3): DamageNumbers float
+## over every hit on an enemy, a kill in a run pops its score, and a run's kills now and then drop a
+## PowerUps bullet multiplier, which lives only in that run.
 ##
 ## Test fight (7.2, Creative): with `test_level` set before `open()`, there's no practice target,
 ## no Spawn or Guns button and no respawn: a generated fight at that level comes in, and when it's
@@ -117,6 +119,9 @@ var _controls_panel: ControlsPanel
 var pause_menu := PauseMenu.new()
 var hud := CombatHud.new()
 var run_hud := RunHud.new()
+var numbers := DamageNumbers.new()
+## A run's power-ups (8.3), or null outside a run.
+var power: PowerUps
 var picker := WeaponPicker.new()
 ## A short message under the HUD (e.g. SWITCH before there are weapons), and when it fades.
 var _note := ""
@@ -206,6 +211,8 @@ func open(bp: Blueprint, placement: Placement) -> void:
 	_world.add_child(impacts)
 	pool.hit.connect(func(_body: ShipBody, _tile: int, point: Vector2, velocity: Vector2, weapon_id: StringName) -> void:
 		impacts.burst(point, velocity, weapon_id))
+	pool.hit.connect(func(body: ShipBody, _tile: int, point: Vector2, _velocity: Vector2, _weapon_id: StringName) -> void:
+		numbers.aim(body, point))
 	pool.exploded.connect(impacts.blast)
 	pool.shot_down.connect(impacts.pop)
 	pool.shot_down.connect(func(_point: Vector2) -> void: _show_status())
@@ -213,7 +220,10 @@ func open(bp: Blueprint, placement: Placement) -> void:
 	spawner.setup(placement, _flight, pool, _world)
 	spawner.player = func() -> ShipBody: return ship
 	spawner.view_half_u = func() -> Vector2: return _world.get_viewport_rect().size * 0.5 / (_camera.zoom.x * PX)
-	spawner.spawned.connect(func(body: ShipBody) -> void: body.rebuilt.connect(_show_status))
+	spawner.spawned.connect(func(body: ShipBody) -> void:
+		body.rebuilt.connect(_show_status)
+		if body.team != 0:
+			body.damaged.connect(func(result: ShipDamage.Result) -> void: numbers.hit(body, result.shield + result.hull)))
 	spawner.enemy_destroyed.connect(_on_enemy_destroyed)
 	spawner.cleared.connect(_on_cleared)
 	spawner.carrier_lost.connect(func() -> void:
@@ -247,6 +257,7 @@ func open(bp: Blueprint, placement: Placement) -> void:
 			get_tree().paused = true)
 	elif test_level == WAVETIME:
 		run = WaveRun.from_table(Data.table(&"levels").get("waves", {}))
+		power = PowerUps.from_table(Data.table(&"powerups"))
 		if not cinematic and run.tick(0.0):
 			_start_wave()
 	elif not cinematic:
@@ -432,7 +443,9 @@ func _on_enemy_destroyed(body: ShipBody, built: Blueprint) -> void:
 	if test != null:
 		test.killed()
 	if run != null:
-		run.killed(built.tiles.size(), body.level)
+		var points := run.killed(built.tiles.size(), body.level)
+		if points > 0:
+			numbers.pop(body.global_position, points)
 
 
 ## The last enemy is gone; if it was a fight from the Spawn list, say so.
@@ -456,6 +469,9 @@ func _drop_loot(body: ShipBody, built: Blueprint) -> void:
 	var part := economy.part_drop(_placement, built, _rng.randf(), _rng.randi(), body.gun_level)
 	if not part.is_empty():
 		pieces.append(part)
+	var shots := power.roll(_rng.randf(), _rng.randf()) if power != null and not run.over else 0
+	if shots > 0:
+		pieces.append({"powerup": shots})
 	# From the tiles still attached, as hard as the ship blew up: the blast is the size of what
 	# was left of it (Explosion), so a ship shot to a stub drops its loot close by.
 	var origins := PackedVector2Array()
@@ -466,6 +482,12 @@ func _drop_loot(body: ShipBody, built: Blueprint) -> void:
 
 ## A pickup reached the ship: into the cargo hold. A part gets a note.
 func _on_pickup(piece: Dictionary) -> void:
+	if piece.has("powerup"):
+		if power != null and not run.over:  # never banked: it's spent here and now
+			power.take(int(piece["powerup"]))
+			_apply_power()
+			run_hud.found("×%d FIREPOWER!" % power.shots())
+		return
 	if piece.has("gun"):
 		var xp := _placement.weapons.xp
 		cargo.add_found_gun(piece["gun"], piece["mount"], int(piece["xp"]))
@@ -599,6 +621,13 @@ func _launch_pod() -> void:
 			float(_cine.get("pod_speed_u", 5.0)), float(_cine.get("pod_accel_u_s2", 9.0))))
 
 
+## The guns fire as many shots as the power-up running says (1 when none is).
+func _apply_power() -> void:
+	if weapons != null:
+		weapons.shots_each = power.shots()
+		weapons.spread_rad = deg_to_rad(power.spread_deg)
+
+
 ## The launch is over: the player has the ship, and the fight (or the practice target) comes.
 func _end_launch() -> void:
 	launch_left = 0.0
@@ -687,10 +716,13 @@ func _process(delta: float) -> void:
 		_fade_in.visible = _fade_in.modulate.a > 0.0
 	if run != null and launch_left <= 0.0 and run.tick(delta):
 		_start_wave()
+	if power != null and power.tick(delta):
+		_apply_power()
 	if Engine.get_process_frames() % 2 == 0:  # the HUD's frames (below)
 		run_hud.show_cargo(cargo)
 		if run != null:
 			run_hud.show_run(run)
+			run_hud.show_power(power)
 	if ship == null:
 		_hud.text = _note
 		return
@@ -909,6 +941,10 @@ func _build_ui() -> void:
 	ui.add_child(controls)
 	hud.name = "CombatHud"
 	ui.add_child(hud)
+	numbers.name = "DamageNumbers"
+	numbers.camera = _camera
+	numbers.configure(_flight.get("damage_numbers", {}))
+	ui.add_child(numbers)
 	run_hud.name = "RunHud"
 	ui.add_child(run_hud)
 	_edge_glow.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)

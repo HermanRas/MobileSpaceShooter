@@ -6,7 +6,8 @@ extends Node2D
 ## collects it. All pickups live in arrays and draw in one `_draw`, like the shot pool.
 ##
 ## A pickup is a piece of loot: {resource: amount} (Economy.loot_pieces), or a part from
-## Economy.part_drop ({"gun", "mount", "xp"} or {"thruster"}). A resource shows its icon (A.4,
+## Economy.part_drop ({"gun", "mount", "xp"} or {"thruster"}), or a WaveTime power-up
+## ({"powerup": 2..5}, 8.3), shown as its badge (`vis.icon.powerup_<n>`). A resource shows its icon (A.4,
 ## `vis.icon.<resource>`), rocking gently, its halo pulsing and a glint crossing it now and then
 ## so loot stands out from the debris (8.2). Without the icon art it's a shape in code: Hull a scrap
 ## of plate (pentagon, so it isn't taken for a tile of debris), Alloy a steel hexagon, Crystal a
@@ -141,7 +142,7 @@ func _draw() -> void:
 			continue  # about to vanish: it blinks
 		var at := _pos[i]
 		var piece := _piece[i]
-		var kind: StringName = &"part" if piece.has("gun") or piece.has("thruster") else piece.keys()[0]
+		var kind := _kind(piece)
 		var pulse := 0.5 + 0.5 * sin(_age[i] * TAU * pulse_hz + _spin[i])
 		draw_circle(at, r * (1.6 + 0.5 * pulse), Color(_colour(kind), 0.14 + 0.16 * pulse))
 		var glint := fmod(_age[i] + i * 0.37, glint_every_s) / 0.3  # 0..1 while it crosses
@@ -180,7 +181,15 @@ func _icon(kind: StringName) -> Texture2D:
 	return _icons[kind]
 
 
+func _kind(piece: Dictionary) -> StringName:
+	if piece.has("powerup"):
+		return StringName("powerup_%d" % int(piece["powerup"]))
+	return &"part" if piece.has("gun") or piece.has("thruster") else piece.keys()[0]
+
+
 func _colour(kind: StringName) -> Color:
+	if String(kind).begins_with("powerup"):
+		return Color(1.0, 0.35, 0.9)
 	match kind:
 		&"alloy": return Color(0.55, 0.68, 0.85)
 		&"crystal": return Color(0.45, 0.95, 1.0)

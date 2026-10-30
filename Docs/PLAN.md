@@ -1558,11 +1558,24 @@ frame would redraw the labels every frame.
   Do the banners and glinting pickups catch the eye without getting in the way?
 
 #### 8.3 Arcade feedback and power-ups `[D4]`
-- [ ] Floating damage numbers on every hit (bigger and brighter for big hits), and a score pop on each kill
-- [ ] Power-up pickups dropped by enemies: ridiculous **×2–×5 bullet multipliers** (every gun fires that many shots) for a set time, with a countdown on the HUD
-- [ ] Power-ups exist only inside a run: they never bank, never reach the hangar, and don't appear in Creative or Story
-- [ ] Drop chance, multipliers and durations in `data/powerups.json`
-- **Done when:** a ×5 power-up turns the screen into a bullet storm for its duration and then ends cleanly, and the projectile pool stays within budget (or caps without a visible glitch).
+✅ 2026-10-30, waiting on the phone.
+- **Damage numbers** (`DamageNumbers`, `src/ui/hud/`): every hit on an enemy, in every mode. A
+  number rises and fades where the shot struck, bigger and hotter (white, gold, red) on a log
+  scale up to `big_hit`. Hits on one ship within 0.15 s add up into one number. A kill in a run
+  pops its score in gold. They're drawn on the HUD layer at the world point's place on screen, so
+  they're the same size at any zoom (`flight.json` → `damage_numbers`).
+- **Power-ups** (`PowerUps`, `src/model/`, from `data/powerups.json`): a run's kill drops one
+  8% of the time, ×2 (15 s) to ×5 (8 s), weighted toward ×2, as a pickup showing its A.4 badge.
+  While it runs, every gun fires that many shots, fanned 4° apart (`WeaponController.shots_each`;
+  a beam hits that many times as hard). It's announced on a banner and counted down under the
+  wave. A new one replaces the one running. It's never cargo, so it can't bank or reach the
+  hangar, and only a run has them.
+- Tested in `tests/model/test_power_ups.gd`. `drive_wavetime` picks up a ×5 against a level-30
+  wave and checks the storm, the pool, the numbers and the clean end. ⚠️ The starter has one gun,
+  so the drive's storm peaked at 22 shots. A many-gun ship at ×5 is the real budget test; the pool
+  caps at 1,024 and drops the rest quietly.
+- [ ] Owner, on the phone: do the numbers help or clutter? Catch a power-up in a run with your
+  most heavily armed ship: does a ×4–×5 storm hold its frame rate?
 
 #### 8.4 End of run
 - [ ] A results screen with score, kills, loot and best wave. **Loot banks into the profile inventory** (death doesn't lose it in WaveTime).

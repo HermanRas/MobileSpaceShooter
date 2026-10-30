@@ -22,6 +22,10 @@ var all_auto := false:
 var enemies: Callable = func() -> Array: return []
 ## While true the guns track nothing and fire nothing (an enemy's grace before it opens fire, 8.7).
 var hold_fire := false
+## A WaveTime power-up (8.3): every shot goes out this many times, fanned `spread_rad` apart, and
+## a beam hits this many times as hard.
+var shots_each := 1
+var spread_rad := 0.07
 
 ## Gun index -> where its beam ends this tick (world pixels), for each beam that's on.
 var beam_ends := {}
@@ -61,11 +65,19 @@ func _physics_process(delta: float) -> void:
 	for shot in shots:
 		var gun := gunnery.layout.guns[shot["gun"]]
 		if shot["beam"]:
+			if shots_each > 1:
+				shot["damage"] *= shots_each
 			_beam_pulse(shot, gun, beam_hits.get(shot["gun"], {}))
 			continue
 		var aimed: int = shot["target"]
-		_pool.fire(shot, _ship.team, gun.weapon, bodies[aimed] if aimed >= 0 and aimed < bodies.size() else null,
-				StringName(gun.item))
+		var homing := bodies[aimed] if aimed >= 0 and aimed < bodies.size() else null
+		if shots_each <= 1:
+			_pool.fire(shot, _ship.team, gun.weapon, homing, StringName(gun.item))
+			continue
+		for turn in PowerUps.fan(shots_each, spread_rad):
+			var copy := shot.duplicate()
+			copy["vel"] = (shot["vel"] as Vector2).rotated(turn)
+			_pool.fire(copy, _ship.team, gun.weapon, homing, StringName(gun.item))
 	BenchRun.spent(&"guns", started)
 
 

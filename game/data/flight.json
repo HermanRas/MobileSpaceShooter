@@ -83,6 +83,17 @@
 		"dock_s": 2.4,
 		"shutter_s": 0.5
 	},
+	"damage_numbers": {
+		"_doc": "PLAN.md 8.3: floating numbers over every hit on an enemy, in every mode. Hits on one ship within merge_s add up into one number; it rises rise_px and fades over life_s. Its size runs min_px..max_px and its colour white..gold..red as the damage climbs (log scale) to big_hit. At most max_live show at once (the oldest goes). A kill in a run pops its score in gold at pop_px.",
+		"merge_s": 0.15,
+		"life_s": 0.9,
+		"rise_px": 70,
+		"min_px": 18,
+		"max_px": 54,
+		"big_hit": 1000,
+		"max_live": 60,
+		"pop_px": 46
+	},
 	"combat_hud": {
 		"_doc": "Phase 4.7. A hit on the player flashes the screen (red for hull, blue for shield only) for flash_s, at up to flash_alpha. Screen shake jolts the view by shake_px_per_damage per point of damage, up to shake_max_px, settling at shake_decay per second. A hull hit of at least vibrate_min_damage buzzes the phone for vibrate_ms. Both obey the Controls settings.",
 		"flash_s": 0.3,

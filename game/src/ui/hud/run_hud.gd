@@ -5,7 +5,8 @@ extends Control
 ##   and the score top right;
 ## - in every flight, the loot in the hold under the score: an icon and a count for each resource
 ##   picked up, counting up to what's there and flashing as it comes in;
-## - a banner across the middle when a part is found (`found`).
+## - a banner across the middle when a part is found (`found`);
+## - while a power-up runs (8.3), its multiplier and countdown under the wave.
 ## The flight calls `show_run` and `show_cargo` on its HUD frames.
 
 ## How fast a count climbs to its new value (a share of the gap a second), and how long a flash
@@ -20,9 +21,11 @@ const RESOURCES: Array[StringName] = [&"hull", &"alloy", &"crystal", &"tech", &"
 var clock := MenuKit.label("", 60)
 var wave := MenuKit.label("", 26)
 var score := MenuKit.label("", 38, GOLD)
+var power := MenuKit.label("", 40, Color(1.0, 0.45, 0.95))
 var banner := PanelContainer.new()
 
 var _banner_text := MenuKit.label("", 32, GOLD)
+var _top: VBoxContainer
 var _banner_left := 0.0
 var _loot := HBoxContainer.new()
 ## Resource -> {"box", "count": Label, "shown": float, "target": int, "flash": seconds left}.
@@ -33,13 +36,14 @@ func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var top := VBoxContainer.new()
+	_top = top
 	top.name = "Clock"
 	top.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
 	top.grow_horizontal = Control.GROW_DIRECTION_BOTH
 	top.add_theme_constant_override(&"separation", -6)
 	top.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(top)
-	for label: Label in [clock, wave]:
+	for label: Label in [clock, wave, power]:
 		_outline(label)
 		top.add_child(label)
 	var right := VBoxContainer.new()
@@ -69,6 +73,7 @@ func _ready() -> void:
 	clock.visible = false
 	wave.visible = false
 	score.visible = false
+	power.visible = false
 
 
 ## The run's clock, wave and score.
@@ -78,6 +83,13 @@ func show_run(run: WaveRun) -> void:
 	clock.text = TestFlight.clock(run.seconds)
 	wave.text = "WAVE %d   ·   next %s" % [run.wave, TestFlight.clock(ceilf(run.next_in()))]
 	score.text = _thousands(run.score())
+
+
+## The power-up running: "×5 FIREPOWER 0:07", or nothing.
+func show_power(running: PowerUps) -> void:
+	power.visible = running != null and running.shots() > 1
+	if power.visible:
+		power.text = "×%d FIREPOWER  %s" % [running.shots(), TestFlight.clock(ceilf(running.left))]
 
 
 ## The hold's loot: each resource and the parts found, as counts that climb to it.
@@ -126,7 +138,9 @@ func _process(delta: float) -> void:
 		_banner_left -= delta
 		banner.modulate.a = clampf(_banner_left / 0.5, 0.0, 1.0)
 		banner.visible = _banner_left > 0.0
-		banner.position = Vector2((size.x - banner.size.x) * 0.5, size.y * 0.17)  # under the clock, above the ship
+		# Under the clock (and a power-up's countdown), above the ship.
+		var under := _top.get_rect().end.y + 8.0 if clock.visible else size.y * 0.12
+		banner.position = Vector2((size.x - banner.size.x) * 0.5, under)
 
 
 func _add_row(resource: StringName) -> void:
