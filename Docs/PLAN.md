@@ -1614,8 +1614,18 @@ next run flies it (`drive_shop` buys one; `drive_wavetime` flies whatever is in 
 - [x] Spawn fairness (from 7.2), 2026-10-30: an enemy holds its fire until any part of it is in
   view round the player or `flight.json` → `spawner.fire_grace_s` (2 s) has passed
   (`Spawner._holding`, `WeaponController.hold_fire`, `SpawnRing.in_view`), in every mode.
-- [ ] Starter ship (§4.10): Core, hull tiles and 3 hardpoints carrying 3 pulse thrusters (2 rear, 1 front) and 1 single gatling
-- [ ] Tune so run 1 lasts ~1–2 min and every run banks enough to visibly upgrade
+- [x] Starter ship (§4.10): Core, hull tiles and 3 hardpoints carrying 3 pulse thrusters (2 rear, 1 front) and 1 single gatling
+  (checked 2026-10-30: `data/blueprints/starter.json` is exactly that, and `economy.json` →
+  `new_pilot` gives it)
+- [ ] Tune so run 1 lasts ~1–2 min and every run banks enough to visibly upgrade. **Measured
+  2026-10-30** (`dev_preview/measure_runs.tscn`: a fresh pilot's starter sitting still with every
+  gun on auto, so a floor, not a player): runs of 4:00, 2:30 and 1:53, reaching waves 7, 6 and 4.
+  They banked 208 hull 119 alloy 105 tech 249 GC, then 105/56/51/123, then only 21 hull 6 alloy
+  9 tech 22 GC. Prices for scale: hull L 120 hull, armor L 80 hull 120 alloy, gatling 800 GC. So
+  an idle ship already outlasts the target, and a short run banks too little to buy anything.
+  Options for the owner's playtest: a steeper `waves.levels` (e.g. 1, 3, 5, 8, 11, 15, 19, 24, 30,
+  36, then +6); a GC bonus per wave cleared, so every run banks something; more loot per kill
+  (`economy.json` → `drops`).
 - [ ] Owner's sandbox playtest, 2026-10-26: a level-1 Starter with 3 gatlings barely survived
   Level 10; Level 25 took 4 respawns; Boss L15 (the Marauder) was almost an instant kill. In
   about 14 kills it dropped 2 guns and 1 thruster at the 4% part chance, maybe too often (keep

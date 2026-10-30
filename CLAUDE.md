@@ -21,6 +21,7 @@ tools/drive.sh res://dev_preview/drive_profiles.tscn     # 3 pilots, separate st
 tools/drive.sh res://dev_preview/drive_stocked.tscn      # the stocked hangar: wallet, sell, inventory, market
 tools/drive.sh res://dev_preview/drive_testflight.tscn   # Creative test fights: L1 easy, L100 brutal, results card
 tools/drive.sh res://dev_preview/drive_wavetime.tscn     # a WaveTime run: waves escalate, death, results, banking
+tools/drive.sh res://dev_preview/measure_runs.tscn       # 8.7 tuning: 3 idle-starter runs' length, wave, loot (a measure, not a test)
 tools/drive.sh res://dev_preview/drive_shop.tscn         # pilot A publishes a ship, pilot B buys it in the shop
 tools/drive.sh res://dev_preview/drive_share.tscn        # ships to and from a file and a share code, and Save as enemy
 tools/drive.sh res://dev_preview/drive_bench.tscn        # the performance test runs and keeps its result (container fps are meaningless)
