@@ -31,6 +31,7 @@ func _ready() -> void:
 	if sandbox != null:
 		await _step_wave_1_holds_fire_until_seen(sandbox)
 		await _step_waves_escalate(sandbox)
+		await _step_a_tap_sets_the_focus(sandbox)
 		await _step_a_x5_bullet_storm(sandbox)
 		await _step_death_ends_the_run(sandbox)
 		await _step_the_pod_docks(sandbox)
@@ -167,6 +168,49 @@ func _step_waves_escalate(sandbox: FlightSandbox) -> void:
 	await _physics_frames(10)
 	_check(run.wave == 3 and sandbox.enemies.size() > before,
 			"at the minute, wave 3 joins wave 2 (%d -> %d enemies)" % [before, sandbox.enemies.size()])
+
+
+## Focus (owner, 2026-10-31): a tap on an enemy makes it the guns' first target, under a reticle;
+## a tap on open space clears it, and so does its death.
+func _step_a_tap_sets_the_focus(sandbox: FlightSandbox) -> void:
+	if sandbox.enemies.is_empty() or sandbox.ship == null:
+		_check(false, "enemies are up to focus on")
+		return
+	var view := sandbox._camera.get_canvas_transform()
+	var screen := get_viewport().get_visible_rect()
+	var target: ShipBody = null
+	for enemy: ShipBody in sandbox.spawner.live():
+		if screen.grow(-60.0).has_point(view * enemy.global_position):
+			target = enemy
+			break
+	if target == null:  # none on screen: bring one in front of the camera
+		target = sandbox.spawner.live()[0]
+		target.global_position = sandbox.ship.global_position + Vector2(8, 4) * ShipMesh.PX_PER_U
+		await _physics_frames(1)
+		view = sandbox._camera.get_canvas_transform()
+	await _tap(0, view * target.global_position + Vector2(20, -10))  # a near miss is still a pick
+	_check(sandbox.weapons.focus == target, "a tap by an enemy makes it the focus")
+	await _frames(2)
+	_save_shot("drive_wavetime_focus.png")
+	var open_space := Vector2.ZERO
+	for candidate in [Vector2(0.5, 0.2), Vector2(0.2, 0.5), Vector2(0.8, 0.5), Vector2(0.5, 0.8), Vector2(0.3, 0.3)]:
+		var at: Vector2 = screen.size * candidate
+		var clear := true
+		for enemy: ShipBody in sandbox.spawner.live():
+			clear = clear and (view * enemy.global_position).distance_to(at) > 120.0
+		if clear and (view * sandbox.ship.global_position).distance_to(at) > 120.0:
+			open_space = at
+			break
+	_check(open_space != Vector2.ZERO, "there's open space on screen to tap")
+	await _tap(0, open_space)
+	_check(sandbox.weapons.focus == null, "a tap on open space clears it")
+	await _tap(0, view * target.global_position)
+	_check(sandbox.weapons.focus == target, "tapped again, it's the focus again")
+	for tile_id: int in target.damage.hp.keys():
+		if is_instance_valid(target) and not target.is_wreck() and target.damage.is_attached(tile_id):
+			target.take_hit(tile_id, 1.0e6, &"kinetic")
+	await _physics_frames(3)
+	_check(sandbox.weapons.focus == null, "and the focus goes when it dies")
 
 
 ## 8.3's "done when": a ×5 power-up turns the guns into a bullet storm for its time, within the

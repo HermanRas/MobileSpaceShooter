@@ -27,6 +27,9 @@ extends Node
 ##
 ## Combat HUD (4.7): shield and hull bars, the active manual weapon, and a flash, jolt and buzz
 ## when hit. SWITCH pauses and lists the manual weapons (Q on a keyboard cycles them instead).
+## Focus (owner, 2026-10-31): a tap on an enemy, or near one, makes it the guns' first target
+## (WeaponController.focus) under a reticle; a tap on open space clears it.
+##
 ## The RunHud (8.2) counts the loot in the hold and banners a found part (and in a run, each new
 ## wave), and shows a run's clock, wave and score. Arcade feedback (8.3): DamageNumbers float
 ## over every hit on an enemy, a kill in a run pops its score, and a run's kills now and then drop a
@@ -108,6 +111,11 @@ var _seen := {}
 ## Fingers down on open space (not the stick or a button), index -> screen position: two of
 ## them pinch the zoom.
 var _touches := {}
+## Where each finger on open space came down, and whether a second finger made it a pinch: a
+## finger that lifts close to where it fell, alone, is a tap (focus).
+var _tap_from := {}
+var _pinched := false
+var _focus_table := {}
 var _status := Label.new()
 var _picked := -1
 var _overlay := Node2D.new()
@@ -192,11 +200,13 @@ func open(bp: Blueprint, placement: Placement) -> void:
 	arena = Arena.from_table(_flight.get("arena", {}))
 	damage_table = DamageTable.from_table(Data.table(&"damage_types"))
 	test_hit = float(_sandbox.get("test_hit", test_hit))
+	_focus_table = _flight.get("focus", {})
 	_world.name = "World"
 	add_child(_world)
 	_arena_view.arena = arena
 	_world.add_child(_arena_view)
 	_overlay.draw.connect(_draw_pick)
+	_overlay.draw.connect(_draw_focus)
 	_overlay.z_index = 2
 	_world.add_child(_overlay)
 	_world.add_child(_camera)
@@ -759,8 +769,8 @@ func _process(delta: float) -> void:
 	pilot.stick = controls.stick_value()
 	weapons.fire_held = controls.is_firing()
 	weapons.all_auto = Settings.get_value(&"control_scheme") != "2-stick"
-	if _picked >= 0:
-		_overlay.queue_redraw()  # the highlight follows its ship
+	if _picked >= 0 or weapons.focus != null:
+		_overlay.queue_redraw()  # the highlight and the reticle follow their ships
 	# Nobody reads the status line or the edge marks 60 times a second (owner, 2026-10-28): the
 	# HUD takes the even frames and the marks the odd ones. The stick and FIRE stay every frame.
 	if Engine.get_process_frames() % 2 == 1:
@@ -855,10 +865,20 @@ func _unhandled_input(event: InputEvent) -> void:
 		if _touches.has(touch.index):
 			_touches.erase(touch.index)
 			_camera.save_zoom()
+			var from: Vector2 = _tap_from.get(touch.index, touch.position)
+			_tap_from.erase(touch.index)
+			if not _pinched and from.distance_to(touch.position) <= float(_focus_table.get("tap_px", 24)):
+				tap_focus(touch.position)
+			if _touches.is_empty():
+				_pinched = false
 		return
 	_touches[touch.index] = touch.position
+	_tap_from[touch.index] = touch.position
 	if _touches.size() > 1:
+		_pinched = true
 		return  # the second finger of a pinch doesn't pick
+	if run != null:
+		return  # a run's taps only focus (on lifting)
 	var world_point: Vector2 = _camera.get_canvas_transform().affine_inverse() * (event as InputEventFromWindow).position
 	var hit := ship_tile_at_point(world_point)
 	_picked_ship = hit[0]
@@ -867,6 +887,44 @@ func _unhandled_input(event: InputEvent) -> void:
 		_test_hit(_picked_ship, _picked)
 	_overlay.queue_redraw()
 	_show_status()
+
+
+## A tap at `screen_point`: the enemy there, or the nearest within `pick_px` on screen, becomes
+## the guns' focus; open space clears it.
+func tap_focus(screen_point: Vector2) -> void:
+	if weapons == null or ship == null:
+		return
+	var view := _camera.get_canvas_transform()
+	var under: ShipBody = ship_tile_at_point(view.affine_inverse() * screen_point)[0]
+	var best: ShipBody = under if under != null and under.team != ship.team else null
+	var best_d := float(_focus_table.get("pick_px", 90))
+	if best == null:
+		for enemy: ShipBody in spawner.live():
+			var d := (view * enemy.global_position).distance_to(screen_point)
+			if d < best_d and WeaponController._alive(enemy):
+				best_d = d
+				best = enemy
+	weapons.focus = best
+	_overlay.queue_redraw()
+
+
+## Four corner brackets round the focus, turning slowly, the same weight on screen at any zoom.
+func _draw_focus() -> void:
+	if weapons == null or not is_instance_valid(weapons.focus):
+		return
+	var body := weapons.focus
+	var zoom := _camera.zoom.x
+	var half := body.extent_px() * 0.6 + 14.0 / zoom
+	var arm := minf(half * 0.45, 26.0 / zoom)
+	var at := body.global_transform * body.center_of_mass
+	var turn := Time.get_ticks_msec() * 0.001
+	for k in 4:
+		var corner := Vector2(half, half).rotated(turn + k * PI * 0.5)
+		var along := corner.normalized()
+		var side := along.orthogonal()
+		var tip := at + corner
+		_overlay.draw_polyline(PackedVector2Array([tip - (along - side) * arm * 0.7, tip, tip - (along + side) * arm * 0.7]),
+				ENEMY_MARK, 3.0 / zoom, true)
 
 
 ## Two fingers on open space zoom the view by how far apart they spread (owner, 2026-10-26).

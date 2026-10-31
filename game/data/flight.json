@@ -94,6 +94,11 @@
 		"max_live": 60,
 		"pop_px": 46
 	},
+	"focus": {
+		"_doc": "Target focus (owner, 2026-10-31): a tap on an enemy, or within pick_px of one on screen, makes it the focus: every gun that can reach it shoots it first, and a reticle marks it. A tap on open space, or the focus dying, clears it. A finger that moves more than tap_px is a drag or a pinch, not a tap.",
+		"pick_px": 90,
+		"tap_px": 24
+	},
 	"combat_hud": {
 		"_doc": "Phase 4.7. A hit on the player flashes the screen (red for hull, blue for shield only) for flash_s, at up to flash_alpha. Screen shake jolts the view by shake_px_per_damage per point of damage, up to shake_max_px, settling at shake_decay per second. A hull hit of at least vibrate_min_damage buzzes the phone for vibrate_ms. Both obey the Controls settings.",
 		"flash_s": 0.3,

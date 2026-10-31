@@ -1539,12 +1539,12 @@ launch, pod and dock SFX are on 14.1's list.
   docks); Free flight from WaveTime also launches from the bay
 
 #### 8.2 HUD
-Built 2026-10-30; waiting on the phone. `RunHud` (`src/ui/hud/`), in outlined type over the
+✅ Built 2026-10-30. `RunHud` (`src/ui/hud/`), in outlined type over the
 flight:
 - **In a run:** a big clock top centre, "WAVE n · next m:ss" under it, the score top right, and
   a chrome banner calling each new wave.
 - **In every flight:** the hold's loot under the score, as an icon and a count per resource
-  (parts as a word until there's a crate icon). Counts climb to the new total and flash gold as
+  (parts with the A.16 crate). Counts climb to the new total and flash gold as
   loot comes in. A found part gets the banner too.
 - **Pickups:** each one's halo pulses, and a glint crosses it every 1.6 s (`flight.json` →
   `pickups`).
@@ -1554,18 +1554,17 @@ staying alive earns 2 a second. Both are multiplied by 1 + 0.25 per wave after t
 results card leads with it. Tested in `test_wave_run.gd`; `drive_wavetime` and `drive_stocked`
 read the HUD. ⚠️ The tally sets its colours only while a count flashes: theme overrides every
 frame would redraw the labels every frame.
-- [ ] Owner, on the phone: does the HUD read at arm's length (clock, wave, score, loot counts)?
-  Do the banners and glinting pickups catch the eye without getting in the way?
+Phone-checked by the owner, 2026-10-31: reads well, "like arcade".
 
 #### 8.3 Arcade feedback and power-ups `[D4]`
-✅ 2026-10-30, waiting on the phone.
+✅ 2026-10-30, phone-checked 2026-10-31.
 - **Damage numbers** (`DamageNumbers`, `src/ui/hud/`): every hit on an enemy, in every mode. A
   number rises and fades where the shot struck, bigger and hotter (white, gold, red) on a log
   scale up to `big_hit`. Hits on one ship within 0.15 s add up into one number. A kill in a run
   pops its score in gold. They're drawn on the HUD layer at the world point's place on screen, so
   they're the same size at any zoom (`flight.json` → `damage_numbers`).
 - **Power-ups** (`PowerUps`, `src/model/`, from `data/powerups.json`): a run's kill drops one
-  8% of the time, ×2 (15 s) to ×5 (8 s), weighted toward ×2, as a pickup showing its A.4 badge.
+  20% of the time (8% felt slow on the phone: one in a whole run, owner 2026-10-31), ×2 (15 s) to ×5 (8 s), weighted toward ×2, as a pickup showing its A.4 badge.
   While it runs, every gun fires that many shots, fanned 4° apart (`WeaponController.shots_each`;
   a beam hits that many times as hard). It's announced on a banner and counted down under the
   wave. A new one replaces the one running. It's never cargo, so it can't bank or reach the
@@ -1574,11 +1573,9 @@ frame would redraw the labels every frame.
   wave and checks the storm, the pool, the numbers and the clean end. ⚠️ The starter has one gun,
   so the drive's storm peaked at 22 shots. A many-gun ship at ×5 is the real budget test; the pool
   caps at 1,024 and drops the rest quietly.
-- [ ] Owner, on the phone: do the numbers help or clutter? Catch a power-up in a run with your
-  most heavily armed ship: does a ×4–×5 storm hold its frame rate?
 
 #### 8.4 End of run
-✅ 2026-10-30, waiting on the phone.
+✅ 2026-10-30, phone-checked 2026-10-31.
 - **Results card:** a run's card leads with any new bests ("NEW BEST SCORE!", "Furthest wave
   yet!", "Longest run yet!"), then score, wave, waves cleared, time, kills, damage and cargo.
   Loot banks on landing, death included (8.1).
@@ -1592,8 +1589,6 @@ frame would redraw the labels every frame.
   `tests/model/test_scoreboard.gd`.
 - `drive_wavetime` checks the saved record across three runs and the board's order; `drive_menu`
   opens the board.
-- [ ] Owner, on the phone: two pilots each fly a run; does the Scoreboard rank them as expected,
-  and do the "new best" lines show?
 
 #### 8.5 Inventory and owned hangar
 ✅ 2026-10-30. The owned hangar is 4.8a's stocked hangar: placing spends materials, removing
@@ -1624,8 +1619,15 @@ next run flies it (`drive_shop` buys one; `drive_wavetime` flies whatever is in 
   ×1.5 loot (`economy.json` → `drops`). `measure_runs`, five idle starters: every one cleared
   wave 1 and none cleared wave 2, in runs of 0:52–1:51. The first numbers, before this tuning,
   were 1:53–4:00 runs reaching waves 4–7, with a short run banking only 22 GC.
-- [ ] Owner, on the phone: does wave 2 feel beatable with input, and does each run bank enough
-  for a visible upgrade?
+- [x] Owner, on the phone, 2026-10-31: wave 2 is beatable with input (reached wave 4 several
+  times). But rammers crowd the guns onto themselves while a gunship behind them shoots the
+  player apart.
+- [x] Target focus (owner, 2026-10-31): a tap on an enemy, or within `pick_px` of one on screen,
+  makes it the focus. Every gun that can reach it shoots it first (`Gunnery._choose` takes a
+  target marked `focus`; the rest keep to the nearest), under turning red corner brackets. A tap
+  on open space, or its death, clears it (`flight.json` → `focus`). Taps count on lifting, so a
+  pinch never changes the focus, and a run's taps don't pick tiles. Tested in `test_weapons.gd`
+  and `drive_wavetime`.
 - [ ] Owner's sandbox playtest, 2026-10-26: a level-1 Starter with 3 gatlings barely survived
   Level 10; Level 25 took 4 respawns; Boss L15 (the Marauder) was almost an instant kill. In
   about 14 kills it dropped 2 guns and 1 thruster at the 4% part chance, maybe too often (keep

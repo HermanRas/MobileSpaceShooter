@@ -14,6 +14,8 @@ extends RefCounted
 ## to heat_resume; `beaming` says which beams are on this tick. A mine layer drops behind the
 ## ship, ignoring arcs and the hull; on auto it drops while an enemy is within its range. Shots carry the ship's velocity, and the
 ## lead accounts for it.
+## Focus (owner, 2026-10-31): a target marked `"focus": true` (the one the player tapped) comes
+## first for every gun that can reach it; the others keep to the nearest.
 
 var layout: GunLayout
 ## The manual weapon FIRE fires (a weapon id; PLAN.md 4.7). Every manual gun of that type fires
@@ -177,9 +179,9 @@ static func intercept_time(rel_pos: Vector2, rel_vel: Vector2, speed: float) -> 
 
 
 ## [target index, ship-local angle to its lead point, seconds to get there] for the nearest
-## target this gun can reach, in range and with a clear line; [-1, 0, 0] if none. The lead is
-## worked out from where the muzzle is now, which is where the shot will start once the barrel
-## is on.
+## target this gun can reach, in range and with a clear line (the focus, if it can reach that);
+## [-1, 0, 0] if none. The lead is worked out from where the muzzle is now, which is where the
+## shot will start once the barrel is on.
 func _choose(gun: GunLayout.Gun, muzzle: Vector2, ship_rotation: float, ship_vel: Vector2, targets: Array) -> Array:
 	var speed := float(gun.stats["speed_u"])
 	var reach_s := float(gun.stats["range_u"]) / speed
@@ -194,6 +196,8 @@ func _choose(gun: GunLayout.Gun, muzzle: Vector2, ship_rotation: float, ship_vel
 		var angle := wrapf((rel_pos + rel_vel * time).angle() - ship_rotation, -PI, PI)
 		if not gun.reaches(angle, fire_within) or not gun.clear(gun.clamp_to_arc(angle)):
 			continue
+		if targets[t].get("focus", false):
+			return [t, angle, time]
 		if rel_pos.length_squared() < best_d:
 			best_d = rel_pos.length_squared()
 			best = [t, angle, time]

@@ -264,7 +264,7 @@ func _blow_apart(groups: Array[Dictionary], wreck: Dictionary) -> void:
 		for chunk in damage.split(group, int(wreck["explode_chunk_tiles"])):
 			_spawn_wreck(chunk, float(wreck["explode_speed_u"]) * randf_range(0.5, 1.0),
 					float(wreck["spin"]) * 3.0, float(wreck["fade_s"]))
-	var blast := Explosion.create(_extent_px())
+	var blast := Explosion.create(extent_px())
 	blast.global_position = global_transform * center_of_mass
 	get_parent().add_child(blast)
 	destroyed.emit()
@@ -312,8 +312,8 @@ func _wear_step(tile_id: int) -> int:
 	return ShipMesh.wear_step(damage.hp[tile_id] / damage.max_hp[tile_id])
 
 
-## The ship's longest side in pixels, for sizing its explosion.
-func _extent_px() -> float:
+## The ship's longest side in pixels (its explosion, the focus reticle).
+func extent_px() -> float:
 	var bounds := Rect2()
 	for tile in blueprint.tiles:
 		for p in placement.tile_polygon(tile):

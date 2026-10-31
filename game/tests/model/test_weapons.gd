@@ -229,6 +229,20 @@ func test_an_auto_turret_turns_onto_its_target_then_fires() -> void:
 	assert_true(total >= 6 and total <= 8, "fired %d in a second" % total)
 
 
+func test_the_focus_comes_before_the_nearest_target() -> void:
+	var gunnery := _gunnery(_sample("starter"))
+	var near := {"pos": Vector2(6, 0), "vel": Vector2.ZERO}
+	var far := {"pos": Vector2(0, 12), "vel": Vector2.ZERO}
+	gunnery.step(DT, Vector2.ZERO, 0.0, Vector2.ZERO, [near, far], false)
+	assert_eq(gunnery.aims[0], 0, "the nearest, with no focus")
+	far["focus"] = true
+	gunnery.step(DT, Vector2.ZERO, 0.0, Vector2.ZERO, [near, far], false)
+	assert_eq(gunnery.aims[0], 1, "the focus, though it's further")
+	far["pos"] = Vector2(0, 500)
+	gunnery.step(DT, Vector2.ZERO, 0.0, Vector2.ZERO, [near, far], false)
+	assert_eq(gunnery.aims[0], 0, "back to the nearest while the focus is out of reach")
+
+
 func test_a_manual_gun_fires_only_while_fire_is_held() -> void:
 	var gunnery := _gunnery(_nose_gun(&"fixed", &"manual"))
 	var ahead := [{"pos": Vector2(15, 0), "vel": Vector2.ZERO}]

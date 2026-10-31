@@ -26,6 +26,9 @@ var hold_fire := false
 ## a beam hits this many times as hard.
 var shots_each := 1
 var spread_rad := 0.07
+## The enemy the player tapped (owner, 2026-10-31): every gun that can reach it shoots it first
+## (Gunnery's focus). Cleared when it dies.
+var focus: ShipBody
 
 ## Gun index -> where its beam ends this tick (world pixels), for each beam that's on.
 var beam_ends := {}
@@ -51,12 +54,18 @@ func _physics_process(delta: float) -> void:
 	var started := Time.get_ticks_usec()
 	if _ship == null or gunnery.layout.guns.is_empty():
 		return
+	if not is_instance_valid(focus) or not _alive(focus):
+		focus = null
 	var targets := []
 	var bodies: Array[ShipBody] = []
-	for body: Variant in [] if hold_fire else ShipBody.nearest(enemies.call(), _ship.global_position, _nearest):
+	var near := [] if hold_fire else ShipBody.nearest(enemies.call(), _ship.global_position, _nearest)
+	if focus != null and not hold_fire and not near.has(focus):
+		near = near + [focus]  # past the nearest few, but still the one to shoot
+	for body: Variant in near:
 		var enemy := body as ShipBody
-		if is_instance_valid(enemy) and not enemy.is_wreck() and enemy.damage != null and not enemy.damage.dead:
-			targets.append({"pos": enemy.global_transform * enemy.center_of_mass / PX, "vel": enemy.linear_velocity / PX})
+		if _alive(enemy):
+			targets.append({"pos": enemy.global_transform * enemy.center_of_mass / PX, "vel": enemy.linear_velocity / PX,
+					"focus": enemy == focus})
 			bodies.append(enemy)
 	var missiles := [] if hold_fire else _pool.rockets().filter(func(r: Dictionary) -> bool: return r["team"] != _ship.team)
 	var shots := gunnery.step(delta, _ship.global_position / PX, _ship.global_rotation, _ship.linear_velocity / PX,
@@ -79,6 +88,10 @@ func _physics_process(delta: float) -> void:
 			copy["vel"] = (shot["vel"] as Vector2).rotated(turn)
 			_pool.fire(copy, _ship.team, gun.weapon, homing, StringName(gun.item))
 	BenchRun.spent(&"guns", started)
+
+
+static func _alive(enemy: ShipBody) -> bool:
+	return is_instance_valid(enemy) and not enemy.is_wreck() and enemy.damage != null and not enemy.damage.dead
 
 
 ## A ray down every beam that's on: fills `beam_ends` and returns gun index -> the ray's hit.
