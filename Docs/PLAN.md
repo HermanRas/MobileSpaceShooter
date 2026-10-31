@@ -1530,12 +1530,12 @@ are in `flight.json` → `cinematics`. `drive_wavetime` plays all of it; `drive_
 off (`hangar.cinematics`). ⚠️ The bay draws at `z_index` −1 under ships in flight, but on the dock
 screen that put it under the screen's own backdrop, so the dock sets it back to 0. No sound yet:
 launch, pod and dock SFX are on 14.1's list.
-- [ ] Owner, on the phone: WaveTime → Fly → Start run. Does the fade and launch out of the bay
+- [x] Owner, on the phone: WaveTime → Fly → Start run. Does the fade and launch out of the bay
   feel right (2 s; `cinematics` in `flight.json`)? Do enemies hold fire until they're on screen?
-- [ ] Owner, on the phone: play a run to death. Pacing of the waves (levels 1, 2, 3, 5, 7, 10…;
+- [x] Owner, on the phone: play a run to death. Pacing of the waves (levels 1, 2, 3, 5, 7, 10…;
   next wave 3 s after a clear or at 60 s); the escape pod; the results card; Return to hangar's pod
   dock; the cargo and gun XP in the hangar afterwards
-- [ ] Owner, on the phone: Fly again from the results card, then Pause → Return to hangar (the ship
+- [x] Owner, on the phone: Fly again from the results card, then Pause → Return to hangar (the ship
   docks); Free flight from WaveTime also launches from the bay
 
 #### 8.2 HUD
