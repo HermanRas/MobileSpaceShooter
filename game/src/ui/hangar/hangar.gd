@@ -952,10 +952,11 @@ func _on_changed() -> void:
 			"stats": started + last_refresh_usec - drawn}
 
 
-## The selected part, for the stats panel: "Gatling L3 · 40% to L4 · sells for 60 GC".
+## The selected part, for the stats panel: "Gatling L3 · 40% to L4 · sells for 60 GC", or the
+## selected tile's (owner, 2026-10-31: a hardpoint is hard to tell from hull by eye).
 func _part_text() -> String:
 	if _selected_mount < 0 or _selected_mount >= editor.blueprint.mounts.size():
-		return ""
+		return _tile_text()
 	var mount := editor.blueprint.mounts[_selected_mount]
 	var parts: PackedStringArray = []
 	if Mounting.is_weapon(mount):
@@ -976,6 +977,29 @@ func _part_text() -> String:
 	if stocked():
 		parts.append("sells for %d GC" % editor.economy.sell_value(Economy.part_price(placement, mount))[Inventory.GC])
 	return "  ·  ".join(parts)
+
+
+## The selected tile, on two lines: "Hardpoint · M square · 80 HP" and "takes guns and thrusters ·
+## cost 120 hull, refunded when removed".
+func _tile_text() -> String:
+	var tile := editor.blueprint.tile_by_id(_selected)
+	if tile == null:
+		return ""
+	var def := placement.tiles.tile(tile.type)
+	var stats := def.stats(tile.size)
+	var parts: PackedStringArray = [String(tile.type).capitalize(), "%s %s" % [tile.size, tile.shape],
+			"%d HP" % roundi(float(stats.get("hp", 0)))]
+	if float(stats.get("armor", 0)) > 0.0:
+		parts.append("armour %d" % roundi(float(stats["armor"])))
+	if float(stats.get("shield_cap", 0)) > 0.0:
+		parts.append("shield %d" % roundi(float(stats["shield_cap"])))
+	var more: PackedStringArray = []
+	if def.has_mounts:
+		more.append("takes guns and thrusters")
+	var cost := def.cost(tile.size)
+	if not cost.is_empty():
+		more.append(("cost %s, refunded when removed" if stocked() else "costs %s in WaveTime") % Inventory.cost_text(cost))
+	return "  ·  ".join(parts) + ("\n" + "  ·  ".join(more) if not more.is_empty() else "")
 
 
 ## Each fitted inventory gun's level (item id -> level); empty in Creative.

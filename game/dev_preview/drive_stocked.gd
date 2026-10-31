@@ -20,6 +20,7 @@ func _ready() -> void:
 
 	await _step_the_stocked_hangar_opens()
 	await _step_a_gun_goes_off_into_the_inventory_and_back()
+	await _step_a_selected_tile_says_what_it_is()
 	await _step_a_part_dropped_on_sell_is_sold()
 	await _step_building_pays_and_a_short_wallet_refuses()
 	await _step_the_stock_survives_a_reload()
@@ -83,6 +84,26 @@ func _step_a_gun_goes_off_into_the_inventory_and_back() -> void:
 	_check(back.size() == 1 and str(back[0]["gun"]) == id, "dragged back on, the same gun is fitted")
 	_check(_hangar.editor.stock.amount(&"gc") == gc, "for free")
 	_check(_card(id) == null, "and leaves the Inventory tab")
+
+
+## Owner, 2026-10-31: a hardpoint is hard to tell from hull by eye, so a selected tile names its
+## type and cost under the ship's stats.
+func _step_a_selected_tile_says_what_it_is() -> void:
+	var hardpoint := -1
+	for tile in _hangar.editor.blueprint.tiles:
+		if tile.type == &"hardpoint":
+			hardpoint = tile.id
+			break
+	_check(hardpoint >= 0, "the starter has a hardpoint")
+	_hangar._select(hardpoint)
+	await _frames(2)
+	var line: String = _hangar._stats._part.text
+	_check(_hangar._stats._part.visible and line.begins_with("Hardpoint") and "takes guns and thrusters" in line
+			and "cost " in line, "selecting it shows its type, what it takes and its cost (%s)" % line.replace("\n", " / "))
+	_save_shot("drive_stocked_tile_info.png")
+	_hangar._select(-1)
+	await _frames(1)
+	_check(not _hangar._stats._part.visible, "and deselecting clears it")
 
 
 func _step_a_part_dropped_on_sell_is_sold() -> void:

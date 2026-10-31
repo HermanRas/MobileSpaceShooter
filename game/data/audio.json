@@ -17,7 +17,7 @@
 		},
 		"hangar": {
 			"file": "res://assets/audio/music/hangar.ogg",
-			"db": -9
+			"db": -11.5
 		},
 		"combat": {
 			"file": "res://assets/audio/music/combat.ogg",

@@ -1600,6 +1600,11 @@ swatches in place after each edit; `Inventory.shortfall` and `cost_text` are tes
 `test_inventory.gd`, and `drive_stocked` checks it. ⚠️ A swatch's tile mesh is a child drawn over
 the swatch's own `_draw`, so the corner price and the note go on an overlay child added after it.
 
+A selected tile names itself under the ship's stats (owner, 2026-10-31: a hardpoint is hard to
+tell from hull by eye): type, size and shape, HP, armour and shield, "takes guns and thrusters"
+for a hardpoint, and its cost (refunded when removed; in Creative, what it would cost in
+WaveTime). `Hangar._tile_text`; `drive_stocked` checks it.
+
 #### 8.6 Shops `[D5]`
 ✅ 2026-10-30, already built in earlier phases. The ship shop is the stocked hangar's **Ships**
 (7.3). The market is the wallet's `MarketPanel` (4.8c). New guns come at L1 and thrusters at their
@@ -1826,6 +1831,8 @@ Router plays each scene's track (`music_for_scene`), a flight switches to combat
 hangar's comes back after docking, all crossfading over 1.2 s. Owner, 2026-10-31: combat is
 really good and the hangar fine; the menu was too slow, so it's now 140 BPM and in your face from
 the first beat (a 27 s loop: nobody stays long on the menu).
+The hangar's track plays at 75% of its first volume (owner, 2026-10-31: the player is there a
+while; `audio.json` → `db` −11.5).
 - [ ] Owner, on the phone: does the new menu track pop? If not, the Gemini prompts in
   `ART_PROMPT.md` A.12, or a new seed.
 - [ ] Station and boss tracks (with Phases 11 and 12)
