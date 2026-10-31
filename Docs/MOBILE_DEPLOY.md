@@ -43,7 +43,7 @@ phone.
 | Export preset | `game/export_presets.cfg` | Tracked; it holds no secrets. arm64 only, sensor landscape, internet off, vibrate on. |
 | Debug keystore | `.android/debug.keystore` | Gitignored. Created on the first export, and kept so reinstalls keep the same signature. |
 | adb key | `.android/adb/` | Gitignored |
-| Release keystore | not in the repo | The owner keeps it. Needed at 8.8. |
+| Release keystore | not in the repo | The owner keeps it: `tools/android.sh keystore PATH` makes it, `MSS_KEYSTORE=PATH tools/android.sh release` signs with it. See [RELEASE.md](RELEASE.md). |
 
 ## Gotchas
 

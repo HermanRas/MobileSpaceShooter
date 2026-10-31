@@ -1648,8 +1648,15 @@ next run flies it (`drive_shop` buys one; `drive_wavetime` flies whatever is in 
 - **Done when:** a fresh profile's first 10 runs each show progress (playtest notes in the PR).
 
 #### 8.8 Alpha release
-- [ ] Release APK in Docker, signed with the owner's keystore (kept outside the repo)
-- [ ] An itch.io page, GitHub release, `CHANGELOG.md`
+Built 2026-10-31, waiting on the owner's keystore and publishing. Version 0.8.0 (versionCode 800).
+`tools/android.sh keystore PATH` makes the release key outside the repo; `MSS_KEYSTORE=PATH
+tools/android.sh release` builds `build/mss-0.8.0.apk` in Docker, mounting only that file
+read-only, and refuses a keystore inside the repo, a versionCode that doesn't match the version
+(major × 10000 + minor × 100 + patch), and a debug signature. Tested with a throwaway key.
+`CHANGELOG.md` has 0.8.0; `Docs/RELEASE.md` has the steps, the GitHub release notes and the
+itch.io page copy.
+- [ ] Owner: make the release keystore, build and install the release APK, play a run
+- [ ] Owner: tag `v0.8.0`, publish the GitHub release and the itch.io page
 - **Done when:** a stranger can install from itch and play WaveTime and Creative.
 
 **M3 — public alpha.**

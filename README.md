@@ -8,8 +8,10 @@ it in three modes:
 - **WaveTime**: arcade survival; everything you collect is banked
 - **Story**: an open hex-tile world with stations, jobs and a 16-tile rescue campaign
 
-Status: **Phase 0, project setup.** See [Docs/PLAN.md](Docs/PLAN.md) for the full plan and
-[Docs/IDEA.md](Docs/IDEA.md) for the original brief.
+Status: **0.8.0, public alpha**: the builder, WaveTime and Creative are playable; Story is next.
+See [CHANGELOG.md](CHANGELOG.md) for what's in it, [Docs/PLAN.md](Docs/PLAN.md) for the full plan,
+[Docs/IDEA.md](Docs/IDEA.md) for the original brief and [Docs/RELEASE.md](Docs/RELEASE.md) for
+how a release is built.
 
 ## Run it
 

@@ -33,6 +33,7 @@ tools/run.sh python3 -I tools/slice_sheets.py             # Gemini sheets in art
 tools/run.sh python3 -I tools/make_audio.py [prefix…]     # SFX + music -> game/assets/audio/ (Kenney picks + synths)
 tools/preview.sh res://dev_preview/art_tiles.tscn 1800x700 --ship=gunboat --zoom=2.2   # tile art, wear 0-4
 tools/android.sh export|devices|deploy|logcat             # see Docs/MOBILE_DEPLOY.md
+MSS_KEYSTORE=/path/outside/repo tools/android.sh release  # signed release APK (Docs/RELEASE.md)
 tools/android.sh perf                                     # phone fps / frame time / refresh (debug builds)
 tools/android.sh runs                                     # every performance test run kept on the phone (JSON)
 tools/android.sh shot NAME                                # phone screenshot -> build/phone_NAME.png
