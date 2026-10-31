@@ -1603,7 +1603,10 @@ the swatch's own `_draw`, so the corner price and the note go on an overlay chil
 A selected tile names itself under the ship's stats (owner, 2026-10-31: a hardpoint is hard to
 tell from hull by eye): type, size and shape, HP, armour and shield, "takes guns and thrusters"
 for a hardpoint, and its cost (refunded when removed; in Creative, what it would cost in
-WaveTime). `Hangar._tile_text`; `drive_stocked` checks it.
+WaveTime). `Hangar._tile_text`; `drive_stocked` checks it. The hangar frames the ship in the
+open space between the stats, the tools and the palette (`Hangar.frame_ship`, on opening and on
+loading a ship), zoomed out if it wouldn't fit, so no tile hides under the stats; the tile's
+lines wrap at the stats' width.
 
 #### 8.6 Shops `[D5]`
 ✅ 2026-10-30, already built in earlier phases. The ship shop is the stocked hangar's **Ships**

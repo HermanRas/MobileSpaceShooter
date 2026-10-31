@@ -13,6 +13,9 @@ const WARN := Color(1.0, 0.75, 0.3)
 const DIM := Color(1, 1, 1, 0.55)
 const MAX_PROBLEMS := 3
 
+## The selected part's lines wrap at this width, so the box doesn't spread over the ship.
+const PART_WIDTH := 420.0
+
 var _rows := {}  # key -> [value Label, delta Label]
 var _problems := VBoxContainer.new()
 var _part := Label.new()
@@ -39,6 +42,8 @@ func _ready() -> void:
 		_rows[entry[0]] = [value, delta]
 	_part.add_theme_color_override(&"font_color", Color(0.6, 0.85, 1.0))
 	_part.add_theme_font_size_override(&"font_size", 18)
+	_part.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART  # as wide as the stats, not wider
+	_part.custom_minimum_size.x = PART_WIDTH
 	_part.visible = false
 	column.add_child(_part)
 	_problems.mouse_filter = Control.MOUSE_FILTER_IGNORE

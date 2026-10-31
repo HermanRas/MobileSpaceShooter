@@ -104,6 +104,29 @@ func _step_a_selected_tile_says_what_it_is() -> void:
 	_hangar._select(-1)
 	await _frames(1)
 	_check(not _hangar._stats._part.visible, "and deselecting clears it")
+	# The stats are display only: a tile under them still takes a tap (owner, 2026-10-31).
+	var box: Rect2 = _hangar._stats.get_global_rect()
+	var at := _screen_of_u(Vector2.ZERO)
+	_hangar._camera.pan_by(box.get_center() - at)
+	await _frames(2)
+	var under: int = _hangar._tile_at(box.get_center())
+	_check(under >= 0, "a tile sits under the stats box")
+	await _tap(0, box.get_center())
+	_check(_hangar._selected == under, "and a tap there selects it (selected %d, wanted %d)" % [_hangar._selected, under])
+	var line_at: Vector2 = _hangar._stats._part.get_global_rect().get_center()
+	var next: int = _hangar._tile_at(line_at)
+	for pressed in [true, false]:  # a mouse click on the tile line itself, as on the desktop
+		var click := InputEventMouseButton.new()
+		click.button_index = MOUSE_BUTTON_LEFT
+		click.position = line_at
+		click.global_position = line_at
+		click.pressed = pressed
+		Input.parse_input_event(click)
+		await _frames(2)
+	_check(next < 0 or _hangar._selected == next, "a click through the tile's own line selects what's under it (selected %d, wanted %d)" % [_hangar._selected, next])
+	_hangar._camera.pan_by(at - box.get_center())
+	_hangar._select(-1)
+	await _frames(2)
 
 
 func _step_a_part_dropped_on_sell_is_sold() -> void:

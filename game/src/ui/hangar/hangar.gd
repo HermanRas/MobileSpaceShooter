@@ -21,6 +21,9 @@ const PX := ShipMesh.PX_PER_U
 const GHOST_LIFT_PX := 90.0
 const SNAP_REACH_U := 1.0
 const TAP_SLOP_PX := 14.0
+## The view's zoom on a ship that fits, and the gap kept round it when it's framed.
+const DEFAULT_ZOOM := 1.6
+const FRAME_MARGIN_PX := 24.0
 const VARIANT_SPREAD_U := 0.75
 ## How long the debug Reset stays armed for its confirming second tap, in seconds.
 const RESET_ARM_S := 3.0
@@ -113,12 +116,13 @@ func _ready() -> void:
 	_view.area_u = placement.area_u
 	_world.add_child(_view)
 	_camera = HangarCamera.new()
-	_camera.zoom = Vector2(1.6, 1.6)
+	_camera.zoom = Vector2(DEFAULT_ZOOM, DEFAULT_ZOOM)
 	_world.add_child(_camera)
 
 	_build_ui()
 	_on_changed()
 	_seed_samples.call_deferred()
+	frame_ship.call_deferred()
 
 
 ## Puts the game's sample ships in the library (new or changed ones only), with thumbnails from
@@ -145,6 +149,36 @@ func stocked() -> bool:
 func load_blueprint(bp: Blueprint) -> void:
 	editor.load_blueprint(bp)
 	_select(-1)
+	frame_ship()
+
+
+## Centres the ship in the open space between the stats on the left, the tools on the right and
+## the palette below, zoomed out if it wouldn't fit there (owner, 2026-10-31: tiles hidden under
+## the stats couldn't be seen to be picked).
+func frame_ship() -> void:
+	var view := get_viewport().get_visible_rect().size
+	var open := Rect2(Vector2.ZERO, view)
+	if _stats != null and _stats.visible:
+		open = open.grow_side(SIDE_LEFT, -_stats.get_global_rect().end.x)
+	if _undo_button != null:
+		open.end.x = minf(open.end.x, _undo_button.get_global_rect().position.x)
+	if _palette != null and _palette.visible:
+		open.end.y = minf(open.end.y, _palette.get_global_rect().position.y)
+	open = open.grow(-FRAME_MARGIN_PX)
+	if open.size.x < view.x * 0.25 or open.size.y < view.y * 0.25:
+		open = Rect2(Vector2.ZERO, view)  # too tight to bother: the middle of the screen
+	var bounds := Rect2()
+	var first := true
+	for tile in editor.blueprint.tiles:
+		for p in placement.tile_polygon(tile):
+			bounds = Rect2(p * PX, Vector2.ZERO) if first else bounds.expand(p * PX)
+			first = false
+	var fit := minf(open.size.x / maxf(bounds.size.x, 1.0), open.size.y / maxf(bounds.size.y, 1.0))
+	var z := clampf(minf(fit, DEFAULT_ZOOM), HangarCamera.MIN_ZOOM, HangarCamera.MAX_ZOOM)
+	_camera.zoom = Vector2(z, z)
+	# The camera's centre sits at the screen's middle; shift it so the ship's middle sits at the
+	# open space's.
+	_camera.position = bounds.get_center() - (open.get_center() - view * 0.5) / z
 
 
 ## Saves the ship being edited to the library, with a fresh thumbnail.
