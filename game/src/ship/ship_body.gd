@@ -244,6 +244,7 @@ func _process(delta: float) -> void:
 func _after_hit(result: ShipDamage.Result) -> void:
 	if result.shield > 0.0 or result.hull > 0.0:
 		damaged.emit(result)
+		Audio.play_at(&"hit.hull" if result.hull > 0.0 else &"hit.shield", global_position)
 	if result.hull > 0.0:
 		_mesh_stale = _mesh_stale or _wear_changed()
 	if result.destroyed.is_empty():
@@ -253,6 +254,7 @@ func _after_hit(result: ShipDamage.Result) -> void:
 	if damage.dead:
 		_blow_apart(groups, wreck)
 		return
+	Audio.play_at(&"hit.break", global_position)
 	for group in groups:
 		_spawn_wreck(group, float(wreck["drift_u"]), float(wreck["spin"]), float(wreck["fade_s"]))
 	build(blueprint.subset(damage.attached_ids()), placement)
@@ -267,6 +269,9 @@ func _blow_apart(groups: Array[Dictionary], wreck: Dictionary) -> void:
 	var blast := Explosion.create(extent_px())
 	blast.global_position = global_transform * center_of_mass
 	get_parent().add_child(blast)
+	# The player's own end, and a big ship's, get the big bang (audio.json → big_boom_u).
+	var big := team == 0 or extent_px() >= Audio.bank.big_boom_u * PX
+	Audio.play_at(&"boom.big" if big else &"boom.small", blast.global_position)
 	destroyed.emit()
 	queue_free()
 

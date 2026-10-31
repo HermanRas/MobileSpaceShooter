@@ -38,6 +38,8 @@ var _pool: ProjectilePool
 var _ray := PhysicsRayQueryParameters2D.new()
 ## How many of the nearest enemies the guns weigh (WeaponLib.nearest_targets; 0 for all).
 var _nearest := 0
+## The beams' hum while any is on (made the first time one fires).
+var _hum: AudioStreamPlayer2D
 
 
 func attach(ship: ShipBody, pool: ProjectilePool, weapons: WeaponLib, enemy_list: Callable) -> void:
@@ -71,6 +73,7 @@ func _physics_process(delta: float) -> void:
 	var shots := gunnery.step(delta, _ship.global_position / PX, _ship.global_rotation, _ship.linear_velocity / PX,
 			targets, fire_held, missiles)
 	var beam_hits := _trace_beams()
+	_hum_while_beaming()
 	for shot in shots:
 		var gun := gunnery.layout.guns[shot["gun"]]
 		if shot["beam"]:
@@ -88,6 +91,21 @@ func _physics_process(delta: float) -> void:
 			copy["vel"] = (shot["vel"] as Vector2).rotated(turn)
 			_pool.fire(copy, _ship.team, gun.weapon, homing, StringName(gun.item))
 	BenchRun.spent(&"guns", started)
+
+
+func _hum_while_beaming() -> void:
+	if beam_ends.is_empty():
+		if _hum != null and _hum.playing:
+			_hum.stop()
+		return
+	if _hum == null:
+		_hum = Audio.loop(&"loop.beam", _ship, true) as AudioStreamPlayer2D
+		if _hum == null:
+			return
+		if _ship.team != 0:
+			_hum.volume_db += Audio.bank.enemy_db
+	if not _hum.playing:
+		_hum.play()
 
 
 static func _alive(enemy: ShipBody) -> bool:

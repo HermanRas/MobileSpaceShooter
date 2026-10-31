@@ -8,7 +8,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 GODOT="${GODOT:-$HOME/Downloads/Godot_v4.7.1/Godot_v4.7.1-stable_linux.x86_64}"
-IMAGE="mss-tools:1"
+IMAGE="mss-tools:2"
 
 if [[ "${1:-}" == "--rebuild" ]]; then
   shift

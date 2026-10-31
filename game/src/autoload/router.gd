@@ -10,6 +10,7 @@ const MAIN_MENU := "res://scenes/menu/main_menu.tscn"
 
 
 func goto(scene_path: String) -> void:
+	Audio.music_for_scene(scene_path)
 	var error := get_tree().change_scene_to_file(scene_path)
 	if error != OK:
 		push_error("Router: cannot open %s (%s)" % [scene_path, error_string(error)])

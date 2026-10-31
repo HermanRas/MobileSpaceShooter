@@ -36,6 +36,7 @@ func _ready() -> void:
 		await _step_death_ends_the_run(sandbox)
 		await _step_the_pod_docks(sandbox)
 		await _step_fly_again_and_the_ship_docks()
+		_step_every_moment_has_its_sound()
 
 	Engine.time_scale = 1.0
 	if _hangar != null:
@@ -414,6 +415,19 @@ func _finish_off(sandbox: FlightSandbox) -> void:
 		for tile_id: int in enemy.damage.hp.keys():
 			if is_instance_valid(enemy) and not enemy.is_wreck() and enemy.damage.is_attached(tile_id):
 				enemy.take_hit(tile_id, 1.0e6, &"kinetic", 0.0, item)
+
+
+## 14.1: the run's moments each played their sound (counted: the container has no audio device),
+## and the music followed the flight.
+func _step_every_moment_has_its_sound() -> void:
+	var missing: PackedStringArray = []
+	for id in [&"bay.launch", &"loop.engine", &"fire.gatling_single", &"hit.hull", &"boom.small", &"boom.big",
+			&"run.wave", &"run.cleared", &"pickup.loot", &"power.up", &"power.down", &"run.over", &"run.best",
+			&"pod.eject", &"dock.clamp", &"dock.shutter", &"ui.click"]:
+		if int(Audio.played.get(id, 0)) == 0:
+			missing.append(String(id))
+	_check(missing.is_empty(), "every moment of the run made its sound%s" % ("" if missing.is_empty() else " (none from %s)" % ", ".join(missing)))
+	_check(Audio.music_id() == &"hangar", "and the hangar's music is back after docking")
 
 
 func _guns(enemy: ShipBody) -> WeaponController:

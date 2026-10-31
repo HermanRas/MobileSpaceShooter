@@ -1,5 +1,359 @@
 {
 	"format": 1,
-	"_doc": "The audio seam: the ONLY place a sound ID maps to a file. Filled in by PLAN.md Phase 14.",
-	"sounds": {}
+	"_doc": "The audio seam (PLAN.md 14.1, 14.2): the ONLY place a sound ID maps to a file. Read by SoundBank, played by the Audio autoload. The files are built by tools/make_audio.py (Kenney CC0 picks and sounds synthesised there); every one is peak-normalised, so db sets how loud each plays. enemy_db: an enemy's gunfire against the player's own. Sounds in the world fade out by max_distance_u (U) from the camera along the attenuation curve. A ship big_boom_u long or more (or the player's) blows up with boom.big. Music crossfades over music_fade_s; each scene Router opens plays its music_for_scene track (default_music otherwise), and a flight plays combat.",
+	"enemy_db": -6,
+	"max_distance_u": 40,
+	"attenuation": 1.5,
+	"music_fade_s": 1.2,
+	"big_boom_u": 6,
+	"default_music": "menu",
+	"music_for_scene": {
+		"res://scenes/hangar/hangar.tscn": "hangar"
+	},
+	"music": {
+		"menu": {
+			"file": "res://assets/audio/music/menu.ogg",
+			"db": -8
+		},
+		"hangar": {
+			"file": "res://assets/audio/music/hangar.ogg",
+			"db": -9
+		},
+		"combat": {
+			"file": "res://assets/audio/music/combat.ogg",
+			"db": -9
+		}
+	},
+	"sounds": {
+		"_doc": "Sound ID -> its files (taking turns), db, pitch jitter (±share), voices (at most this many at once) and gap_s (a new one waits this long after the last). loop: for Audio.loop's owners (the engine, a beam).",
+		"fire.gatling_single": {
+			"files": [
+				"res://assets/audio/synth/fire_gatling_1.wav",
+				"res://assets/audio/synth/fire_gatling_2.wav",
+				"res://assets/audio/synth/fire_gatling_3.wav"
+			],
+			"db": -12,
+			"pitch": 0.08,
+			"gap_s": 0.05
+		},
+		"fire.gatling_multi": {
+			"files": [
+				"res://assets/audio/synth/fire_multi_1.wav",
+				"res://assets/audio/synth/fire_multi_2.wav"
+			],
+			"db": -13,
+			"pitch": 0.08,
+			"gap_s": 0.04
+		},
+		"fire.cannon": {
+			"files": [
+				"res://assets/audio/synth/fire_cannon_1.wav",
+				"res://assets/audio/synth/fire_cannon_2.wav"
+			],
+			"db": -6,
+			"pitch": 0.06,
+			"voices": 3,
+			"gap_s": 0.08
+		},
+		"fire.flak": {
+			"files": [
+				"res://assets/audio/synth/fire_flak_1.wav",
+				"res://assets/audio/synth/fire_flak_2.wav"
+			],
+			"db": -10,
+			"pitch": 0.08,
+			"voices": 3,
+			"gap_s": 0.06
+		},
+		"fire.rocket_ff_he": {
+			"files": [
+				"res://assets/audio/synth/fire_rocket.wav"
+			],
+			"db": -9,
+			"pitch": 0.1,
+			"voices": 3,
+			"gap_s": 0.08
+		},
+		"fire.rocket_ff_ap": {
+			"files": [
+				"res://assets/audio/synth/fire_rocket.wav"
+			],
+			"db": -9,
+			"pitch": 0.1,
+			"voices": 3,
+			"gap_s": 0.08
+		},
+		"fire.rocket_homing_he": {
+			"files": [
+				"res://assets/audio/synth/fire_rocket.wav"
+			],
+			"db": -9,
+			"pitch": 0.1,
+			"voices": 3,
+			"gap_s": 0.08
+		},
+		"fire.rocket_homing_ap": {
+			"files": [
+				"res://assets/audio/synth/fire_rocket.wav"
+			],
+			"db": -9,
+			"pitch": 0.1,
+			"voices": 3,
+			"gap_s": 0.08
+		},
+		"fire.emp": {
+			"files": [
+				"res://assets/audio/synth/fire_emp.wav"
+			],
+			"db": -7,
+			"pitch": 0.05,
+			"voices": 2,
+			"gap_s": 0.15
+		},
+		"fire.mines": {
+			"files": [
+				"res://assets/audio/kenney/mine_drop.wav"
+			],
+			"db": -8,
+			"pitch": 0.05,
+			"voices": 2,
+			"gap_s": 0.2
+		},
+		"loop.beam": {
+			"files": [
+				"res://assets/audio/kenney/beam_loop.wav"
+			],
+			"db": -10,
+			"loop": true
+		},
+		"loop.engine": {
+			"files": [
+				"res://assets/audio/kenney/engine_loop.wav"
+			],
+			"db": -14,
+			"loop": true
+		},
+		"hit.hull": {
+			"files": [
+				"res://assets/audio/kenney/hit_hull_1.wav",
+				"res://assets/audio/kenney/hit_hull_2.wav",
+				"res://assets/audio/kenney/hit_hull_3.wav",
+				"res://assets/audio/kenney/hit_hull_4.wav"
+			],
+			"db": -12,
+			"pitch": 0.1,
+			"gap_s": 0.05
+		},
+		"hit.shield": {
+			"files": [
+				"res://assets/audio/synth/hit_shield_1.wav",
+				"res://assets/audio/synth/hit_shield_2.wav",
+				"res://assets/audio/synth/hit_shield_3.wav"
+			],
+			"db": -15,
+			"pitch": 0.06,
+			"voices": 3,
+			"gap_s": 0.06
+		},
+		"hit.break": {
+			"files": [
+				"res://assets/audio/kenney/tile_break_1.wav",
+				"res://assets/audio/kenney/tile_break_2.wav"
+			],
+			"db": -8,
+			"pitch": 0.1,
+			"voices": 3,
+			"gap_s": 0.06
+		},
+		"boom.small": {
+			"files": [
+				"res://assets/audio/kenney/boom_small_1.wav",
+				"res://assets/audio/kenney/boom_small_2.wav"
+			],
+			"db": -4,
+			"pitch": 0.08,
+			"gap_s": 0.05
+		},
+		"boom.big": {
+			"files": [
+				"res://assets/audio/kenney/boom_big.wav"
+			],
+			"db": -2,
+			"pitch": 0.05,
+			"voices": 2,
+			"gap_s": 0.1
+		},
+		"boom.blast": {
+			"files": [
+				"res://assets/audio/kenney/boom_blast.wav"
+			],
+			"db": -9,
+			"pitch": 0.12,
+			"voices": 3,
+			"gap_s": 0.08
+		},
+		"shot.down": {
+			"files": [
+				"res://assets/audio/synth/shot_down.wav"
+			],
+			"db": -10,
+			"pitch": 0.08,
+			"voices": 2,
+			"gap_s": 0.05
+		},
+		"pickup.loot": {
+			"files": [
+				"res://assets/audio/synth/pickup_loot.wav"
+			],
+			"db": -11,
+			"pitch": 0.04,
+			"voices": 3,
+			"gap_s": 0.05
+		},
+		"pickup.part": {
+			"files": [
+				"res://assets/audio/synth/pickup_part.wav"
+			],
+			"db": -6,
+			"voices": 1
+		},
+		"power.up": {
+			"files": [
+				"res://assets/audio/synth/power_up.wav"
+			],
+			"db": -5,
+			"voices": 1
+		},
+		"power.down": {
+			"files": [
+				"res://assets/audio/synth/power_down.wav"
+			],
+			"db": -7,
+			"voices": 1
+		},
+		"run.wave": {
+			"files": [
+				"res://assets/audio/synth/wave_start.wav"
+			],
+			"db": -6,
+			"voices": 1
+		},
+		"run.cleared": {
+			"files": [
+				"res://assets/audio/synth/wave_cleared.wav"
+			],
+			"db": -5,
+			"voices": 1
+		},
+		"run.over": {
+			"files": [
+				"res://assets/audio/synth/run_over.wav"
+			],
+			"db": -5,
+			"voices": 1
+		},
+		"run.best": {
+			"files": [
+				"res://assets/audio/synth/new_best.wav"
+			],
+			"db": -5,
+			"voices": 1
+		},
+		"gun.level_up": {
+			"files": [
+				"res://assets/audio/synth/gun_level_up.wav"
+			],
+			"db": -7,
+			"voices": 1
+		},
+		"bay.launch": {
+			"files": [
+				"res://assets/audio/synth/launch.wav"
+			],
+			"db": -3,
+			"voices": 1
+		},
+		"pod.eject": {
+			"files": [
+				"res://assets/audio/synth/pod_eject.wav"
+			],
+			"db": -4,
+			"voices": 1
+		},
+		"dock.clamp": {
+			"files": [
+				"res://assets/audio/kenney/dock_clamp.wav"
+			],
+			"db": -5,
+			"voices": 1
+		},
+		"dock.shutter": {
+			"files": [
+				"res://assets/audio/kenney/dock_shutter.wav"
+			],
+			"db": -5,
+			"voices": 1
+		},
+		"ui.click": {
+			"files": [
+				"res://assets/audio/kenney/ui_click.wav"
+			],
+			"db": -10,
+			"pitch": 0.03,
+			"voices": 2,
+			"gap_s": 0.03
+		},
+		"ui.back": {
+			"files": [
+				"res://assets/audio/kenney/ui_back.wav"
+			],
+			"db": -10,
+			"voices": 2
+		},
+		"ui.buy": {
+			"files": [
+				"res://assets/audio/kenney/ui_buy.wav"
+			],
+			"db": -8,
+			"voices": 1
+		},
+		"ui.sell": {
+			"files": [
+				"res://assets/audio/kenney/ui_sell.wav"
+			],
+			"db": -8,
+			"voices": 1
+		},
+		"ui.error": {
+			"files": [
+				"res://assets/audio/kenney/ui_error.wav"
+			],
+			"db": -8,
+			"voices": 1,
+			"gap_s": 0.2
+		},
+		"ui.toggle": {
+			"files": [
+				"res://assets/audio/kenney/ui_toggle.wav"
+			],
+			"db": -10,
+			"voices": 2
+		},
+		"hangar.place": {
+			"files": [
+				"res://assets/audio/kenney/hangar_place.wav"
+			],
+			"db": -8,
+			"pitch": 0.08,
+			"voices": 2
+		},
+		"hangar.remove": {
+			"files": [
+				"res://assets/audio/kenney/hangar_remove.wav"
+			],
+			"db": -9,
+			"pitch": 0.05,
+			"voices": 2
+		}
+	}
 }

@@ -1975,6 +1975,39 @@ its words until `has_real_art()`.
 
 ---
 
+## A.12: music prompts (optional, 2026-10-31)
+
+The game already ships three chiptune loops composed by `tools/make_audio.py`. These prompts are
+for Gemini's music generation, if any of them doesn't fit after the phone check. Ask for one
+track at a time, and drop the file in `art_src/audio/music/` named after the track (`menu.wav`,
+`hangar.wav`, `combat.wav`; 16-bit 44.1 kHz WAV, or hand over an MP3 to convert):
+`tools/make_audio.py` crossfades its end into its start and ships it as a seamless Ogg loop. Before shipping one, check that
+Gemini's terms let you use generated music in a commercial game, and note it in `LICENCES.md`
+like the Gemini art. Never name a real artist, band or game in a prompt.
+
+Every prompt starts with the same house style:
+
+> Instrumental video game music for an arcade space shooter on mobile. Retro-modern chiptune:
+> square and pulse leads, a punchy synth bass, bright arpeggios, light analogue pads and tight
+> electronic drums, with a clean modern mix. No vocals, no speech, no sound effects. It must
+> loop seamlessly: the end leads straight back into the start, with no fade-in, no fade-out, no
+> intro and no ending. Steady tempo throughout.
+
+### menu
+> [house style] Main menu theme, 90–95 BPM, A minor. Calm but adventurous: drifting through
+> space before a mission, a little wonder. Starts sparse (pad and arpeggio), a gentle lead melody
+> joins, soft drums come and go. 60–90 seconds.
+
+### hangar
+> [house style] Ship-building workshop music, 100 BPM, D dorian, a light swing. Relaxed, playful
+> and focused, like tinkering in a garage: a walking bass, plucky arpeggios and a cheerful lead
+> that stays out of the way. 60–90 seconds.
+
+### combat
+> [house style] Wave-battle music, 145–155 BPM, E minor. Driving and urgent but not
+> frantic: an eighth-note bass, four-on-the-floor kick, snare on 2 and 4, a heroic lead with a
+> memorable hook and a breakdown section halfway. 45–60 seconds.
+
 ## After a sheet comes back
 
 Check these before slicing, in the order the failures actually happen (from AOD):

@@ -292,6 +292,8 @@ func buy_ship(id: String) -> bool:
 	if bp == null:
 		return false
 	var bought := editor.buy_ship(bp)
+	if bought:
+		Audio.play_sfx(&"ui.buy")
 	_after_fleet_change(bought)
 	return bought
 
@@ -361,6 +363,7 @@ func fly(test_level := 0) -> FlightSandbox:
 	_sandbox.open(copy, placement)
 	_sandbox.closed.connect(func() -> void:
 		var docked := _sandbox.cinematic
+		Audio.play_music(&"hangar")
 		land()
 		if docked:  # the dock screen ended on black
 			_fade.modulate.a = 1.0
@@ -732,6 +735,7 @@ func _commit_carry() -> void:
 				done = not editor.add_thruster(ThrusterLib.type_of_part(str(part["part"])), StringName(part["size"]),
 						int(part["level"]), _mount_slot, bool(part.get("stock", false))).is_empty()
 			if done:
+				Audio.play_sfx(&"hangar.place")
 				_select_mount(editor.mount_index(_mount_slot))
 		_end_carry()
 		return
@@ -740,9 +744,11 @@ func _commit_carry() -> void:
 		if _carry["moving"] >= 0:
 			editor.move(_carry["moving"], _snap.pos, _snap.rot)
 			_select(_carry["moving"])
+			Audio.play_sfx(&"hangar.place")
 		else:
 			var ids := editor.place(_carry["type"], _carry["shape"], _carry["size"], _snap.pos, _snap.rot, _carry["paint"])
 			if not ids.is_empty():
+				Audio.play_sfx(&"hangar.place")
 				_select(ids[0])
 	_end_carry()
 
@@ -750,6 +756,7 @@ func _commit_carry() -> void:
 ## A part dropped on Sell: one being moved off the ship, or a loose one from the Inventory tab.
 ## A new one from a shop tab isn't anyone's yet, so nothing happens.
 func _sell_carried(part: Dictionary) -> void:
+	Audio.play_sfx(&"ui.sell")
 	if _carry["moving_mount"] >= 0:
 		editor.sell_mount(_carry["moving_mount"])
 		_select(-1)
@@ -822,14 +829,17 @@ func _select(tile_id: int) -> void:
 
 func _sell_selected() -> void:
 	if _selected_mount >= 0 and editor.sell_mount(_selected_mount):
+		Audio.play_sfx(&"ui.sell")
 		_select(-1)
 
 
 func _delete_selected() -> void:
 	if _selected_mount >= 0:
 		editor.remove_mount(_selected_mount)
+		Audio.play_sfx(&"hangar.remove")
 		_select(-1)
 	elif _selected >= 0 and editor.remove(_selected):
+		Audio.play_sfx(&"hangar.remove")
 		_select(-1)
 
 
@@ -934,6 +944,7 @@ func _on_changed() -> void:
 		if _market != null and _market.visible:
 			_market.show_market(editor.stock, editor.economy)
 		if not editor.refusal.is_empty():
+			Audio.play_sfx(&"ui.error")
 			_show_notice(editor.refusal)
 			editor.refusal = ""
 	last_refresh_usec = Time.get_ticks_usec() - started
@@ -1148,7 +1159,10 @@ func _build_ui() -> void:
 		_market = MarketPanel.new()
 		_market.visible = false
 		_market.trade_requested.connect(func(material: StringName, amount: int) -> void:
-			if not editor.trade(material, amount):
+			if editor.trade(material, amount):
+				Audio.play_sfx(&"ui.buy" if amount > 0 else &"ui.sell")
+			else:
+				Audio.play_sfx(&"ui.error")
 				_show_notice(editor.refusal))
 		root.add_child(_market)
 	_fly_button = _tool_button(tools, "Fly", _on_fly_pressed)

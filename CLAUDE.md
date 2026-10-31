@@ -30,6 +30,7 @@ $GODOT --headless --path game res://dev_preview/trace_flight.tscn -- --ship=star
 tools/run.sh python3 -I tools/licence_audit.py            # every asset declared?
 tools/run.sh python3 -I tools/make_branding.py            # icon + splash from art_src/ -> game/assets/branding/
 tools/run.sh python3 -I tools/slice_sheets.py             # Gemini sheets in art_src/ -> atlases (art_src/sheets.json)
+tools/run.sh python3 -I tools/make_audio.py [prefix…]     # SFX + music -> game/assets/audio/ (Kenney picks + synths)
 tools/preview.sh res://dev_preview/art_tiles.tscn 1800x700 --ship=gunboat --zoom=2.2   # tile art, wear 0-4
 tools/android.sh export|devices|deploy|logcat             # see Docs/MOBILE_DEPLOY.md
 tools/android.sh perf                                     # phone fps / frame time / refresh (debug builds)

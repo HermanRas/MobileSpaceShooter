@@ -29,6 +29,8 @@ var _glide_s := 2.4
 var _shutter_s := 0.5
 var _fade_s := 0.35
 var _pod := false
+## The sounds played so far: 1 the clamps (the craft settled), 2 the shutter.
+var _sounded := 0
 
 
 func _ready() -> void:
@@ -88,6 +90,7 @@ func play(bp: Blueprint, placement: Placement, tuning: Dictionary) -> void:
 		_badge.visible = _pod
 	_black.modulate.a = 1.0
 	_age = 0.0
+	_sounded = 0
 	running = true
 	visible = true
 
@@ -100,6 +103,12 @@ func _process(delta: float) -> void:
 	_craft.position = _from.lerp(_to, 1.0 - pow(1.0 - glide, 3.0))  # eases to a stop
 	var shut := clampf((_age - _fade_s - _glide_s) / _shutter_s, 0.0, 1.0)
 	_bay.shutter = shut
+	if _sounded == 0 and glide >= 0.85:
+		_sounded = 1
+		Audio.play_sfx(&"dock.clamp")
+	elif _sounded == 1 and shut > 0.0:
+		_sounded = 2
+		Audio.play_sfx(&"dock.shutter")
 	var end := _fade_s + _glide_s + _shutter_s
 	_black.modulate.a = clampf(1.0 - _age / _fade_s, 0.0, 1.0) if _age < end else clampf((_age - end) / _fade_s, 0.0, 1.0)
 	queue_redraw()

@@ -7,6 +7,10 @@
 			"Placeholder art: made for this project (MIT)",
 			"Icon and splash: Herman Ras, with Google Gemini"
 		]},
+		{"title": "Sound", "lines": [
+			"Sound effects: Kenney (kenney.nl), Sci-fi, Impact and Interface Sounds (CC0)",
+			"Synth sounds and music: made for this project"
+		]},
 		{"title": "Engine", "lines": ["Godot Engine 4.7, godotengine.org (MIT licence, below)"]}
 	]
 }

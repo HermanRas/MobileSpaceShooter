@@ -126,6 +126,24 @@ func _ready() -> void:
 		music.value = was_music
 		await get_tree().create_timer(0.6).timeout
 	_check(_find_text(settings, "Done") == null, "with no Done button (back closes it)")
+	_check(Audio.music_id() == &"menu", "the menus play the menu music")
+	# 14.1: the Sound test plays every sound in audio.json, a button each.
+	var clicks := int(Audio.played.get(&"ui.click", 0))
+	await _press("Soundtest")
+	_check(int(Audio.played.get(&"ui.click", 0)) > clicks, "a button clicks")
+	var test := get_tree().current_scene
+	_check(_is(test, "res://scenes/menu/sound_test.tscn"), "Settings opens the Sound test")
+	var buttons := test.find_children("*", "Button", true, false).size()
+	_check(buttons >= Audio.bank.entries.size() + Audio.bank.music.size(), "a button for every sound and track (%d)" % buttons)
+	var booms := int(Audio.played.get(&"boom.big", 0))
+	(test.find_child("boom_big", true, false) as Button).pressed.emit()
+	_check(int(Audio.played.get(&"boom.big", 0)) == booms + 1, "and one plays its sound")
+	await _frames(2)
+	_save_shot("drive_menu_sound_test.png")
+	test.call("on_back")
+	await _frames(3)
+	settings = get_tree().current_scene
+	_check(_is(settings, "res://scenes/menu/settings.tscn"), "back to Settings")
 	var esc := InputEventKey.new()
 	esc.physical_keycode = KEY_ESCAPE
 	esc.pressed = true

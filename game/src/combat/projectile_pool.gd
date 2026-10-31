@@ -124,6 +124,7 @@ func fire(shot: Dictionary, team: int, weapon_id: StringName, homing_target: Nod
 	_look[i] = _look_for(weapon_id)
 	_target[i] = homing_target if _flags[i] & HOMES else null
 	count += 1
+	Audio.shot(weapon_id, _pos[i], team)
 
 
 ## Every rocket in flight, as targets for anti-missile guns: [{"pos", "vel" (U, U/s), "team",
@@ -163,6 +164,7 @@ func _physics_process(delta: float) -> void:
 		if _life[i] <= DOWNED:
 			downed += 1
 			shot_down.emit(_pos[i])
+			Audio.play_at(&"shot.down", _pos[i])
 			var at := _pos[i]
 			var fused := _flags[i] & FUSED
 			var extra := _specs[_spec[i]]
@@ -323,6 +325,7 @@ func _explode(space: PhysicsDirectSpaceState2D, point: Vector2, spec: Dictionary
 	var radius: float = spec["splash"]
 	explosions += 1
 	exploded.emit(point, radius, spec["weapon"])
+	Audio.play_at(&"boom.blast", point)
 	_blast_shape.radius = radius
 	_blast_query.transform = Transform2D(0.0, point)
 	_blast_query.collision_mask = ShipBody.enemy_mask(team)

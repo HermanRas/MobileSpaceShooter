@@ -135,6 +135,8 @@ var profile: ProfileRecord
 ## The bests the run just beat ("score", "wave", "time"), once it's recorded.
 var run_bests: PackedStringArray = []
 var _run_recorded := false
+## The player's engine hum (14.1), following the thrusters' throttle.
+var _engine: AudioStreamPlayer
 var picker := WeaponPicker.new()
 ## A short message under the HUD (e.g. SWITCH before there are weapons), and when it fades.
 var _note := ""
@@ -252,7 +254,9 @@ func open(bp: Blueprint, placement: Placement) -> void:
 		bay.position = -bay.berth_u() * PX  # the ship starts at the origin, in its berth
 	_spawn_player()
 	_camera.make_current()
+	Audio.play_music(&"combat")
 	if cinematic:
+		Audio.play_sfx(&"bay.launch")
 		launch_left = float(_cine.get("launch_s", 2.0))
 		_camera.zoom *= float(_cine.get("zoom_in", 1.6))
 		weapons.hold_fire = true
@@ -313,6 +317,9 @@ func _spawn_player() -> void:
 	weapons.name = "Weapons"
 	ship.add_child(weapons)
 	weapons.attach(ship, pool, _placement.weapons, spawner.live)
+	_engine = Audio.loop(&"loop.engine", ship) as AudioStreamPlayer
+	if _engine != null:
+		_engine.play()
 	var guns := GunView.new()
 	guns.name = "Guns"
 	ship.add_child(guns)
@@ -361,6 +368,7 @@ func spawn_encounter(level: int, hvt := false) -> Encounter:
 ## The run's next wave (8.1): a generated fight at its level, off screen round the player.
 func _start_wave() -> void:
 	spawner.spawn_encounter(run.level())
+	Audio.play_sfx(&"run.wave")
 	run_hud.found("WAVE %d   ·   level %d" % [run.wave, run.level()])
 
 
@@ -429,6 +437,9 @@ func _close_spawner(kind: StringName = &"", id: String = "") -> void:
 
 
 func _on_player_destroyed() -> void:
+	_engine = null
+	if run != null:
+		Audio.play_sfx(&"run.over")
 	if cinematic and run != null:
 		_launch_pod()
 	ship = null
@@ -468,11 +479,13 @@ func _on_enemy_destroyed(body: ShipBody, built: Blueprint) -> void:
 func _on_cleared() -> void:
 	if test != null and ship != null:
 		test.cleared()
+		Audio.play_sfx(&"run.cleared")
 		_show_results_soon()
 	if run != null and ship != null:
 		var bonus := run.cleared()
 		if bonus > 0:  # every run banks something (8.7)
 			cargo.receive({Inventory.GC: bonus})
+			Audio.play_sfx(&"run.cleared")
 			run_hud.found("WAVE %d CLEARED!   +%d GC" % [run.wave, bonus])
 	if _fight_level > 0:
 		_note = "level %d cleared!" % _fight_level
@@ -505,8 +518,10 @@ func _on_pickup(piece: Dictionary) -> void:
 		if power != null and not run.over:  # never banked: it's spent here and now
 			power.take(int(piece["powerup"]))
 			_apply_power()
+			Audio.play_sfx(&"power.up")
 			run_hud.found("×%d FIREPOWER!" % power.shots())
 		return
+	Audio.play_sfx(&"pickup.part" if piece.has("gun") or piece.has("thruster") else &"pickup.loot")
 	if piece.has("gun"):
 		var xp := _placement.weapons.xp
 		cargo.add_found_gun(piece["gun"], piece["mount"], int(piece["xp"]))
@@ -572,6 +587,8 @@ func _on_kill(body: ShipBody) -> void:
 	xp_earned += total
 	_note = "+%d XP%s" % [total, "  ·  " + ", ".join(ups) + "!" if not ups.is_empty() else ""]
 	_note_until = Time.get_ticks_msec() + 2500
+	if not ups.is_empty():
+		Audio.play_sfx(&"gun.level_up")
 	if not ups.is_empty() and ship != null:
 		ship.gun_levels = _item_levels()
 		ship.guns = GunLayout.compute(ship.blueprint, _placement, 1, ship.gun_levels)
@@ -601,6 +618,8 @@ func _show_results_soon(delay_s := RESULTS_DELAY_S) -> void:
 				lines.insert(0, {"score": "NEW BEST SCORE!", "wave": "Furthest wave yet!", "time": "Longest run yet!"}[best])
 			lines.append("Cargo: " + (cargo_text().trim_prefix("cargo ") if not cargo.is_empty() else "nothing"))
 			results.show_report(run.title(), lines, false)
+			if not run_bests.is_empty():
+				Audio.play_sfx(&"run.best")
 		else:
 			results.show_flight(test)
 		get_tree().paused = true)
@@ -651,6 +670,7 @@ func _launch_pod() -> void:
 	var at := ship.global_transform * ship.center_of_mass
 	var home := bay.global_position if bay != null else Vector2.ZERO
 	var heading := (home - at).angle() if at.distance_to(home) > PX else ship.global_rotation
+	Audio.play_sfx(&"pod.eject")
 	_world.add_child(EscapePod.launch(at, ship.linear_velocity, heading,
 			float(_cine.get("pod_speed_u", 5.0)), float(_cine.get("pod_accel_u_s2", 9.0))))
 
@@ -752,6 +772,8 @@ func _process(delta: float) -> void:
 		_start_wave()
 	if power != null and power.tick(delta):
 		_apply_power()
+		if power.shots() <= 1:
+			Audio.play_sfx(&"power.down")
 	if Engine.get_process_frames() % 2 == 0:  # the HUD's frames (below)
 		run_hud.show_cargo(cargo)
 		if run != null and run.wave > 0:  # not during the launch
@@ -768,6 +790,7 @@ func _process(delta: float) -> void:
 		return
 	pilot.stick = controls.stick_value()
 	weapons.fire_held = controls.is_firing()
+	_steer_engine()
 	weapons.all_auto = Settings.get_value(&"control_scheme") != "2-stick"
 	if _picked >= 0 or weapons.focus != null:
 		_overlay.queue_redraw()  # the highlight and the reticle follow their ships
@@ -798,6 +821,18 @@ func _process(delta: float) -> void:
 		parts.append(_note)
 	_hud.text = "  ·  ".join(parts)
 	BenchRun.spent(&"hud", started)
+
+
+## The engine hum rises in pitch and volume with the thrusters' average throttle.
+func _steer_engine() -> void:
+	if _engine == null or not is_instance_valid(_engine) or pilot.throttles.is_empty():
+		return
+	var sum := 0.0
+	for throttle in pilot.throttles:
+		sum += throttle
+	var level := clampf(sum / pilot.throttles.size(), 0.0, 1.0)
+	_engine.pitch_scale = 0.8 + 0.45 * level
+	_engine.volume_db = Audio.bank.entry(&"loop.engine").db + linear_to_db(lerpf(0.3, 1.0, level))
 
 
 ## The edge marks: the carrier's arrow, and a dot for each enemy seen and still in sight range.
