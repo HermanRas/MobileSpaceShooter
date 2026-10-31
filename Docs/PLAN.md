@@ -1823,8 +1823,10 @@ Built 2026-10-31, pulled forward for the alpha (owner); waiting on the phone.
 Menu, hangar and combat loops built 2026-10-31 (`make_audio.py` composes them from a seed:
 chords, bass, arpeggio, a generated lead and drums, rendered so the end runs into the start).
 Router plays each scene's track (`music_for_scene`), a flight switches to combat and the
-hangar's comes back after docking, all crossfading over 1.2 s.
-- [ ] Owner, on the phone: do the three tracks fit? If not, the Gemini prompts in
+hangar's comes back after docking, all crossfading over 1.2 s. Owner, 2026-10-31: combat is
+really good and the hangar fine; the menu was too slow, so it's now 140 BPM and in your face from
+the first beat (a 27 s loop: nobody stays long on the menu).
+- [ ] Owner, on the phone: does the new menu track pop? If not, the Gemini prompts in
   `ART_PROMPT.md` A.12, or a new seed.
 - [ ] Station and boss tracks (with Phases 11 and 12)
 - **Done when:** music changes with context and no track hard-cuts.

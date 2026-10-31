@@ -508,14 +508,14 @@ class Track:
 
 
 def menu() -> np.ndarray:
+    # Owner, 2026-10-31: nobody lingers on the menu, so it hits from the first beat: fast, full
+    # drums and the hook straight away, no build-up.
     i, iii, iv, v, vi, vii = 0, 2, 3, 4, 5, 6
     block = [i, vi, iii, vii]
-    return Track(92, 57, MINOR, block * 3 + [iv, vi, i, v] + block * 2 + [iv, vi, vii, vii] + block,
-                 ["-", "A", "A", "B", "-", "A", "B", "A"],
-                 [{"pad", "bass_hold"}, {"pad", "bass_hold", "arp8"}, {"pad", "bass_walk", "arp8", "drums_pulse"},
-                  {"pad", "bass_walk", "arp8", "drums_soft"}, {"pad", "bass_hold", "arp8"},
-                  {"pad", "bass_walk", "arp8", "drums_soft"}, {"pad", "bass_walk", "arp16", "drums_soft"},
-                  {"pad", "bass_hold", "arp8", "drums_pulse"}], seed=92, lead_duty=0.25).render()
+    full = {"bass_drive", "arp16", "drums_drive"}
+    return Track(140, 57, MINOR, block * 2 + [iv, vi, vii, v] + block,
+                 ["A", "A", "B", "A"],
+                 [full, full, full | {"pad"}, full], seed=140, lead_duty=0.25).render()
 
 
 def hangar() -> np.ndarray:
