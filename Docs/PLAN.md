@@ -93,7 +93,7 @@ mode and comes last.
 | **D11** | Which world-map tiles you can see | **Story tiles, plus every tile within 5 hexes of your ship** | 9.3 |
 | **D12** | When job rewards pay | **On return to a hangar.** "Save and return to hangar" pays at once, but then you have to fly all the way back out. Carrying rewards further is your own risk. | 4.9, 12.1 |
 | **D13** | Thruster sizes | **Every thruster type comes in Small, Medium and Large**, and they can be mixed on one ship | 4.3 |
-| **D14** | Title, package id, stores | Working title "MSS", package id `com.example.mss`, itch.io + GitHub Releases first | 15.3 |
+| **D14** | Title, package id, stores | Working title "MSS", package id `za.co.dragoon.mss`, itch.io + GitHub Releases first | 15.3 |
 | **D15** | Reference phone | **The same phone as AOD**: HONOR LNA-NX1, Mali-G610 (§5.5). Creative gets a performance test (7.5). | 0.9, 7.5 |
 | **D16** | Status board | **None**, since this is a quick project. Status lives in this file's checkboxes. | – |
 | **D17** | Selling the starter ship's parts | Shops **warn before you sell your last thruster or your last gun**, but allow it. The starter ship has 3 thrusters and 1 gun. | 4.10, 11.4 |
@@ -1648,7 +1648,7 @@ next run flies it (`drive_shop` buys one; `drive_wavetime` flies whatever is in 
 - **Done when:** a fresh profile's first 10 runs each show progress (playtest notes in the PR).
 
 #### 8.8 Alpha release
-Built 2026-10-31, waiting on the owner's keystore and publishing. Version 0.8.0 (versionCode 800).
+Built 2026-10-31, waiting on the owner's keystore and publishing. Version 0.8.0 (versionCode 800), package `za.co.dragoon.mss` (fixed from here on: a new id is a new app).
 `tools/android.sh keystore PATH` makes the release key outside the repo; `MSS_KEYSTORE=PATH
 tools/android.sh release` builds `build/mss-0.8.0.apk` in Docker, mounting only that file
 read-only, and refuses a keystore inside the repo, a versionCode that doesn't match the version

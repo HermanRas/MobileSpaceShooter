@@ -39,7 +39,7 @@ phone.
 
 | Thing | Where | Notes |
 |---|---|---|
-| Package id | `com.example.mss` | Placeholder until a title is chosen (D14) |
+| Package id | `za.co.dragoon.mss` | Chosen by the owner for 0.8.0 (D14); never change it once released |
 | Export preset | `game/export_presets.cfg` | Tracked; it holds no secrets. arm64 only, sensor landscape, internet off, vibrate on. |
 | Debug keystore | `.android/debug.keystore` | Gitignored. Created on the first export, and kept so reinstalls keep the same signature. |
 | adb key | `.android/adb/` | Gitignored |
