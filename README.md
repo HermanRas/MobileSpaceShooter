@@ -13,6 +13,20 @@ See [CHANGELOG.md](CHANGELOG.md) for what's in it, [Docs/PLAN.md](Docs/PLAN.md) 
 [Docs/IDEA.md](Docs/IDEA.md) for the original brief and [Docs/RELEASE.md](Docs/RELEASE.md) for
 how a release is built.
 
+**Download:** the Android APK is on the [Releases](https://github.com/HermanRas/MobileSpaceShooter/releases)
+page (Android 7 or newer, 64-bit).
+
+## Screenshots
+
+| | |
+|---|---|
+| ![The main menu](Docs/screenshots/menu.jpg) | ![The hangar, a hardpoint selected](Docs/screenshots/hangar.jpg) |
+| The main menu: your pilot and the modes | The hangar: build tile by tile, tap a tile to see what it is |
+| ![A WaveTime wave with a focused target](Docs/screenshots/wavetime.jpg) | ![A ×5 firepower power-up](Docs/screenshots/firepower.jpg) |
+| WaveTime: tap an enemy to focus your guns on it | Power-ups up to ×5 firepower |
+| ![The results card](Docs/screenshots/results.jpg) | |
+| When the ship goes, the pod brings the cargo home | |
+
 ## Run it
 
 Open `game/project.godot` in Godot **4.7.1-stable** (pinned), or from a terminal:
